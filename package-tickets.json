@@ -1,0 +1,20 @@
+{
+  "name": "nexstar-tickets",
+  "version": "1.0.0",
+  "description": "Sistema de tickets para Discord",
+  "main": "bottickets.js",
+  "scripts": {
+    "start": "node bottickets.js",
+    "dev": "nodemon bottickets.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": ["discord", "bot", "tickets", "support"],
+  "author": "Nexstar",
+  "license": "MIT"
+}

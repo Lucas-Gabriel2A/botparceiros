@@ -1,0 +1,22 @@
+# Arquivos de configuração
+.env
+node_modules/
+package-lock.json
+
+# Logs
+*.log
+logs/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Arquivos temporários
+*.tmp
+*.temp
