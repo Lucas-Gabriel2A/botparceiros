@@ -581,52 +581,69 @@ client.on('interactionCreate', async interaction => {
                         const partnerUser = await client.users.fetch(ticketData.userId);
                         const serverName = ticketData.responses ? ticketData.responses[0]?.answer || 'Servidor Desconhecido' : 'Servidor Desconhecido';
                         const serverTheme = ticketData.responses && ticketData.responses.length >= 3 ? ticketData.responses[2]?.answer || 'Não informado' : 'Não informado';
+                        const memberActivity = ticketData.responses && ticketData.responses.length >= 4 ? ticketData.responses[3]?.answer || 'Não informado' : 'Não informado';
                         
+                        // Embed principal moderno e atrativo
                         const announcementEmbed = new EmbedBuilder()
-                            .setColor('#ff6b9d')
-                            .setTitle('🎉 Nova Parceria Oficial!')
-                            .setDescription(`**Temos o prazer de anunciar nossa nova parceria oficial!**\n\n🤝 **Bem-vindos ao nosso novo servidor parceiro!**`)
+                            .setColor('#2F3136') // Cor escura moderna
+                            .setTitle('🎉 NOVA PARCERIA OFICIAL')
+                            .setDescription(`┌─────────────────────────────────────┐\n│        **NEXSTAR PARTNERSHIPS**        │\n└─────────────────────────────────────┘\n\n🌟 **Temos o orgulho de anunciar nossa mais nova parceria oficial!**\n\n✨ Um novo servidor incrível se juntou à nossa família de parceiros!\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
                             .addFields(
                                 {
-                                    name: '📋 Informações do Servidor',
-                                    value: `**Nome:** ${serverName}\n**Temática:** ${serverTheme}\n**Responsável:** ${partnerUser}`,
+                                    name: '🏰 **SERVIDOR PARCEIRO**',
+                                    value: `**\`${serverName}\`**\n🎯 **Temática:** ${serverTheme}\n👤 **Responsável:** ${partnerUser}`,
+                                    inline: true
+                                },
+                                {
+                                    name: '📊 **ESTATÍSTICAS**',
+                                    value: partnerGuild ? 
+                                        `👥 **${ticketData.memberCount ? ticketData.memberCount.toLocaleString() : 'N/A'}** membros\n💎 **Level ${partnerGuild.premiumTier || 0}** de boost\n🔗 **[Entrar no servidor](${serverLink})**` :
+                                        `👥 **Verificando...** membros\n💎 **Level -** de boost\n🔗 **Link disponível**`,
+                                    inline: true
+                                },
+                                {
+                                    name: '🎪 **ATIVIDADE DOS MEMBROS**',
+                                    value: `${memberActivity.length > 100 ? memberActivity.substring(0, 97) + '...' : memberActivity}`,
                                     inline: false
                                 }
                             )
-                            .setFooter({ text: 'Nexstar • Parcerias Oficiais' })
+                            .setFooter({ 
+                                text: '✨ Nexstar • Parcerias Oficiais • Crescendo Juntos', 
+                                iconURL: client.user.displayAvatarURL() 
+                            })
                             .setTimestamp();
 
-                        // Adiciona informações visuais se conseguiu buscar do Discord
-                        if (partnerGuild) {
-                            announcementEmbed.addFields({
-                                name: '📊 Estatísticas Verificadas',
-                                value: `**Membros:** ${ticketData.memberCount ? ticketData.memberCount.toLocaleString() : 'N/A'}\n**Boost Level:** ${partnerGuild.premiumTier || 0}\n**Link:** ${serverLink || 'Disponível no servidor'}`,
-                                inline: false
-                            });
-
-                            // Adiciona ícone do servidor
-                            if (partnerGuild.iconURL()) {
-                                announcementEmbed.setThumbnail(partnerGuild.iconURL({ size: 256 }));
-                            }
-
-                            // Adiciona banner se houver
-                            if (partnerGuild.bannerURL()) {
-                                announcementEmbed.setImage(partnerGuild.bannerURL({ size: 1024 }));
-                            }
+                        // Adiciona ícone do servidor como thumbnail
+                        if (partnerGuild && partnerGuild.iconURL()) {
+                            announcementEmbed.setThumbnail(partnerGuild.iconURL({ size: 512, extension: 'png' }));
                         }
 
-                        // Monta as menções
+                        // Adiciona banner como imagem principal se houver
+                        if (partnerGuild && partnerGuild.bannerURL()) {
+                            announcementEmbed.setImage(partnerGuild.bannerURL({ size: 1024, extension: 'png' }));
+                        } else {
+                            // Se não tem banner, usa uma imagem padrão de celebração
+                            announcementEmbed.setImage('https://media.discordapp.net/attachments/123456789/987654321/partnership_banner.gif'); // Você pode substituir por uma imagem sua
+                        }
+
+                        // Embed secundário com call-to-action
+                        const ctaEmbed = new EmbedBuilder()
+                            .setColor('#5865F2') // Cor azul do Discord
+                            .setDescription(`🎊 **VENHA CELEBRAR CONOSCO!** 🎊\n\n🤝 Visite nosso novo parceiro e conheça uma comunidade incrível!\n🎉 Mais oportunidades, mais diversão, mais conexões!\n\n> *"Juntos somos mais fortes!"* 💪`)
+                            .setFooter({ text: '🌟 Obrigado por fazer parte da nossa comunidade!' });
+
+                        // Monta as menções com estilo
                         let mentions = '';
                         if (ID_CARGO_MEMBROS) {
                             mentions += `<@&${ID_CARGO_MEMBROS}> `;
                         }
                         mentions += `<@&${ID_CARGO_STAFF}>`;
 
-                        const welcomeMessage = `${mentions}\n\n🎊 **Celebremos nossa nova parceria!** 🎊`;
+                        const welcomeMessage = `${mentions}\n\n🎊 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 🎊\n\n**🎉 CELEBRAÇÃO DE NOVA PARCERIA! 🎉**\n\n🎊 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 🎊`;
 
                         await announcementChannel.send({ 
                             content: welcomeMessage, 
-                            embeds: [announcementEmbed] 
+                            embeds: [announcementEmbed, ctaEmbed] 
                         });
 
                         console.log(`✅ Anúncio de parceria publicado para: ${serverName}`);

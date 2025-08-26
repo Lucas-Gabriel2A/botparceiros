@@ -11,8 +11,8 @@ const ID_CATEGORIA_CALLS = "1408499733970026516";
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildVoiceStates, // Necessário para monitorar quem entra/sai de calls
-        GatewayIntentBits.GuildMembers
+        GatewayIntentBits.GuildVoiceStates // Necessário para monitorar quem entra/sai de calls
+        // Removido GuildMembers que precisa ser habilitado manualmente
     ],
     partials: [Partials.Channel],
     sweepers: {

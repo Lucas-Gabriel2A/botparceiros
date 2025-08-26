@@ -1,16 +1,31 @@
 {
-  "name": "nexstar",
+  "name": "nexstar-discord-bots",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "bottickets.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node bottickets.js",
+    "start:tickets": "node bottickets.js",
+    "start:calls": "node botcallprivada.js",
+    "dev": "nodemon bottickets.js",
+    "test": "echo \"No tests specified\" && exit 0"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": ["discord", "bot", "tickets", "partnerships", "calls", "nexstar"],
+  "author": "Nexstar",
+  "license": "MIT",
+  "description": "Sistema de tickets e calls privadas para Discord",
   "dependencies": {
     "discord.js": "^14.21.0",
     "dotenv": "^17.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Lucas-Gabriel2A/botparceiros.git"
   }
 }
