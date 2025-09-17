@@ -843,6 +843,11 @@ client.on("interactionCreate", async (interaction) => {
             const mentions = `${ID_CARGO_MEMBROS ? `<@&${ID_CARGO_MEMBROS}> ` : ""}${ID_CARGO_STAFF ? `<@&${ID_CARGO_STAFF}>` : ""}`.trim();
             let announcementContent = mentions + "\n\n";
 
+            // Título decorativo da nova parceria
+            announcementContent += "┌─────────────────────────────────────┐\n";
+            announcementContent += "│        🎉 NOVA PARCERIA OFICIAL 🎉        │\n";
+            announcementContent += "└─────────────────────────────────────┘\n\n";
+
             if (customText && customText.trim() !== "") {
               announcementContent += customText.length > 2000
                 ? customText.substring(0, 1997) + "..."
