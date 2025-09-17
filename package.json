@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "bottickets.js",
   "scripts": {
-    "start": "node bottickets.js",
+    "start": "concurrently \"npm run start:tickets\" \"npm run start:welcome\"",
     "start:tickets": "node bottickets.js",
     "start:calls": "node botcallprivada.js",
     "start:welcome": "node botwelcom.js",
@@ -16,6 +16,7 @@
   "description": "Sistema de tickets e calls privadas para Discord",
   "dependencies": {
     "canvas": "^2.11.2",
+    "concurrently": "^8.2.2",
     "discord.js": "^14.21.0",
     "dotenv": "^17.2.1",
     "express": "^4.18.2",
