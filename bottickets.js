@@ -518,7 +518,7 @@ client.on('interactionCreate', async interaction => {
             const formEmbed = new EmbedBuilder()
                 .setColor('#ffa500')
                 .setTitle('📝 Formulário de Parceria')
-                .setDescription(`${interaction.user}, por favor responda às seguintes perguntas **em mensagens separadas** na ordem indicada:\n\n**1.** Qual o nome do seu servidor?\n**2.** Quantos membros seu servidor possui?\n**3.** Qual a temática/foco do servidor?\n**4.** Seus membros são ativos? (Sim/Não e explique)\n**5.** Cole aqui o link de convite do seu servidor\n**6.** Por que deseja fazer parceria conosco?\n\n*Aguarde nossa verificação após responder todas as perguntas.*`)
+                .setDescription(`${interaction.user}, por favor responda às seguintes perguntas **em mensagens separadas** na ordem indicada:\n\n**1.** Qual o nome do seu servidor?\n**2.** Quantos membros seu servidor possui?\n**3.** Qual a temática/foco do servidor?\n**4.** Seus membros são ativos? (Sim/Não e explique)\n**5.** Cole aqui o link de convite do seu servidor\n**6.** Por que deseja fazer parceria conosco?\n**7.** Cole aqui o texto personalizado/descritivo do seu servidor (será exibido no anúncio)\n**8.** Cole aqui o link do banner/imagem do seu servidor (opcional - deixe em branco se não tiver)\n\n*Aguarde nossa verificação após responder todas as perguntas.*`)
                 .setFooter({ text: 'Responda uma pergunta por mensagem' })
                 .setTimestamp();
 
@@ -542,6 +542,108 @@ client.on('interactionCreate', async interaction => {
             const channel = interaction.channel;
             const ticketData = activeTickets.get(channel.id);
             
+            // Embed com aviso sobre divulgação obrigatória
+            const disclosureWarningEmbed = new EmbedBuilder()
+                .setColor('#ff6b35')
+                .setTitle('⚠️ DIVULGAÇÃO OBRIGATÓRIA')
+                .setDescription(`**Antes de aprovar esta parceria, é obrigatório que o servidor parceiro divulgue o nosso servidor primeiro.**\n\n**📋 Instruções para o parceiro:**\n• O parceiro deve divulgar nosso servidor em um canal público\n• Deve enviar um print comprovando a divulgação\n• Só então a parceria poderá ser aprovada\n\n**🌟 Texto para divulgação:**\n\`\`\`\n🌟 Nexstar\nUm novo universo esperando por você...\n\nQuem somos nós?\nOlá! Somos a Nexstar, e criamos este espaço pensando em você que está em busca de novas amizades, momentos divertidos e muita energia positiva!\n\nSabe aquele sentimento de chegar em um lugar e se sentir imediatamente em casa? É exatamente isso que queremos proporcionar. Nossa comunidade foi construída com muito carinho para ser um refúgio acolhedor onde cada pessoa se sinta genuinamente bem-vinda.\n\nO que preparamos especialmente para você\nAqui na Nexstar, acreditamos que cada dia pode ser especial! Por isso, oferecemos:\n🤝 Parcerias incríveis - Conectamos pessoas e comunidades que compartilham os mesmos valores\n🤖 Bots que realmente ajudam - Ferramentas úteis e interativas que tornam sua experiência ainda melhor\n🎉 Eventos e surpresas - Organizamos atividades divertidas, sorteios emocionantes e entretenimento de qualidade\n💬 Suporte humano - Nossa equipe está sempre pronta para ajudar quando você precisar\n\nNossa missão\nNosso sonho é simples, mas poderoso: queremos criar um cantinho na internet onde você possa ser autenticamente você mesmo. Um lugar onde o respeito não é apenas uma regra, mas o coração de tudo que fazemos.\n\nAqui, cada opinião importa, cada pessoa tem valor, e cada dia é uma nova oportunidade de fazer conexões genuínas.\n\nNossa única regra essencial\nRespeito em primeiro lugar, sempre.\n\nAcreditamos que quando tratamos uns aos outros com gentileza e consideração, criamos algo muito maior do que uma simples comunidade online - criamos uma família.\n\nVamos nos conectar?\nEstamos ansiosos para conhecer você e descobrir o que torna você único!\n\nEntre na nossa galáxia: https://discord.gg/fbBEGWfVEQ\n\nNexstar — Venha brilhar com a gente neste universo! ✨\n\`\`\`\n\n**📸 Após a divulgação, solicite que envie um print como comprovante.**`)
+                .setFooter({ text: 'Aguardando print comprovante da divulgação' })
+                .setTimestamp();
+
+            const confirmButtons = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('confirm_approval_waiting_proof')
+                        .setLabel('Enviar Instruções ao Parceiro')
+                        .setStyle(ButtonStyle.Success)
+                        .setEmoji('📤'),
+                    new ButtonBuilder()
+                        .setCustomId('cancel_approval')
+                        .setLabel('Cancelar Aprovação')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setEmoji('❌')
+                );
+
+            await interaction.reply({ 
+                embeds: [disclosureWarningEmbed], 
+                components: [confirmButtons],
+                ephemeral: true 
+            });
+        }
+
+        else if (interaction.customId === 'reject_partnership') {
+            const isStaff = interaction.member.roles.cache.has(ID_CARGO_STAFF);
+            if (!isStaff) {
+                return interaction.reply({ content: '❌ Apenas membros da staff podem rejeitar parcerias.', ephemeral: true });
+            }
+
+            const channel = interaction.channel;
+            
+            const rejectionEmbed = new EmbedBuilder()
+                .setColor('#ff0000')
+                .setTitle('❌ Parceria Rejeitada')
+                .setDescription(`Infelizmente, sua proposta de parceria não foi aprovada neste momento.\n\n**Rejeitado por:** ${interaction.user}\n**Data:** <t:${Math.floor(Date.now() / 1000)}:F>\n\n**Possíveis motivos:**\n• Servidor não atende aos critérios mínimos\n• Pouca atividade dos membros\n• Temática incompatível\n• Já temos parcerias similares\n\n**Você pode:**\n• Trabalhar no crescimento do seu servidor\n• Tentar novamente no futuro\n• Entrar em contato para feedback específico\n\n*Este ticket será fechado automaticamente em 60 segundos.*`)
+                .setFooter({ text: 'Obrigado pelo interesse!' })
+                .setTimestamp();
+
+            await interaction.reply({ embeds: [rejectionEmbed] });
+
+            // Fecha o ticket após 60 segundos
+            setTimeout(async () => {
+                try {
+                    activeTickets.delete(channel.id);
+                    await channel.delete();
+                } catch (error) {
+                    console.error('Erro ao fechar ticket rejeitado:', error);
+                }
+            }, 60000);
+        }
+
+        else if (interaction.customId === 'confirm_approval_waiting_proof') {
+            const isStaff = interaction.member.roles.cache.has(ID_CARGO_STAFF);
+            if (!isStaff) {
+                return interaction.reply({ content: '❌ Apenas membros da staff podem executar esta ação.', ephemeral: true });
+            }
+
+            const channel = interaction.channel;
+            const ticketData = activeTickets.get(channel.id);
+
+            // Envia instruções para o parceiro
+            const instructionsEmbed = new EmbedBuilder()
+                .setColor('#ff6b35')
+                .setTitle('� DIVULGAÇÃO OBRIGATÓRIA')
+                .setDescription(`**Olá! Antes de aprovarmos sua parceria, precisamos que você divulgue nosso servidor primeiro.**\n\n**📋 O que você precisa fazer:**\n\n1. **Divulgue nosso servidor** em um canal público do seu servidor\n2. **Use exatamente este texto** para a divulgação:\n\n\`\`\`\n🌟 Nexstar\nUm novo universo esperando por você...\n\nQuem somos nós?\nOlá! Somos a Nexstar, e criamos este espaço pensando em você que está em busca de novas amizades, momentos divertidos e muita energia positiva!\n\nSabe aquele sentimento de chegar em um lugar e se sentir imediatamente em casa? É exatamente isso que queremos proporcionar. Nossa comunidade foi construída com muito carinho para ser um refúgio acolhedor onde cada pessoa se sinta genuinamente bem-vinda.\n\nO que preparamos especialmente para você\nAqui na Nexstar, acreditamos que cada dia pode ser especial! Por isso, oferecemos:\n🤝 Parcerias incríveis - Conectamos pessoas e comunidades que compartilham os mesmos valores\n🤖 Bots que realmente ajudam - Ferramentas úteis e interativas que tornam sua experiência ainda melhor\n🎉 Eventos e surpresas - Organizamos atividades divertidas, sorteios emocionantes e entretenimento de qualidade\n💬 Suporte humano - Nossa equipe está sempre pronta para ajudar quando você precisar\n\nNossa missão\nNosso sonho é simples, mas poderoso: queremos criar um cantinho na internet onde você possa ser autenticamente você mesmo. Um lugar onde o respeito não é apenas uma regra, mas o coração de tudo que fazemos.\n\nAqui, cada opinião importa, cada pessoa tem valor, e cada dia é uma nova oportunidade de fazer conexões genuínas.\n\nNossa única regra essencial\nRespeito em primeiro lugar, sempre.\n\nAcreditamos que quando tratamos uns aos outros com gentileza e consideração, criamos algo muito maior do que uma simples comunidade online - criamos uma família.\n\nVamos nos conectar?\nEstamos ansiosos para conhecer você e descobrir o que torna você único!\n\nEntre na nossa galáxia: https://discord.gg/fbBEGWfVEQ\n\nNexstar — Venha brilhar com a gente neste universo! ✨\n\`\`\`\n\n3. **Envie um print** comprovando que a divulgação foi feita\n4. **Aguardamos seu print** para aprovar a parceria!\n\n**⚠️ Importante:** A parceria só será aprovada após o envio do print comprovante.`)
+                .setFooter({ text: 'Aguardando print comprovante da divulgação' })
+                .setTimestamp();
+
+            await channel.send({ embeds: [instructionsEmbed] });
+
+            // Atualiza o status do ticket para aguardar print
+            activeTickets.set(channel.id, {
+                ...ticketData,
+                waitingForProof: true
+            });
+
+            await interaction.reply({ content: '✅ Instruções enviadas ao parceiro. Aguardando print comprovante.', ephemeral: true });
+        }
+
+        else if (interaction.customId === 'cancel_approval') {
+            await interaction.reply({ content: '❌ Aprovação cancelada.', ephemeral: true });
+        }
+
+        else if (interaction.customId === 'final_approve_partnership') {
+            const isStaff = interaction.member.roles.cache.has(ID_CARGO_STAFF);
+            if (!isStaff) {
+                return interaction.reply({ content: '❌ Apenas membros da staff podem aprovar parcerias.', ephemeral: true });
+            }
+
+            const channel = interaction.channel;
+            const ticketData = activeTickets.get(channel.id);
+            
+            if (!ticketData.proofReceived) {
+                return interaction.reply({ content: '❌ Print comprovante ainda não foi recebido.', ephemeral: true });
+            }
+
             // Busca informações do servidor parceiro
             let partnerGuild = null;
             let serverLink = null;
@@ -582,6 +684,8 @@ client.on('interactionCreate', async interaction => {
                         const serverName = ticketData.responses ? ticketData.responses[0]?.answer || 'Servidor Desconhecido' : 'Servidor Desconhecido';
                         const serverTheme = ticketData.responses && ticketData.responses.length >= 3 ? ticketData.responses[2]?.answer || 'Não informado' : 'Não informado';
                         const memberActivity = ticketData.responses && ticketData.responses.length >= 4 ? ticketData.responses[3]?.answer || 'Não informado' : 'Não informado';
+                        const customText = ticketData.responses && ticketData.responses.length >= 7 ? ticketData.responses[6]?.answer || '' : '';
+                        const customBanner = ticketData.responses && ticketData.responses.length >= 8 ? ticketData.responses[7]?.answer || '' : '';
                         
                         // Embed principal moderno e atrativo
                         const announcementEmbed = new EmbedBuilder()
@@ -618,18 +722,28 @@ client.on('interactionCreate', async interaction => {
                             announcementEmbed.setThumbnail(partnerGuild.iconURL({ size: 512, extension: 'png' }));
                         }
 
-                        // Adiciona banner como imagem principal se houver
-                        if (partnerGuild && partnerGuild.bannerURL()) {
+                        // Adiciona banner customizado se fornecido, senão banner do servidor ou imagem padrão
+                        if (customBanner && customBanner.trim() !== '') {
+                            announcementEmbed.setImage(customBanner);
+                        } else if (partnerGuild && partnerGuild.bannerURL()) {
                             announcementEmbed.setImage(partnerGuild.bannerURL({ size: 1024, extension: 'png' }));
                         } else {
                             // Se não tem banner, usa uma imagem padrão de celebração
                             announcementEmbed.setImage('https://media.discordapp.net/attachments/123456789/987654321/partnership_banner.gif'); // Você pode substituir por uma imagem sua
                         }
 
-                        // Embed secundário com call-to-action
+                        // Embed secundário com call-to-action e texto personalizado
+                        let ctaDescription = `🎊 **VENHA CELEBRAR CONOSCO!** 🎊\n\n🤝 Visite nosso novo parceiro e conheça uma comunidade incrível!\n🎉 Mais oportunidades, mais diversão, mais conexões!\n\n`;
+                        
+                        if (customText && customText.trim() !== '') {
+                            ctaDescription += `**📝 Sobre nosso parceiro:**\n${customText.length > 500 ? customText.substring(0, 497) + '...' : customText}\n\n`;
+                        }
+                        
+                        ctaDescription += `> *"Juntos somos mais fortes!"* 💪`;
+
                         const ctaEmbed = new EmbedBuilder()
                             .setColor('#5865F2') // Cor azul do Discord
-                            .setDescription(`🎊 **VENHA CELEBRAR CONOSCO!** 🎊\n\n🤝 Visite nosso novo parceiro e conheça uma comunidade incrível!\n🎉 Mais oportunidades, mais diversão, mais conexões!\n\n> *"Juntos somos mais fortes!"* 💪`)
+                            .setDescription(ctaDescription)
                             .setFooter({ text: '🌟 Obrigado por fazer parte da nossa comunidade!' });
 
                         // Monta as menções com estilo
@@ -666,48 +780,30 @@ client.on('interactionCreate', async interaction => {
             }, 30000);
         }
 
-        else if (interaction.customId === 'reject_partnership') {
+        else if (interaction.customId === 'reject_proof') {
             const isStaff = interaction.member.roles.cache.has(ID_CARGO_STAFF);
             if (!isStaff) {
-                return interaction.reply({ content: '❌ Apenas membros da staff podem rejeitar parcerias.', ephemeral: true });
+                return interaction.reply({ content: '❌ Apenas membros da staff podem rejeitar prints.', ephemeral: true });
             }
 
             const channel = interaction.channel;
-            
-            const rejectionEmbed = new EmbedBuilder()
+            const ticketData = activeTickets.get(channel.id);
+
+            const rejectProofEmbed = new EmbedBuilder()
                 .setColor('#ff0000')
-                .setTitle('❌ Parceria Rejeitada')
-                .setDescription(`Infelizmente, sua proposta de parceria não foi aprovada neste momento.\n\n**Rejeitado por:** ${interaction.user}\n**Data:** <t:${Math.floor(Date.now() / 1000)}:F>\n\n**Possíveis motivos:**\n• Servidor não atende aos critérios mínimos\n• Pouca atividade dos membros\n• Temática incompatível\n• Já temos parcerias similares\n\n**Você pode:**\n• Trabalhar no crescimento do seu servidor\n• Tentar novamente no futuro\n• Entrar em contato para feedback específico\n\n*Este ticket será fechado automaticamente em 60 segundos.*`)
-                .setFooter({ text: 'Obrigado pelo interesse!' })
+                .setTitle('❌ Print Insuficiente')
+                .setDescription(`O print enviado não foi considerado suficiente para comprovar a divulgação.\n\n**Possíveis motivos:**\n• Print não mostra claramente a divulgação\n• Divulgação não foi feita corretamente\n• Print está cortado ou ilegível\n\n**Por favor, envie um novo print** que mostre claramente a divulgação do nosso servidor no seu servidor.`)
+                .setFooter({ text: 'Aguardando novo print comprovante' })
                 .setTimestamp();
 
-            await interaction.reply({ embeds: [rejectionEmbed] });
+            await interaction.reply({ embeds: [rejectProofEmbed] });
 
-            // Fecha o ticket após 60 segundos
-            setTimeout(async () => {
-                try {
-                    activeTickets.delete(channel.id);
-                    await channel.delete();
-                } catch (error) {
-                    console.error('Erro ao fechar ticket rejeitado:', error);
-                }
-            }, 60000);
-        }
-
-        else if (interaction.customId === 'request_more_info') {
-            const isStaff = interaction.member.roles.cache.has(ID_CARGO_STAFF);
-            if (!isStaff) {
-                return interaction.reply({ content: '❌ Apenas membros da staff podem solicitar mais informações.', ephemeral: true });
-            }
-
-            const moreInfoEmbed = new EmbedBuilder()
-                .setColor('#ffa500')
-                .setTitle('📝 Informações Adicionais Solicitadas')
-                .setDescription(`A staff precisa de mais informações sobre sua proposta de parceria.\n\n**Solicitado por:** ${interaction.user}\n**Data:** <t:${Math.floor(Date.now() / 1000)}:F>\n\n**Por favor, aguarde que um membro da staff irá especificar quais informações adicionais são necessárias.**\n\nApós fornecer as informações solicitadas, a análise da sua proposta continuará.`)
-                .setFooter({ text: 'Aguarde instruções da staff' })
-                .setTimestamp();
-
-            await interaction.reply({ embeds: [moreInfoEmbed] });
+            // Mantém o status de aguardar print
+            activeTickets.set(channel.id, {
+                ...ticketData,
+                proofReceived: false,
+                proofImageUrl: null
+            });
         }
     }
 });
@@ -724,13 +820,90 @@ client.on('messageCreate', async (message) => {
     
     const ticketData = activeTickets.get(channel.id);
     
-    // Verifica se é ticket de parceria, formulário foi iniciado e a mensagem é do criador
-    if (ticketData.type !== 'parceria' || !ticketData.formStarted || ticketData.userId !== message.author.id) {
+    // Verifica se é ticket de parceria
+    if (ticketData.type !== 'parceria') {
+        return;
+    }
+
+    // Se está aguardando print comprovante da divulgação
+    if (ticketData.waitingForProof) {
+        // Verifica se a mensagem tem anexos (imagens)
+        if (message.attachments.size > 0) {
+            // Verifica se algum anexo é uma imagem
+            const imageAttachments = message.attachments.filter(attachment => 
+                attachment.contentType && attachment.contentType.startsWith('image/')
+            );
+
+            if (imageAttachments.size > 0) {
+                // Print recebido - agora pode aprovar
+                await message.react('✅');
+                
+                const proofReceivedEmbed = new EmbedBuilder()
+                    .setColor('#00ff00')
+                    .setTitle('📸 Print Comprovante Recebido!')
+                    .setDescription(`**Print da divulgação recebido com sucesso!**\n\nAgora a parceria pode ser aprovada. A staff irá revisar o print e proceder com a aprovação final.`)
+                    .setImage(imageAttachments.first().url)
+                    .setFooter({ text: 'Aguardando aprovação final da staff' })
+                    .setTimestamp();
+
+                // Botões para aprovação final
+                const finalApprovalButtons = new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('final_approve_partnership')
+                            .setLabel('Aprovar Parceria Final')
+                            .setStyle(ButtonStyle.Success)
+                            .setEmoji('🎉'),
+                        new ButtonBuilder()
+                            .setCustomId('reject_proof')
+                            .setLabel('Print Insuficiente')
+                            .setStyle(ButtonStyle.Danger)
+                            .setEmoji('❌')
+                    );
+
+                await channel.send({ embeds: [proofReceivedEmbed], components: [finalApprovalButtons] });
+
+                // Notifica a staff
+                const staffNotification = new EmbedBuilder()
+                    .setColor('#00ff00')
+                    .setTitle('🔔 Print Comprovante Recebido')
+                    .setDescription(`<@&${ID_CARGO_STAFF}> Um print comprovante da divulgação foi enviado no ticket de parceria!\n\n**Ticket:** ${channel}\n**Usuário:** ${message.author}\n\nPor favor, revise o print e proceda com a aprovação final.`)
+                    .setTimestamp();
+
+                await channel.send({ embeds: [staffNotification] });
+
+                // Atualiza o status do ticket
+                activeTickets.set(channel.id, {
+                    ...ticketData,
+                    proofReceived: true,
+                    proofImageUrl: imageAttachments.first().url
+                });
+
+                return;
+            }
+        }
+        
+        // Se não é imagem, informa que precisa enviar print
+        if (!message.attachments.size || !message.attachments.some(att => att.contentType && att.contentType.startsWith('image/'))) {
+            const reminderEmbed = new EmbedBuilder()
+                .setColor('#ffa500')
+                .setTitle('📸 Print Necessário')
+                .setDescription(`Por favor, envie um **print/imagem** comprovando que você divulgou nosso servidor no seu servidor.\n\n**Lembre-se:** A parceria só será aprovada após o envio do print comprovante.`)
+                .setFooter({ text: 'Envie uma imagem anexada à mensagem' })
+                .setTimestamp();
+
+            await channel.send({ embeds: [reminderEmbed] });
+            return;
+        }
+    }
+    
+    // Verifica se formulário foi iniciado e a mensagem é do criador
+    if (!ticketData.formStarted || ticketData.userId !== message.author.id) {
         return;
     }
 
     // Se já coletou todas as respostas, ignora
-    if (ticketData.responses && ticketData.responses.length >= 6) return;
+    if (ticketData.responses && ticketData.responses.length >= 8) return;
 
     const questions = [
         "Nome do servidor",
@@ -738,7 +911,9 @@ client.on('messageCreate', async (message) => {
         "Temática/foco",
         "Membros ativos",
         "Link do servidor",
-        "Motivo da parceria"
+        "Motivo da parceria",
+        "Texto personalizado do servidor",
+        "Banner/imagem do servidor"
     ];
 
     const currentQuestion = ticketData.awaitingResponse;
@@ -783,7 +958,7 @@ client.on('messageCreate', async (message) => {
     }
 
     // Se coletou todas as respostas
-    if (ticketData.responses.length >= 6) {
+    if (ticketData.responses.length >= 8) {
         const summaryEmbed = new EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('📋 Resumo da Proposta de Parceria')
@@ -837,7 +1012,7 @@ client.on('messageCreate', async (message) => {
             awaitingResponse: nextQuestion
         });
 
-        await channel.send(`✅ Resposta registrada! **Próxima pergunta (${nextQuestion}/6):** ${questions[nextQuestion - 1]}`);
+        await channel.send(`✅ Resposta registrada! **Próxima pergunta (${nextQuestion}/8):** ${questions[nextQuestion - 1]}`);
     }
 });
 
