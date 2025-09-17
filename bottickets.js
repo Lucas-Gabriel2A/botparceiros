@@ -1,6 +1,5 @@
 // Polyfill para ReadableStream (compatibilidade com Node.js < 16.5.0)
-const { ReadableStream } = require('web-streams-polyfill');
-global.ReadableStream = ReadableStream;
+
 
 // Importa as classes necessárias da biblioteca discord.js
 const {
