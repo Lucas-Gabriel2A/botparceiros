@@ -840,7 +840,7 @@ client.on("interactionCreate", async (interaction) => {
                 : "";
 
             // Anúncio simplificado: apenas texto personalizado + banner
-            const mentions = ID_CARGO_MEMBROS ? `<@&${ID_CARGO_MEMBROS}>` : "";
+            const mentions = `${ID_CARGO_MEMBROS ? `<@&${ID_CARGO_MEMBROS}> ` : ""}${ID_CARGO_STAFF ? `<@&${ID_CARGO_STAFF}>` : ""}`.trim();
             let announcementContent = mentions + "\n\n";
 
             if (customText && customText.trim() !== "") {
