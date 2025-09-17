@@ -626,7 +626,7 @@ client.on("interactionCreate", async (interaction) => {
         .setColor("#ffa500")
         .setTitle("📝 Formulário de Parceria")
         .setDescription(
-          `${interaction.user}, por favor responda às seguintes perguntas **em mensagens separadas** na ordem indicada:\n\n**1.** Qual o nome do seu servidor?\n**2.** Quantos membros seu servidor possui?\n**3.** Qual a temática/foco do servidor?\n**4.** Seus membros são ativos? (Sim/Não e explique)\n**5.** Cole aqui o link de convite do seu servidor\n**6.** Por que deseja fazer parceria conosco?\n**7.** Cole aqui o texto personalizado/descritivo do seu servidor (será exibido no anúncio)\n**8.** Cole aqui o link do banner/imagem do seu servidor (opcional - deixe em branco se não tiver)\n\n*Aguarde nossa verificação após responder todas as perguntas.*`
+          `${interaction.user}, por favor responda às seguintes perguntas **em mensagens separadas** na ordem indicada:\n\n**1.** Qual o nome do seu servidor?\n**2.** Quantos membros seu servidor possui?\n**3.** Qual a temática/foco do servidor?\n**4.** Seus membros são ativos? (Sim/Não e explique)\n**5.** Cole aqui o link de convite do seu servidor\n**6.** Por que deseja fazer parceria conosco?\n**7.** Cole aqui o texto personalizado/descritivo do seu servidor (será exibido no anúncio)\n**8.** Cole aqui o link do banner/imagem do seu servidor OU anexe uma imagem diretamente (opcional - deixe em branco se não tiver)\n\n*Aguarde nossa verificação após responder todas as perguntas.*`
         )
         .setFooter({ text: "Responda uma pergunta por mensagem" })
         .setTimestamp();
@@ -1051,9 +1051,22 @@ client.on("messageCreate", async (message) => {
 
   // Adiciona a resposta
   if (!ticketData.responses) ticketData.responses = [];
+  
+  // Para a pergunta 8 (banner), verificar se há anexo de imagem
+  let answer = message.content;
+  if (currentQuestion === 8 && message.attachments.size > 0) {
+    const imageAttachments = message.attachments.filter(
+      (attachment) =>
+        attachment.contentType && attachment.contentType.startsWith("image/")
+    );
+    if (imageAttachments.size > 0) {
+      answer = imageAttachments.first().url;
+    }
+  }
+  
   ticketData.responses.push({
     question: questions[currentQuestion - 1],
-    answer: message.content,
+    answer: answer,
   });
 
   // Reage à mensagem para confirmar que foi capturada
