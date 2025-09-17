@@ -9,7 +9,7 @@ const fs = require('fs-extra');
 const path = require('path');
 
 // Configurações
-const TOKEN = process.env.DISCORD_TOKEN ;
+const TOKEN = process.env.DISCORD_TOKENS || process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 
 // IDs fixos

@@ -20,7 +20,9 @@ Crie serviços separados no Railway para cada bot:
 
 ### Para Todos os Bots:
 ```
-DISCORD_TOKEN=your_bot_token_here
+DISCORD_TOKEN=your_tickets_bot_token
+DISCORD_TOKENS=your_welcome_bot_token
+CLIENT_ID=your_welcome_bot_client_id
 ```
 
 ### Bot de Tickets (bottickets.js):
