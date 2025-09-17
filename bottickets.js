@@ -736,7 +736,7 @@ client.on('interactionCreate', async interaction => {
                         let ctaDescription = `🎊 **VENHA CELEBRAR CONOSCO!** 🎊\n\n🤝 Visite nosso novo parceiro e conheça uma comunidade incrível!\n🎉 Mais oportunidades, mais diversão, mais conexões!\n\n`;
                         
                         if (customText && customText.trim() !== '') {
-                            ctaDescription += `**📝 Sobre nosso parceiro:**\n${customText.length > 500 ? customText.substring(0, 497) + '...' : customText}\n\n`;
+                            ctaDescription += `**📝 Sobre nosso parceiro:**\n${customText.length > 2000 ? customText.substring(0, 1997) + '...' : customText}\n\n`;
                         }
                         
                         ctaDescription += `> *"Juntos somos mais fortes!"* 💪`;
@@ -753,10 +753,8 @@ client.on('interactionCreate', async interaction => {
                         }
                         mentions += `<@&${ID_CARGO_STAFF}>`;
 
-                        const welcomeMessage = `${mentions}\n\n🎊 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 🎊\n\n**🎉 CELEBRAÇÃO DE NOVA PARCERIA! 🎉**\n\n🎊 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 🎊`;
-
                         await announcementChannel.send({ 
-                            content: welcomeMessage, 
+                            content: mentions, 
                             embeds: [announcementEmbed, ctaEmbed] 
                         });
 
