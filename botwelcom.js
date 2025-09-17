@@ -1,3 +1,7 @@
+// Polyfill para ReadableStream (compatibilidade com Node.js < 16.5.0)
+const { ReadableStream } = require('web-streams-polyfill');
+global.ReadableStream = ReadableStream;
+
 require('dotenv').config();
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, AttachmentBuilder, SelectMenuBuilder, MessageFlags } = require('discord.js');
 const { createCanvas, loadImage, registerFont } = require('canvas');

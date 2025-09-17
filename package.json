@@ -6,6 +6,7 @@
     "start": "node bottickets.js",
     "start:tickets": "node bottickets.js",
     "start:calls": "node botcallprivada.js",
+    "start:welcome": "node botwelcom.js",
     "dev": "nodemon bottickets.js",
     "test": "echo \"No tests specified\" && exit 0"
   },
@@ -14,8 +15,10 @@
   "license": "MIT",
   "description": "Sistema de tickets e calls privadas para Discord",
   "dependencies": {
+    "canvas": "^2.11.2",
     "discord.js": "^14.21.0",
     "dotenv": "^17.2.1",
+    "fs-extra": "^11.1.1",
     "web-streams-polyfill": "^3.2.1"
   },
   "devDependencies": {
