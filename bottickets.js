@@ -1190,4 +1190,22 @@ client.on("messageCreate", async (message) => {
   }
 });
 
+// Servidor HTTP básico para healthcheck do Railway
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    bot: 'Nexstar Tickets Bot',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.listen(PORT, () => {
+  console.log(`Healthcheck server running on port ${PORT}`);
+});
+
 client.login(TOKEN);
