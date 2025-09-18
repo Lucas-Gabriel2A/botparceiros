@@ -253,13 +253,36 @@ async function generateBanner(member, text, isWelcome = true) {
         ctx.restore();
     } catch (error) {
         console.log('❌ Erro ao carregar avatar, usando placeholder épico:', error.message);
-        const placeholder = await loadImage('path/to/placeholder.png');
+        
+        // Criar placeholder usando canvas (gradiente dourado com inicial do usuário)
         ctx.save();
+        const placeholderGradient = ctx.createRadialGradient(400, 150, 0, 400, 150, 64);
+        placeholderGradient.addColorStop(0, '#ffdd44');
+        placeholderGradient.addColorStop(0.7, '#ffaa00');
+        placeholderGradient.addColorStop(1, '#cc6600');
+
+        ctx.fillStyle = placeholderGradient;
         ctx.beginPath();
         ctx.arc(400, 150, 64, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.clip();
-        ctx.drawImage(placeholder, 336, 86, 128, 128);
+        ctx.fill();
+
+        ctx.strokeStyle = '#ffdd44';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 48px "Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Sombra da inicial
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillText(username.charAt(0).toUpperCase(), 402, 152);
+
+        // Inicial principal
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(username.charAt(0).toUpperCase(), 400, 150);
+
         ctx.restore();
     }
 
