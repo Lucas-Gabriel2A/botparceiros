@@ -188,7 +188,7 @@ function hasPermission(member) {
 
 // Função para gerar banner (completo com avatar)
 async function generateBanner(member, text, isWelcome = true) {
-    const username = member.user?.username || member.displayName || 'Unknown';
+    const username = member.user?.username || member.displayName || 'Usuário Desconhecido';
     console.log(`🎨 generateBanner iniciada para ${username}`);
 
     let canvas, ctx;
@@ -232,12 +232,8 @@ async function generateBanner(member, text, isWelcome = true) {
 
     // Avatar circular
     try {
-        const avatarURL = member.user?.displayAvatarURL({ format: 'png', size: 128, dynamic: false });
+        const avatarURL = member.user?.displayAvatarURL({ format: 'png', size: 128, dynamic: false }) || 'path/to/placeholder.png';
         console.log(`🖼️ Tentando carregar avatar: ${avatarURL}`);
-
-        if (!avatarURL) {
-            throw new Error('Avatar URL não disponível');
-        }
 
         // Adicionar timeout para carregamento do avatar
         const avatarPromise = loadImage(avatarURL);
@@ -257,88 +253,24 @@ async function generateBanner(member, text, isWelcome = true) {
         ctx.restore();
     } catch (error) {
         console.log('❌ Erro ao carregar avatar, usando placeholder épico:', error.message);
-        // Desenhar placeholder épico se avatar falhar
+        const placeholder = await loadImage('path/to/placeholder.png');
         ctx.save();
-
-        // Gradiente circular para o placeholder
-        const placeholderGradient = ctx.createRadialGradient(400, 150, 0, 400, 150, 64);
-        placeholderGradient.addColorStop(0, '#ffdd44');
-        placeholderGradient.addColorStop(0.7, '#ffaa00');
-        placeholderGradient.addColorStop(1, '#cc6600');
-
-        ctx.fillStyle = placeholderGradient;
         ctx.beginPath();
         ctx.arc(400, 150, 64, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Contorno dourado
-        ctx.strokeStyle = '#ffdd44';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-
-        // Letra do usuário com sombra e brilho
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 48px "Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        // Sombra da letra
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillText(username.charAt(0).toUpperCase(), 402, 152);
-
-        // Letra principal
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText(username.charAt(0).toUpperCase(), 400, 150);
-
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(placeholder, 336, 86, 128, 128);
         ctx.restore();
     }
 
-    // Texto principal com fonte épica
-    ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 3;
-    ctx.font = 'bold 48px "Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
+    // Substituir texto
     const displayText = text.replace('[username]', username);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '30px Arial';
+    ctx.fillText(displayText, 400, 300);
 
-    // Renderizar texto principal com quebra automática
-    const linesUsed = renderText(ctx, displayText, 400, 280, 700, 60);
-
-    // Texto secundário (número do membro) com fonte menor
-    if (isWelcome) {
-        const memberCount = member.guild.memberCount;
-        const memberText = `Você é o ${memberCount}º Membro!`;
-
-        ctx.font = 'bold 32px "Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
-
-        // Posicionar baseado no número de linhas do texto principal
-        const memberY = 280 + (linesUsed * 60) + 40;
-
-        // Sombra
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillText(memberText, 402, memberY + 2);
-
-        // Contorno
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 3;
-        ctx.strokeText(memberText, 400, memberY);
-
-        // Texto com gradiente dourado
-        const memberGradient = ctx.createLinearGradient(300, memberY - 15, 500, memberY + 15);
-        memberGradient.addColorStop(0, '#ffaa00');
-        memberGradient.addColorStop(0.5, '#ffdd44');
-        memberGradient.addColorStop(1, '#ffaa00');
-
-        ctx.fillStyle = memberGradient;
-        ctx.fillText(memberText, 400, memberY);
-    }
-
-    const buffer = canvas.toBuffer();
-    console.log(`✅ Banner gerado com sucesso. Tamanho: ${buffer.length} bytes`);
-    console.log('🎨 generateBanner finalizada');
-    return buffer;
+    console.log('✅ Banner gerado com sucesso');
+    return canvas.toBuffer();
 }
 
 // Função para gerar banner rápido (sempre usa placeholder)
@@ -420,21 +352,26 @@ async function generateBannerFast(member, text, isWelcome = true) {
     const displayText = text.replace('[username]', username);
     const linesUsed = renderText(ctx, displayText, 400, 280, 700, 60);
 
-    // Texto secundário
+    // Texto secundário (número do membro) com fonte menor
     if (isWelcome) {
         const memberCount = member.guild.memberCount;
         const memberText = `Você é o ${memberCount}º Membro!`;
 
         ctx.font = 'bold 32px "Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
+
+        // Posicionar baseado no número de linhas do texto principal
         const memberY = 280 + (linesUsed * 60) + 40;
 
+        // Sombra
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillText(memberText, 402, memberY + 2);
 
+        // Contorno
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 3;
         ctx.strokeText(memberText, 400, memberY);
 
+        // Texto com gradiente dourado
         const memberGradient = ctx.createLinearGradient(300, memberY - 15, 500, memberY + 15);
         memberGradient.addColorStop(0, '#ffaa00');
         memberGradient.addColorStop(0.5, '#ffdd44');
