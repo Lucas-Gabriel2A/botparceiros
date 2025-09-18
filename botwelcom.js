@@ -939,7 +939,7 @@ process.on('uncaughtException', (error) => {
 
 const express = require('express');
 const app = express();
-const PORT = process.env.PORT || 8000;
+const PORT =  8081; // Alterei para 8081
 
 // Servidor Express para healthcheck da Railway
 app.get('/', (req, res) => {

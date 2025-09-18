@@ -20,7 +20,7 @@ const {
 require("dotenv").config();
 
 // --- CONFIGURAÇÕES ---
-const TOKEN = process.env.DISCORD_TOKEN;
+const TOKEN = process.env.DISCORD_TOKEN || 'MTQwOTY5MDU0OTUwOTk0NzQ2Mg.GOEdLi.4SyMD3MoD8AuNtmt_eguSK-pzbmXP-sYnDQlYs';
 const ID_CARGO_STAFF = process.env.STAFF_ROLE_ID;
 const ID_CATEGORIA_TICKETS = process.env.TICKETS_CATEGORY_ID;
 const ID_CANAL_TICKETS = process.env.TICKETS_CHANNEL_ID;
