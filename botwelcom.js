@@ -86,7 +86,6 @@ function saveConfig() {
 
 // Função para renderizar texto com quebra automática
 function renderText(ctx, text, x, y, maxWidth, lineHeight = 70) {
-    console.log(`📝 renderText chamado com texto: "${text}"`);
     const words = text.split(' ');
     let line = '';
     let lines = [];
@@ -111,8 +110,6 @@ function renderText(ctx, text, x, y, maxWidth, lineHeight = 70) {
         lines = lines.slice(0, 3);
         lines[2] = lines[2].substring(0, maxCharsPerLine - 3) + '...';
     }
-
-    console.log(`📝 Linhas a renderizar:`, lines);
 
     // Renderizar cada linha
     lines.forEach((lineText, index) => {
@@ -193,7 +190,6 @@ function hasPermission(member) {
 async function generateBanner(member, text, isWelcome = true) {
     const username = member.user?.username || member.displayName || 'Unknown';
     console.log(`🎨 generateBanner iniciada para ${username}`);
-    console.log(`📝 Texto original recebido: "${text}"`);
 
     let canvas, ctx;
     try {
@@ -306,8 +302,6 @@ async function generateBanner(member, text, isWelcome = true) {
     ctx.textBaseline = 'middle';
 
     const displayText = text.replace('[username]', username);
-    console.log(`📝 Texto após substituição: "${displayText}"`);
-    console.log(`👤 Username do membro: "${username}"`);
 
     // Renderizar texto principal com quebra automática
     const linesUsed = renderText(ctx, displayText, 400, 280, 700, 60);
@@ -491,7 +485,6 @@ client.on('guildMemberAdd', async (member) => {
     try {
         console.log(`🎨 Gerando banner para ${member.user?.username || member.displayName || 'Unknown'}...`);
         const config = getConfig(member.guild.id);
-        console.log(`📝 Texto welcome configurado: "${config.welcomeText}"`);
         const buffer = await generateBanner(member, config.welcomeText, true);
         const attachment = new AttachmentBuilder(buffer, { name: 'welcome.png' });
         await channel.send({ files: [attachment] });
