@@ -994,6 +994,25 @@ process.on('uncaughtException', (error) => {
     // Não fazer process.exit() para manter o bot rodando
 });
 
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 8080;
+
+// Servidor Express para healthcheck da Railway
+app.get('/', (req, res) => {
+    res.status(200).json({
+        status: 'OK',
+        bot: 'Welcome Bot',
+        uptime: process.uptime(),
+        guilds: client.guilds.cache.size,
+        timestamp: new Date().toISOString()
+    });
+});
+
+app.listen(PORT, () => {
+    console.log(`🌐 Servidor HTTP rodando na porta ${PORT} para healthcheck`);
+});
+
 // Login
 client.login(TOKEN);
 
