@@ -618,13 +618,28 @@ client.on('messageCreate', async (message) => {
         const filePath = path.join(backgroundsPath, `background_${message.guild.id}.png`);
         try {
             console.log(`Baixando background: ${attachment.url} (${attachment.size} bytes)`);
-            const response = await fetch(attachment.url);
+            
+            // Timeout de 30 segundos para o download
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            
+            const response = await fetch(attachment.url, {
+                signal: controller.signal,
+                headers: {
+                    'User-Agent': 'DiscordBot/1.0'
+                }
+            });
+            
+            clearTimeout(timeoutId);
+            
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
+            console.log('📥 Download iniciado, aguardando buffer...');
             const buffer = await response.arrayBuffer();
             const imageBuffer = Buffer.from(buffer);
+            console.log(`✅ Download concluído: ${imageBuffer.length} bytes`);
 
             // Verificar se é uma imagem válida tentando carregar
             try {
@@ -661,7 +676,21 @@ client.on('messageCreate', async (message) => {
             }
         } catch (error) {
             console.error('Erro ao salvar background:', error);
-            await message.reply('❌ Erro ao salvar o background. Tente novamente.');
+            
+            let errorMessage = '❌ Erro ao salvar o background. Tente novamente.';
+            
+            if (error.name === 'AbortError') {
+                errorMessage = '❌ Timeout: Download demorou mais de 30 segundos. Tente uma imagem menor.';
+                console.error('⏰ Timeout no download da imagem');
+            } else if (error.message.includes('HTTP')) {
+                errorMessage = '❌ Erro no download da imagem. Verifique se o arquivo ainda existe.';
+                console.error('🌐 Erro HTTP no download:', error.message);
+            } else if (error.message.includes('loadImage')) {
+                errorMessage = '❌ Formato de imagem não suportado. Use PNG, JPG ou JPEG.';
+                console.error('🖼️ Erro na validação da imagem:', error.message);
+            }
+            
+            await message.reply(errorMessage);
         }
     }
 });
