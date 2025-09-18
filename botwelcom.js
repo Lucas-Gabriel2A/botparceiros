@@ -9,7 +9,7 @@ const fs = require('fs-extra');
 const path = require('path');
 
 // Configurações
-const TOKEN = process.env.DISCORD_TOKENS || process.env.DISCORD_TOKEN;
+const TOKEN = process.env.DISCORD_TOKENS;
 const CLIENT_ID = process.env.CLIENT_ID;
 
 // IDs fixos
@@ -18,6 +18,36 @@ const SEMI_OWNER_ROLE_ID = process.env.SEMI_OWNER_ROLE_ID;
 const CATEGORY_ID = process.env.CATEGORY_ID;
 const WELCOME_CHANNEL_ID = process.env.WELCOME_CHANNEL_ID;
 const LEAVE_CHANNEL_ID = process.env.LEAVE_CHANNEL_ID;
+
+// Log das configurações carregadas
+console.log('🔧 Configurações carregadas:');
+console.log(`TOKEN: ${TOKEN ? '✅ Definido' : '❌ Não definido'}`);
+console.log(`CLIENT_ID: ${CLIENT_ID || '❌ Não definido'}`);
+console.log(`WELCOME_CHANNEL_ID: ${WELCOME_CHANNEL_ID || '❌ Não definido'}`);
+console.log(`LEAVE_CHANNEL_ID: ${LEAVE_CHANNEL_ID || '❌ Não definido'}`);
+console.log(`CATEGORY_ID: ${CATEGORY_ID || '❌ Não definido'}`);
+console.log(`OWNER_ROLE_ID: ${OWNER_ROLE_ID || '❌ Não definido'}`);
+console.log(`SEMI_OWNER_ROLE_ID: ${SEMI_OWNER_ROLE_ID || '❌ Não definido'}`);
+console.log('🚀 Iniciando bot welcome...\n');
+
+// Validação das variáveis de ambiente críticas
+if (!TOKEN) {
+    console.error("❌ DISCORD_TOKENS não configurado no arquivo .env");
+    process.exit(1);
+}
+if (!CLIENT_ID) {
+    console.error("❌ CLIENT_ID não configurado no arquivo .env");
+    process.exit(1);
+}
+if (!WELCOME_CHANNEL_ID) {
+    console.error("❌ WELCOME_CHANNEL_ID não configurado no arquivo .env");
+}
+if (!LEAVE_CHANNEL_ID) {
+    console.error("❌ LEAVE_CHANNEL_ID não configurado no arquivo .env");
+}
+if (!CATEGORY_ID) {
+    console.error("❌ CATEGORY_ID não configurado no arquivo .env");
+}
 
 // Cliente Discord
 const client = new Client({
@@ -129,8 +159,16 @@ function hasPermission(member) {
 async function generateBanner(member, text, isWelcome = true) {
     const config = getConfig(member.guild.id);
     console.log(`Gerando banner para guild ${member.guild.id}, config:`, config);
-    const canvas = createCanvas(800, 600);
-    const ctx = canvas.getContext('2d');
+    
+    let canvas, ctx;
+    try {
+        canvas = createCanvas(800, 600);
+        ctx = canvas.getContext('2d');
+        console.log('✅ Canvas criado com sucesso');
+    } catch (error) {
+        console.error('❌ Erro ao criar canvas:', error);
+        throw new Error('Falha ao criar canvas para o banner');
+    }
 
     // Fundo padrão ou customizado
     let backgroundImage;
@@ -261,32 +299,91 @@ async function generateBanner(member, text, isWelcome = true) {
         ctx.fillText(memberText, 400, memberY);
     }
 
-    return canvas.toBuffer();
+    const buffer = canvas.toBuffer();
+    console.log(`✅ Banner gerado com sucesso. Tamanho: ${buffer.length} bytes`);
+    return buffer;
 }
 
 // Eventos
 client.on('guildMemberAdd', async (member) => {
-    console.log(`Novo membro: ${member.user.username} no servidor ${member.guild.id}`);
+    console.log(`🔥 EVENTO guildMemberAdd DISPARADO para ${member.user.username} no servidor ${member.guild.name} (${member.guild.id})`);
+    
+    if (!WELCOME_CHANNEL_ID) {
+        console.error("❌ WELCOME_CHANNEL_ID não configurado - pulando welcome");
+        return;
+    }
+    
     const channel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
-    if (!channel || channel.parentId !== CATEGORY_ID) {
-        console.log(`Canal welcome não encontrado ou não está na categoria correta. Canal: ${channel ? channel.id : 'null'}, Parent: ${channel ? channel.parentId : 'null'}`);
+    if (!channel) {
+        console.error(`❌ Canal de welcome não encontrado. ID: ${WELCOME_CHANNEL_ID}`);
+        console.log(`📋 Canais disponíveis no servidor:`, member.guild.channels.cache.map(c => `${c.name} (${c.id})`).join(', '));
+        return;
+    }
+    
+    // Nota: Canais de welcome/leave podem estar em qualquer categoria
+    console.log(`📍 Canal welcome encontrado: ${channel.name} (Categoria: ${channel.parentId || 'Nenhuma'})`);
+    
+    // Verificar permissões do bot
+    const botPermissions = channel.permissionsFor(member.guild.members.me);
+    if (!botPermissions.has('SendMessages')) {
+        console.error(`❌ Bot não tem permissão para enviar mensagens no canal ${channel.name}`);
+        return;
+    }
+    if (!botPermissions.has('AttachFiles')) {
+        console.error(`❌ Bot não tem permissão para anexar arquivos no canal ${channel.name}`);
         return;
     }
 
-    const config = getConfig(member.guild.id);
-    const buffer = await generateBanner(member, config.welcomeText, true);
-    const attachment = new AttachmentBuilder(buffer, { name: 'welcome.png' });
-    await channel.send({ files: [attachment] });
+    try {
+        console.log(`🎨 Gerando banner para ${member.user.username}...`);
+        const config = getConfig(member.guild.id);
+        const buffer = await generateBanner(member, config.welcomeText, true);
+        const attachment = new AttachmentBuilder(buffer, { name: 'welcome.png' });
+        await channel.send({ files: [attachment] });
+        console.log(`✅ Welcome enviado com sucesso para ${member.user.username} no canal ${channel.name}`);
+    } catch (error) {
+        console.error("❌ Erro ao enviar welcome:", error);
+        console.error("Stack:", error.stack);
+    }
 });
 
 client.on('guildMemberRemove', async (member) => {
+    console.log(`Membro saiu: ${member.user.username} do servidor ${member.guild.id}`);
+    
+    if (!LEAVE_CHANNEL_ID) {
+        console.error("❌ LEAVE_CHANNEL_ID não configurado - pulando leave");
+        return;
+    }
+    
     const channel = member.guild.channels.cache.get(LEAVE_CHANNEL_ID);
-    if (!channel || channel.parentId !== CATEGORY_ID) return;
+    if (!channel) {
+        console.error(`❌ Canal de leave não encontrado. ID: ${LEAVE_CHANNEL_ID}`);
+        return;
+    }
+    
+    // Nota: Canais de welcome/leave podem estar em qualquer categoria
+    console.log(`📍 Canal leave encontrado: ${channel.name} (Categoria: ${channel.parentId || 'Nenhuma'})`);
+    
+    // Verificar permissões do bot
+    const botPermissions = channel.permissionsFor(member.guild.members.me);
+    if (!botPermissions.has('SendMessages')) {
+        console.error(`❌ Bot não tem permissão para enviar mensagens no canal ${channel.name}`);
+        return;
+    }
+    if (!botPermissions.has('AttachFiles')) {
+        console.error(`❌ Bot não tem permissão para anexar arquivos no canal ${channel.name}`);
+        return;
+    }
 
-    const config = getConfig(member.guild.id);
-    const buffer = await generateBanner(member, config.leaveText, false);
-    const attachment = new AttachmentBuilder(buffer, { name: 'leave.png' });
-    await channel.send({ files: [attachment] });
+    try {
+        const config = getConfig(member.guild.id);
+        const buffer = await generateBanner(member, config.leaveText, false);
+        const attachment = new AttachmentBuilder(buffer, { name: 'leave.png' });
+        await channel.send({ files: [attachment] });
+        console.log(`✅ Leave enviado para ${member.user.username}`);
+    } catch (error) {
+        console.error("❌ Erro ao enviar leave:", error);
+    }
 });
 
 // Comandos Slash
@@ -306,18 +403,34 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
     }
 })();
 
+// Função helper para responder interações com tratamento de erro
+async function safeReply(interaction, options) {
+    try {
+        if (interaction.replied || interaction.deferred) {
+            return await interaction.followUp(options);
+        }
+        return await interaction.reply(options);
+    } catch (error) {
+        if (error.code === 10062) {
+            console.log('Interação expirada, ignorando...');
+            return null;
+        }
+        throw error;
+    }
+}
+
 // Interação
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
 
     if (interaction.commandName === 'config-welcome') {
         if (!hasPermission(interaction.member)) {
-            return interaction.reply({ content: 'Você não tem permissão para usar este comando.', flags: MessageFlags.Ephemeral });
+            return await safeReply(interaction, { content: 'Você não tem permissão para usar este comando.', flags: MessageFlags.Ephemeral });
         }
 
         // Verificar se está na categoria correta
         if (interaction.channel.parentId !== CATEGORY_ID) {
-            return interaction.reply({ content: 'Este comando só pode ser usado na categoria específica.', flags: MessageFlags.Ephemeral });
+            return await safeReply(interaction, { content: 'Este comando só pode ser usado na categoria específica.', flags: MessageFlags.Ephemeral });
         }
 
         const config = getConfig(interaction.guild.id);
@@ -341,7 +454,7 @@ client.on('interactionCreate', async (interaction) => {
                     .setStyle(ButtonStyle.Success),
             );
 
-        await interaction.reply({ content: 'Selecione uma opção:', components: [row], flags: MessageFlags.Ephemeral });
+        await safeReply(interaction, { content: 'Selecione uma opção:', components: [row], flags: MessageFlags.Ephemeral });
     }
 });
 
@@ -386,7 +499,7 @@ client.on('interactionCreate', async (interaction) => {
 
         await interaction.showModal(modal);
     } else if (interaction.customId === 'upload_background') {
-        await interaction.reply({ 
+        await safeReply(interaction, { 
             content: '📸 **Para fazer upload do background:**\n\nEnvie uma mensagem separada neste canal com a imagem anexada (PNG ou JPG, máximo 5MB).\n\nO bot irá detectar automaticamente e salvar como background.', 
             flags: MessageFlags.Ephemeral 
         });
@@ -394,7 +507,7 @@ client.on('interactionCreate', async (interaction) => {
         const config = getConfig(interaction.guild.id);
         const buffer = await generateBanner(interaction.member, config.welcomeText, true);
         const attachment = new AttachmentBuilder(buffer, { name: 'preview.png' });
-        await interaction.reply({ files: [attachment], flags: MessageFlags.Ephemeral });
+        await safeReply(interaction, { files: [attachment], flags: MessageFlags.Ephemeral });
     }
 });
 
@@ -406,12 +519,12 @@ client.on('interactionCreate', async (interaction) => {
         const config = getConfig(interaction.guild.id);
         config.welcomeText = interaction.fields.getTextInputValue('welcome_text');
         saveConfig();
-        await interaction.reply({ content: 'Texto welcome atualizado!', flags: MessageFlags.Ephemeral });
+        await safeReply(interaction, { content: 'Texto welcome atualizado!', flags: MessageFlags.Ephemeral });
     } else if (interaction.customId === 'leave_text_modal') {
         const config = getConfig(interaction.guild.id);
         config.leaveText = interaction.fields.getTextInputValue('leave_text');
         saveConfig();
-        await interaction.reply({ content: 'Texto leave atualizado!', flags: MessageFlags.Ephemeral });
+        await safeReply(interaction, { content: 'Texto leave atualizado!', flags: MessageFlags.Ephemeral });
     }
 });
 
@@ -532,14 +645,18 @@ client.login(TOKEN);
 // Evento ready
 client.on('ready', () => {
     console.log(`🤖 Bot ${client.user.tag} está online!`);
-    console.log(`📊 Servidores: ${client.guilds.cache.size}`);
-    console.log(`🎯 Intents: ${client.options.intents}`);
-    console.log(`🔧 Comandos registrados: ${client.application.commands.cache.size}`);
+    console.log(`📊 Servidores conectados: ${client.guilds.cache.size}`);
+    console.log(`🎯 Intents ativos: ${client.options.intents}`);
+    
+    console.log('\n� Lista de servidores:');
+    client.guilds.cache.forEach(guild => {
+        console.log(`   • ${guild.name} (${guild.id}) - ${guild.memberCount} membros`);
+    });
     
     // Verificar servidor específico
     const targetGuild = client.guilds.cache.get('1408499417945866430');
     if (targetGuild) {
-        console.log(`✅ Conectado ao servidor alvo: ${targetGuild.name}`);
+        console.log(`\n✅ Conectado ao servidor alvo: ${targetGuild.name}`);
         console.log(`👥 Membros: ${targetGuild.memberCount}`);
         
         // Verificar canais
@@ -558,7 +675,7 @@ client.on('ready', () => {
         console.log(`👑 Role dono: ${ownerRole ? ownerRole.name : 'NÃO ENCONTRADO'}`);
         console.log(`👨‍💼 Role semi-dono: ${semiOwnerRole ? semiOwnerRole.name : 'NÃO ENCONTRADO'}`);
     } else {
-        console.log(`❌ NÃO CONECTADO ao servidor alvo (ID: 1408499417945866430)`);
+        console.log(`\n❌ NÃO CONECTADO ao servidor alvo (ID: 1408499417945866430)`);
         console.log('Servidores disponíveis:', client.guilds.cache.map(g => `${g.name} (${g.id})`).join(', '));
     }
 });
