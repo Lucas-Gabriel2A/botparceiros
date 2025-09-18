@@ -86,6 +86,7 @@ function saveConfig() {
 
 // Função para renderizar texto com quebra automática
 function renderText(ctx, text, x, y, maxWidth, lineHeight = 70) {
+    console.log(`📝 renderText chamado com texto: "${text}"`);
     const words = text.split(' ');
     let line = '';
     let lines = [];
@@ -110,6 +111,8 @@ function renderText(ctx, text, x, y, maxWidth, lineHeight = 70) {
         lines = lines.slice(0, 3);
         lines[2] = lines[2].substring(0, maxCharsPerLine - 3) + '...';
     }
+
+    console.log(`📝 Linhas a renderizar:`, lines);
 
     // Renderizar cada linha
     lines.forEach((lineText, index) => {
@@ -188,7 +191,9 @@ function hasPermission(member) {
 
 // Função para gerar banner (completo com avatar)
 async function generateBanner(member, text, isWelcome = true) {
-    console.log(`🎨 generateBanner iniciada para ${member.user.username}`);
+    const username = member.user?.username || member.displayName || 'Unknown';
+    console.log(`🎨 generateBanner iniciada para ${username}`);
+    console.log(`📝 Texto original recebido: "${text}"`);
 
     let canvas, ctx;
     try {
@@ -231,8 +236,12 @@ async function generateBanner(member, text, isWelcome = true) {
 
     // Avatar circular
     try {
-        const avatarURL = member.user.displayAvatarURL({ format: 'png', size: 128, dynamic: false });
-        console.log(`Carregando avatar: ${avatarURL}`);
+        const avatarURL = member.user?.displayAvatarURL({ format: 'png', size: 128, dynamic: false });
+        console.log(`🖼️ Tentando carregar avatar: ${avatarURL}`);
+
+        if (!avatarURL) {
+            throw new Error('Avatar URL não disponível');
+        }
 
         // Adicionar timeout para carregamento do avatar
         const avatarPromise = loadImage(avatarURL);
@@ -241,7 +250,7 @@ async function generateBanner(member, text, isWelcome = true) {
         );
 
         const avatar = await Promise.race([avatarPromise, timeoutPromise]);
-        console.log('Avatar carregado com sucesso');
+        console.log('✅ Avatar carregado com sucesso');
 
         ctx.save();
         ctx.beginPath();
@@ -251,7 +260,7 @@ async function generateBanner(member, text, isWelcome = true) {
         ctx.drawImage(avatar, 336, 86, 128, 128);
         ctx.restore();
     } catch (error) {
-        console.log('Erro ao carregar avatar, usando placeholder épico:', error.message);
+        console.log('❌ Erro ao carregar avatar, usando placeholder épico:', error.message);
         // Desenhar placeholder épico se avatar falhar
         ctx.save();
 
@@ -279,11 +288,11 @@ async function generateBanner(member, text, isWelcome = true) {
 
         // Sombra da letra
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillText(member.user.username.charAt(0).toUpperCase(), 402, 152);
+        ctx.fillText(username.charAt(0).toUpperCase(), 402, 152);
 
         // Letra principal
         ctx.fillStyle = '#ffffff';
-        ctx.fillText(member.user.username.charAt(0).toUpperCase(), 400, 150);
+        ctx.fillText(username.charAt(0).toUpperCase(), 400, 150);
 
         ctx.restore();
     }
@@ -296,7 +305,9 @@ async function generateBanner(member, text, isWelcome = true) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    const displayText = text.replace('[username]', member.user.username);
+    const displayText = text.replace('[username]', username);
+    console.log(`📝 Texto após substituição: "${displayText}"`);
+    console.log(`👤 Username do membro: "${username}"`);
 
     // Renderizar texto principal com quebra automática
     const linesUsed = renderText(ctx, displayText, 400, 280, 700, 60);
@@ -338,7 +349,8 @@ async function generateBanner(member, text, isWelcome = true) {
 
 // Função para gerar banner rápido (sempre usa placeholder)
 async function generateBannerFast(member, text, isWelcome = true) {
-    console.log(`🎨 generateBannerFast iniciada para ${member.user.username}`);
+    const username = member.user?.username || member.displayName || 'Unknown';
+    console.log(`🎨 generateBannerFast iniciada para ${username}`);
 
     let canvas, ctx;
     try {
@@ -396,10 +408,10 @@ async function generateBannerFast(member, text, isWelcome = true) {
     ctx.textBaseline = 'middle';
 
     ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    ctx.fillText(member.user.username.charAt(0).toUpperCase(), 402, 152);
+    ctx.fillText(username.charAt(0).toUpperCase(), 402, 152);
 
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(member.user.username.charAt(0).toUpperCase(), 400, 150);
+    ctx.fillText(username.charAt(0).toUpperCase(), 400, 150);
 
     ctx.restore();
 
@@ -411,7 +423,7 @@ async function generateBannerFast(member, text, isWelcome = true) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    const displayText = text.replace('[username]', member.user.username);
+    const displayText = text.replace('[username]', username);
     const linesUsed = renderText(ctx, displayText, 400, 280, 700, 60);
 
     // Texto secundário
@@ -477,12 +489,13 @@ client.on('guildMemberAdd', async (member) => {
     }
 
     try {
-        console.log(`🎨 Gerando banner para ${member.user.username}...`);
+        console.log(`🎨 Gerando banner para ${member.user?.username || member.displayName || 'Unknown'}...`);
         const config = getConfig(member.guild.id);
+        console.log(`📝 Texto welcome configurado: "${config.welcomeText}"`);
         const buffer = await generateBanner(member, config.welcomeText, true);
         const attachment = new AttachmentBuilder(buffer, { name: 'welcome.png' });
         await channel.send({ files: [attachment] });
-        console.log(`✅ Welcome enviado com sucesso para ${member.user.username} no canal ${channel.name}`);
+        console.log(`✅ Welcome enviado com sucesso para ${member.user?.username || member.displayName || 'Unknown'} no canal ${channel.name}`);
     } catch (error) {
         console.error("❌ Erro ao enviar welcome:", error);
         console.error("Stack:", error.stack);
@@ -492,7 +505,7 @@ client.on('guildMemberAdd', async (member) => {
 // Eventos de Welcome/Leave (SISTEMA AUTOMÁTICO - Categoria Galáxia)
 client.on('guildMemberRemove', async (member) => {
     console.log(`👋 EVENTO guildMemberRemove DISPARADO (LEAVE AUTOMÁTICO):`);
-    console.log(`   👤 Usuário: ${member.user.username} (${member.user.id})`);
+    console.log(`   👤 Usuário: ${member.user?.username || member.displayName || 'Unknown'} (${member.user?.id || member.id})`);
     console.log(`   🏠 Servidor: ${member.guild.name} (${member.guild.id})`);
     console.log(`   💡 Sistema: LEAVE (categoria Galáxia)`);
     
@@ -526,7 +539,7 @@ client.on('guildMemberRemove', async (member) => {
         const buffer = await generateBanner(member, config.leaveText, false);
         const attachment = new AttachmentBuilder(buffer, { name: 'leave.png' });
         await channel.send({ files: [attachment] });
-        console.log(`✅ Leave enviado para ${member.user.username}`);
+        console.log(`✅ Leave enviado para ${member.user?.username || member.displayName || 'Unknown'}`);
     } catch (error) {
         console.error("❌ Erro ao enviar leave:", error);
     }
