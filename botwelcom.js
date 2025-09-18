@@ -996,7 +996,7 @@ process.on('uncaughtException', (error) => {
 
 const express = require('express');
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8000;
 
 // Servidor Express para healthcheck da Railway
 app.get('/', (req, res) => {
