@@ -412,131 +412,239 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
     }
 })();
 
-// Função helper para responder interações com tratamento de erro
+// Função helper para responder interações com tratamento de erro CORRIGIDA
 async function safeReply(interaction, options) {
     try {
-        if (interaction.replied || interaction.deferred) {
+        // Verificar se a interação já foi respondida ou está expirada
+        if (interaction.replied) {
+            console.log('Interação já foi respondida, usando followUp...');
             return await interaction.followUp(options);
         }
-        return await interaction.reply(options);
-    } catch (error) {
-        if (error.code === 10062) {
-            console.log('Interação expirada, ignorando...');
+        
+        if (interaction.deferred) {
+            console.log('Interação foi deferida, usando editReply...');
+            return await interaction.editReply(options);
+        }
+        
+        // Verificar se a interação não expirou (3 segundos de margem)
+        const now = Date.now();
+        const interactionTime = interaction.createdTimestamp;
+        const timeElapsed = now - interactionTime;
+        
+        if (timeElapsed > 2700000) { // 45 minutos em ms (margem de segurança)
+            console.log(`Interação expirada (${timeElapsed}ms), não respondendo`);
             return null;
         }
+        
+        console.log('Respondendo interação normalmente...');
+        return await interaction.reply(options);
+        
+    } catch (error) {
+        if (error.code === 10062) {
+            console.log('Interação expirou durante a resposta, ignorando...');
+            return null;
+        }
+        if (error.code === 40060) {
+            console.log('Interação já foi reconhecida, tentando followUp...');
+            try {
+                return await interaction.followUp(options);
+            } catch (followUpError) {
+                console.log('Erro no followUp também, ignorando...', followUpError.message);
+                return null;
+            }
+        }
+        console.error('Erro não tratado em safeReply:', error);
         throw error;
     }
 }
 
-// Interação
+// COMANDO SLASH CORRIGIDO - Substitua o handler do comando /config-welcome
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
 
     if (interaction.commandName === 'config-welcome') {
+        console.log(`⚡ Comando /config-welcome usado por ${interaction.user.username}`);
+        
+        // Verificar permissões
         if (!hasPermission(interaction.member)) {
-            return await safeReply(interaction, { content: 'Você não tem permissão para usar este comando.', flags: MessageFlags.Ephemeral });
+            return await safeReply(interaction, { 
+                content: '❌ Você não tem permissão para usar este comando.', 
+                flags: MessageFlags.Ephemeral 
+            });
         }
 
         // Verificar se está na categoria correta
         if (interaction.channel.parentId !== CATEGORY_ID) {
-            return await safeReply(interaction, { content: 'Este comando só pode ser usado na categoria específica.', flags: MessageFlags.Ephemeral });
+            return await safeReply(interaction, { 
+                content: '❌ Este comando só pode ser usado na categoria específica.', 
+                flags: MessageFlags.Ephemeral 
+            });
         }
 
-        const config = getConfig(interaction.guild.id);
-        const row = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('edit_welcome_text')
-                    .setLabel('Editar Texto Welcome')
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                    .setCustomId('edit_leave_text')
-                    .setLabel('Editar Texto Leave')
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                    .setCustomId('upload_background')
-                    .setLabel('Upload Background')
-                    .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                    .setCustomId('preview')
-                    .setLabel('Preview')
-                    .setStyle(ButtonStyle.Success),
-            );
+        try {
+            const config = getConfig(interaction.guild.id);
+            
+            const row = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('edit_welcome_text')
+                        .setLabel('Editar Texto Welcome')
+                        .setStyle(ButtonStyle.Primary)
+                        .setEmoji('📝'),
+                    new ButtonBuilder()
+                        .setCustomId('edit_leave_text')
+                        .setLabel('Editar Texto Leave')
+                        .setStyle(ButtonStyle.Primary)
+                        .setEmoji('👋'),
+                    new ButtonBuilder()
+                        .setCustomId('upload_background')
+                        .setLabel('Upload Background')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setEmoji('📸'),
+                    new ButtonBuilder()
+                        .setCustomId('preview')
+                        .setLabel('Preview')
+                        .setStyle(ButtonStyle.Success)
+                        .setEmoji('🔍'),
+                );
 
-        await safeReply(interaction, { content: 'Selecione uma opção:', components: [row], flags: MessageFlags.Ephemeral });
+            await safeReply(interaction, { 
+                content: '⚙️ **Configuração de Welcome/Leave**\n\nSelecione uma opção abaixo:', 
+                components: [row], 
+                flags: MessageFlags.Ephemeral 
+            });
+            
+            console.log('✅ Menu de configuração enviado');
+            
+        } catch (error) {
+            console.error('❌ Erro no comando config-welcome:', error);
+            await safeReply(interaction, { 
+                content: '❌ Erro ao exibir menu de configuração.', 
+                flags: MessageFlags.Ephemeral 
+            });
+        }
     }
 });
 
-// Botões
+// HANDLER DE BOTÕES CORRIGIDO - Substitua o handler de botões existente
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
 
-    if (!hasPermission(interaction.member)) return;
+    console.log(`🔘 Botão pressionado: ${interaction.customId} por ${interaction.user.username}`);
 
-    if (interaction.customId === 'edit_welcome_text') {
-        const config = getConfig(interaction.guild.id);
-        const modal = new ModalBuilder()
-            .setCustomId('welcome_text_modal')
-            .setTitle('Editar Texto Welcome')
-            .addComponents(
-                new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId('welcome_text')
-                        .setLabel('Texto Welcome')
-                        .setStyle(TextInputStyle.Short)
-                        .setValue(config.welcomeText)
-                        .setRequired(true),
-                ),
-            );
-
-        try {
-            await interaction.showModal(modal);
-        } catch (error) {
-            if (error.code === 10062) {
-                console.log('⚠️ Interação expirada - ignorando');
-            } else {
-                console.error('Erro ao mostrar modal:', error);
-            }
-        }
-    } else if (interaction.customId === 'edit_leave_text') {
-        const config = getConfig(interaction.guild.id);
-        const modal = new ModalBuilder()
-            .setCustomId('leave_text_modal')
-            .setTitle('Editar Texto Leave')
-            .addComponents(
-                new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId('leave_text')
-                        .setLabel('Texto Leave')
-                        .setStyle(TextInputStyle.Short)
-                        .setValue(config.leaveText)
-                        .setRequired(true),
-                ),
-            );
-
-        try {
-            await interaction.showModal(modal);
-        } catch (error) {
-            if (error.code === 10062) {
-                console.log('⚠️ Interação expirada - ignorando');
-            } else {
-                console.error('Erro ao mostrar modal:', error);
-            }
-        }
-    } else if (interaction.customId === 'upload_background') {
-        await safeReply(interaction, { 
-            content: '📸 **Para fazer upload do background:**\n\nEnvie uma mensagem separada neste canal com a imagem anexada (PNG ou JPG, máximo 5MB).\n\nO bot irá detectar automaticamente e salvar como background.', 
+    // Verificar permissões
+    if (!hasPermission(interaction.member)) {
+        console.log('❌ Usuário sem permissão');
+        return await safeReply(interaction, { 
+            content: '❌ Você não tem permissão para usar este comando.', 
             flags: MessageFlags.Ephemeral 
         });
-    } else if (interaction.customId === 'preview') {
-        const config = getConfig(interaction.guild.id);
-        const buffer = await generateBanner(interaction.member, config.welcomeText, true);
-        const attachment = new AttachmentBuilder(buffer, { name: 'preview.png' });
-        await safeReply(interaction, { files: [attachment], flags: MessageFlags.Ephemeral });
     }
-});
 
-// Modais
+    // Verificar se está na categoria correta
+    if (interaction.channel.parentId !== CATEGORY_ID) {
+        console.log('❌ Canal incorreto');
+        return await safeReply(interaction, { 
+            content: '❌ Este comando só pode ser usado na categoria específica.', 
+            flags: MessageFlags.Ephemeral 
+        });
+    }
+
+    try {
+        if (interaction.customId === 'edit_welcome_text') {
+            console.log('📝 Abrindo modal de welcome text...');
+            
+            const config = getConfig(interaction.guild.id);
+            const modal = new ModalBuilder()
+                .setCustomId('welcome_text_modal')
+                .setTitle('Editar Texto Welcome')
+                .addComponents(
+                    new ActionRowBuilder().addComponents(
+                        new TextInputBuilder()
+                            .setCustomId('welcome_text')
+                            .setLabel('Texto Welcome')
+                            .setStyle(TextInputStyle.Short)
+                            .setValue(config.welcomeText)
+                            .setRequired(true),
+                ),
+            );
+
+            await interaction.showModal(modal);
+            console.log('✅ Modal de welcome exibido');
+            
+        } else if (interaction.customId === 'edit_leave_text') {
+            console.log('📝 Abrindo modal de leave text...');
+            
+            const config = getConfig(interaction.guild.id);
+            const modal = new ModalBuilder()
+                .setCustomId('leave_text_modal')
+                .setTitle('Editar Texto Leave')
+                .addComponents(
+                    new ActionRowBuilder().addComponents(
+                        new TextInputBuilder()
+                            .setCustomId('leave_text')
+                            .setLabel('Texto Leave')
+                            .setStyle(TextInputStyle.Short)
+                            .setValue(config.leaveText)
+                            .setRequired(true),
+                ),
+            );
+
+            await interaction.showModal(modal);
+            console.log('✅ Modal de leave exibido');
+            
+        } else if (interaction.customId === 'upload_background') {
+            console.log('📸 Exibindo instruções de upload...');
+            
+            await safeReply(interaction, { 
+                content: '📸 **Para fazer upload do background:**\n\nEnvie uma mensagem separada neste canal com a imagem anexada (PNG ou JPG, máximo 5MB).\n\nO bot irá detectar automaticamente e salvar como background.\n\n✨ **Dicas:**\n• Use imagens em alta resolução (recomendado: 800x600 ou maior)\n• Formatos aceitos: PNG, JPG, JPEG\n• Evite GIFs animados ou WebP', 
+                flags: MessageFlags.Ephemeral 
+            });
+            console.log('✅ Instruções de upload enviadas');
+            
+        } else if (interaction.customId === 'preview') {
+            console.log('🔍 Gerando preview...');
+            
+            // Defer a resposta para ter mais tempo
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            
+            try {
+                const config = getConfig(interaction.guild.id);
+                console.log('📊 Config atual:', config);
+                
+                const buffer = await generateBanner(interaction.member, config.welcomeText, true);
+                const attachment = new AttachmentBuilder(buffer, { name: 'preview.png' });
+                
+                await interaction.editReply({ 
+                    content: '🔍 **Preview do banner atual:**', 
+                    files: [attachment] 
+                });
+                console.log('✅ Preview enviado com sucesso');
+                
+            } catch (previewError) {
+                console.error('❌ Erro ao gerar preview:', previewError);
+                await interaction.editReply({ 
+                    content: '❌ Erro ao gerar preview. Verifique os logs para mais detalhes.' 
+                });
+            }
+        }
+        
+    } catch (error) {
+        console.error(`❌ Erro no handler de botão ${interaction.customId}:`, error);
+        
+        // Tentar responder com erro se ainda não respondeu
+        if (!interaction.replied && !interaction.deferred) {
+            try {
+                await safeReply(interaction, { 
+                    content: '❌ Ocorreu um erro interno. Tente novamente.', 
+                    flags: MessageFlags.Ephemeral 
+                });
+            } catch (replyError) {
+                console.error('❌ Erro ao enviar mensagem de erro:', replyError);
+            }
+        }
+    }
+});// Modais
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isModalSubmit()) return;
 
@@ -751,6 +859,17 @@ client.on('messageCreate', async (message) => {
             await message.reply(errorMessage);
         }
     }
+});
+
+// ADICIONAR HANDLER DE ERRO GLOBAL (adicione no final do arquivo, antes do login)
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason);
+    // Não fazer process.exit() para manter o bot rodando
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('🚨 Uncaught Exception:', error);
+    // Não fazer process.exit() para manter o bot rodando
 });
 
 // Login
