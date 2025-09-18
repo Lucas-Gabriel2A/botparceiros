@@ -304,9 +304,12 @@ async function generateBanner(member, text, isWelcome = true) {
     return buffer;
 }
 
-// Eventos
+// Eventos de Welcome/Leave (SISTEMA AUTOMÁTICO - Categoria Galáxia)
 client.on('guildMemberAdd', async (member) => {
-    console.log(`🔥 EVENTO guildMemberAdd DISPARADO para ${member.user.username} no servidor ${member.guild.name} (${member.guild.id})`);
+    console.log(`🔥 EVENTO guildMemberAdd DISPARADO (WELCOME AUTOMÁTICO):`);
+    console.log(`   👤 Usuário: ${member.user.username} (${member.user.id})`);
+    console.log(`   🏠 Servidor: ${member.guild.name} (${member.guild.id})`);
+    console.log(`   💡 Sistema: WELCOME (categoria Galáxia)`);
     
     if (!WELCOME_CHANNEL_ID) {
         console.error("❌ WELCOME_CHANNEL_ID não configurado - pulando welcome");
@@ -347,8 +350,12 @@ client.on('guildMemberAdd', async (member) => {
     }
 });
 
+// Eventos de Welcome/Leave (SISTEMA AUTOMÁTICO - Categoria Galáxia)
 client.on('guildMemberRemove', async (member) => {
-    console.log(`Membro saiu: ${member.user.username} do servidor ${member.guild.id}`);
+    console.log(`👋 EVENTO guildMemberRemove DISPARADO (LEAVE AUTOMÁTICO):`);
+    console.log(`   👤 Usuário: ${member.user.username} (${member.user.id})`);
+    console.log(`   🏠 Servidor: ${member.guild.name} (${member.guild.id})`);
+    console.log(`   💡 Sistema: LEAVE (categoria Galáxia)`);
     
     if (!LEAVE_CHANNEL_ID) {
         console.error("❌ LEAVE_CHANNEL_ID não configurado - pulando leave");
@@ -537,9 +544,9 @@ client.on('interactionCreate', async (interaction) => {
     // Removido: não há mais select menus configuráveis
 });
 
-// Mensagens para upload
+// Mensagens para configuração (upload de backgrounds nos canais de entrada/saída)
 client.on('messageCreate', async (message) => {
-    console.log(`� NOVA MENSAGEM DETECTADA:`);
+    console.log(`📝 NOVA MENSAGEM DETECTADA (CONFIGURAÇÃO):`);
     console.log(`   👤 Usuário: ${message.author.username} (${message.author.id})`);
     console.log(`   📍 Canal: ${message.channel.name} (${message.channel.id})`);
     console.log(`   📁 Parent ID: ${message.channel.parentId}`);
@@ -556,15 +563,19 @@ client.on('messageCreate', async (message) => {
         return;
     }
     
-    // Verificar se está na categoria correta
-    if (message.channel.parentId !== CATEGORY_ID) {
-        console.log(`   📁 Canal NÃO está na categoria correta (${message.channel.parentId} !== ${CATEGORY_ID}) - IGNORANDO`);
+    // Verificar se está na categoria Galáxia E é um dos canais de entrada/saída
+    const isWelcomeChannel = message.channel.id === WELCOME_CHANNEL_ID;
+    const isLeaveChannel = message.channel.id === LEAVE_CHANNEL_ID;
+    
+    if (message.channel.parentId !== CATEGORY_ID || (!isWelcomeChannel && !isLeaveChannel)) {
+        console.log(`   📁 Canal não é Portal de Entrada/Saída na categoria Galáxia - IGNORANDO`);
         return;
     }
     
-    console.log(`   📁 Canal está na categoria correta - CONTINUANDO`);
+    console.log(`   📁 Canal válido para configuração - CONTINUANDO`);
     
-    console.log(`   🔐 Verificando permissões para ${message.member.displayName}...`);
+    console.log(`   🔐 Verificando permissões do USUÁRIO para ${message.member.displayName}...`);
+    console.log(`   💡 Sistema: CONFIGURAÇÃO (upload de backgrounds)`);
     const hasPerm = hasPermission(message.member);
     console.log(`   🔐 Permissão: ${hasPerm ? 'SIM' : 'NÃO'}`);
     
@@ -659,14 +670,16 @@ client.on('ready', () => {
         console.log(`\n✅ Conectado ao servidor alvo: ${targetGuild.name}`);
         console.log(`👥 Membros: ${targetGuild.memberCount}`);
         
+        // Verificar categoria Galáxia
+        const galaxiaCategory = targetGuild.channels.cache.get(CATEGORY_ID);
+        console.log(`🌌 Categoria Galáxia: ${galaxiaCategory ? galaxiaCategory.name : 'NÃO ENCONTRADA'}`);
+        
         // Verificar canais
         const welcomeChannel = targetGuild.channels.cache.get(WELCOME_CHANNEL_ID);
         const leaveChannel = targetGuild.channels.cache.get(LEAVE_CHANNEL_ID);
-        const category = targetGuild.channels.cache.get(CATEGORY_ID);
         
-        console.log(`📺 Canal welcome: ${welcomeChannel ? welcomeChannel.name : 'NÃO ENCONTRADO'}`);
-        console.log(`👋 Canal leave: ${leaveChannel ? leaveChannel.name : 'NÃO ENCONTRADO'}`);
-        console.log(`📁 Categoria: ${category ? category.name : 'NÃO ENCONTRADA'}`);
+        console.log(`📺 Portal de Entrada: ${welcomeChannel ? welcomeChannel.name : 'NÃO ENCONTRADO'}`);
+        console.log(`👋 Portal de Saída: ${leaveChannel ? leaveChannel.name : 'NÃO ENCONTRADO'}`);
         
         // Verificar roles
         const ownerRole = targetGuild.roles.cache.get(OWNER_ROLE_ID);
