@@ -487,7 +487,15 @@ client.on('interactionCreate', async (interaction) => {
                 ),
             );
 
-        await interaction.showModal(modal);
+        try {
+            await interaction.showModal(modal);
+        } catch (error) {
+            if (error.code === 10062) {
+                console.log('⚠️ Interação expirada - ignorando');
+            } else {
+                console.error('Erro ao mostrar modal:', error);
+            }
+        }
     } else if (interaction.customId === 'edit_leave_text') {
         const config = getConfig(interaction.guild.id);
         const modal = new ModalBuilder()
@@ -504,7 +512,15 @@ client.on('interactionCreate', async (interaction) => {
                 ),
             );
 
-        await interaction.showModal(modal);
+        try {
+            await interaction.showModal(modal);
+        } catch (error) {
+            if (error.code === 10062) {
+                console.log('⚠️ Interação expirada - ignorando');
+            } else {
+                console.error('Erro ao mostrar modal:', error);
+            }
+        }
     } else if (interaction.customId === 'upload_background') {
         await safeReply(interaction, { 
             content: '📸 **Para fazer upload do background:**\n\nEnvie uma mensagem separada neste canal com a imagem anexada (PNG ou JPG, máximo 5MB).\n\nO bot irá detectar automaticamente e salvar como background.', 
