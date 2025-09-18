@@ -69,6 +69,57 @@ const client = new Client({
   ],
 });
 
+// Função para dividir mensagens longas em partes menores
+function splitMessage(content, maxLength = 2000) {
+  if (content.length <= maxLength) {
+    return [content];
+  }
+
+  const parts = [];
+  let currentPart = '';
+
+  // Divide por linhas para manter formatação
+  const lines = content.split('\n');
+
+  for (const line of lines) {
+    if ((currentPart + line + '\n').length > maxLength) {
+      if (currentPart.trim()) {
+        parts.push(currentPart.trim());
+        currentPart = line + '\n';
+      } else {
+        // Se uma linha é muito longa, corta no meio
+        const words = line.split(' ');
+        let tempLine = '';
+        for (const word of words) {
+          if ((tempLine + word + ' ').length > maxLength) {
+            if (tempLine.trim()) {
+              parts.push(tempLine.trim());
+              tempLine = word + ' ';
+            } else {
+              // Palavra muito longa, corta
+              parts.push(word.substring(0, maxLength - 3) + '...');
+              tempLine = '';
+            }
+          } else {
+            tempLine += word + ' ';
+          }
+        }
+        if (tempLine.trim()) {
+          currentPart = tempLine.trim() + '\n';
+        }
+      }
+    } else {
+      currentPart += line + '\n';
+    }
+  }
+
+  if (currentPart.trim()) {
+    parts.push(currentPart.trim());
+  }
+
+  return parts;
+}
+
 // Armazena os tickets ativos: Map<channelId, {userId, type, created}>
 const activeTickets = new Map();
 
@@ -209,7 +260,7 @@ client.on("interactionCreate", async (interaction) => {
       if (!isStaff) {
         return interaction.reply({
           content: "❌ Apenas membros da staff podem usar este comando.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -235,7 +286,7 @@ client.on("interactionCreate", async (interaction) => {
       if (!isStaff) {
         return interaction.reply({
           content: "❌ Apenas membros da staff podem fechar tickets.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -243,7 +294,7 @@ client.on("interactionCreate", async (interaction) => {
       if (!activeTickets.has(channel.id)) {
         return interaction.reply({
           content: "❌ Este não é um canal de ticket.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -270,7 +321,7 @@ client.on("interactionCreate", async (interaction) => {
       if (!isStaff) {
         return interaction.reply({
           content: "❌ Apenas membros da staff podem adicionar usuários.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -278,7 +329,7 @@ client.on("interactionCreate", async (interaction) => {
       if (!activeTickets.has(channel.id)) {
         return interaction.reply({
           content: "❌ Este não é um canal de ticket.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -298,14 +349,14 @@ client.on("interactionCreate", async (interaction) => {
         console.error("Erro ao adicionar usuário:", error);
         await interaction.reply({
           content: "❌ Erro ao adicionar usuário ao ticket.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
     } else if (commandName === "remover") {
       if (!isStaff) {
         return interaction.reply({
           content: "❌ Apenas membros da staff podem remover usuários.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -313,7 +364,7 @@ client.on("interactionCreate", async (interaction) => {
       if (!activeTickets.has(channel.id)) {
         return interaction.reply({
           content: "❌ Este não é um canal de ticket.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -323,7 +374,7 @@ client.on("interactionCreate", async (interaction) => {
       if (user.id === ticketData.userId) {
         return interaction.reply({
           content: "❌ Não é possível remover o criador do ticket.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -336,14 +387,14 @@ client.on("interactionCreate", async (interaction) => {
         console.error("Erro ao remover usuário:", error);
         await interaction.reply({
           content: "❌ Erro ao remover usuário do ticket.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
     } else if (commandName === "info-parceria") {
       if (!isStaff) {
         return interaction.reply({
           content: "❌ Apenas membros da staff podem usar este comando.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -351,7 +402,7 @@ client.on("interactionCreate", async (interaction) => {
       if (!activeTickets.has(channel.id)) {
         return interaction.reply({
           content: "❌ Este não é um canal de ticket.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -359,14 +410,14 @@ client.on("interactionCreate", async (interaction) => {
       if (ticketData.type !== "parceria") {
         return interaction.reply({
           content: "❌ Este não é um ticket de parceria.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
       if (!ticketData.formCompleted) {
         return interaction.reply({
           content: "⚠️ O formulário de parceria ainda não foi completado.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -407,7 +458,7 @@ client.on("interactionCreate", async (interaction) => {
         .setFooter({ text: "Informações para análise da staff" })
         .setTimestamp();
 
-      await interaction.reply({ embeds: [infoEmbed], ephemeral: true });
+      await interaction.reply({ embeds: [infoEmbed], flags: MessageFlags.Ephemeral });
     }
   }
 
@@ -426,7 +477,7 @@ client.on("interactionCreate", async (interaction) => {
         );
         return interaction.reply({
           content: `❌ Você já possui um ticket aberto: ${ticketChannel}`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -447,13 +498,13 @@ client.on("interactionCreate", async (interaction) => {
       await interaction.reply({
         content: "🎫 **Selecione o tipo do seu ticket:**",
         components: [row],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     } else if (interaction.customId === "ticket_type_select") {
       const ticketType = interaction.values[0];
       const typeInfo = ticketTypes[ticketType];
 
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       try {
         const guild = interaction.guild;
@@ -575,7 +626,7 @@ client.on("interactionCreate", async (interaction) => {
       if (!activeTickets.has(channel.id)) {
         return interaction.reply({
           content: "❌ Este não é um canal de ticket válido.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -587,7 +638,7 @@ client.on("interactionCreate", async (interaction) => {
         return interaction.reply({
           content:
             "❌ Apenas o criador do ticket ou a staff podem fechar este ticket.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -613,7 +664,7 @@ client.on("interactionCreate", async (interaction) => {
       if (!activeTickets.has(channel.id)) {
         return interaction.reply({
           content: "❌ Este não é um canal de ticket válido.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -621,7 +672,7 @@ client.on("interactionCreate", async (interaction) => {
       if (ticketData.userId !== interaction.user.id) {
         return interaction.reply({
           content: "❌ Apenas o criador do ticket pode preencher o formulário.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -648,7 +699,7 @@ client.on("interactionCreate", async (interaction) => {
       if (!isStaff) {
         return interaction.reply({
           content: "❌ Apenas membros da staff podem aprovar parcerias.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -681,14 +732,14 @@ client.on("interactionCreate", async (interaction) => {
       await interaction.reply({
         embeds: [disclosureWarningEmbed],
         components: [confirmButtons],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     } else if (interaction.customId === "reject_partnership") {
       const isStaff = interaction.member.roles.cache.has(ID_CARGO_STAFF);
       if (!isStaff) {
         return interaction.reply({
           content: "❌ Apenas membros da staff podem rejeitar parcerias.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -723,7 +774,7 @@ client.on("interactionCreate", async (interaction) => {
       if (!isStaff) {
         return interaction.reply({
           content: "❌ Apenas membros da staff podem executar esta ação.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -751,19 +802,19 @@ client.on("interactionCreate", async (interaction) => {
       await interaction.reply({
         content:
           "✅ Instruções enviadas ao parceiro. Aguardando print comprovante.",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     } else if (interaction.customId === "cancel_approval") {
       await interaction.reply({
         content: "❌ Aprovação cancelada.",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     } else if (interaction.customId === "final_approve_partnership") {
       const isStaff = interaction.member.roles.cache.has(ID_CARGO_STAFF);
       if (!isStaff) {
         return interaction.reply({
           content: "❌ Apenas membros da staff podem aprovar parcerias.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -773,7 +824,7 @@ client.on("interactionCreate", async (interaction) => {
       if (!ticketData.proofReceived) {
         return interaction.reply({
           content: "❌ Print comprovante ainda não foi recebido.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -872,10 +923,19 @@ client.on("interactionCreate", async (interaction) => {
                 .setColor("#2F3136");
               announcementEmbeds.push(bannerEmbed);
             }
-            await announcementChannel.send({
-              content: announcementContent,
-              embeds: announcementEmbeds,
-            });
+            // Divide o anúncio em partes se for muito longo
+            const messageParts = splitMessage(announcementContent);
+
+            // Envia cada parte da mensagem
+            for (let i = 0; i < messageParts.length; i++) {
+              const isFirstMessage = i === 0;
+              const isLastMessage = i === messageParts.length - 1;
+
+              await announcementChannel.send({
+                content: messageParts[i],
+                embeds: isLastMessage ? announcementEmbeds : [], // Só adiciona embeds na última mensagem
+              });
+            }
 
             console.log(`✅ Anúncio de parceria publicado para: ${serverName}`);
           } else {
@@ -900,7 +960,7 @@ client.on("interactionCreate", async (interaction) => {
       if (!isStaff) {
         return interaction.reply({
           content: "❌ Apenas membros da staff podem rejeitar prints.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
