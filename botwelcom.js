@@ -7,6 +7,8 @@ const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ActionRowB
 const { createCanvas, loadImage, registerFont } = require('canvas');
 const fs = require('fs-extra');
 const path = require('path');
+const https = require('https');
+const url = require('url');
 
 // Configurações
 const TOKEN = process.env.DISCORD_TOKENS;
@@ -608,6 +610,19 @@ client.on('messageCreate', async (message) => {
     console.log('   🖼️ INICIANDO PROCESSAMENTO DO ANEXO...');
     // Processar cada anexo (pode haver múltiplos)
     for (const attachment of message.attachments.values()) {
+        // Verificar se é imagem
+        if (!attachment.contentType || !attachment.contentType.startsWith('image/')) {
+            await message.reply('❌ Apenas imagens são aceitas como background!');
+            continue;
+        }
+
+        // Verificar formato suportado
+        const supportedFormats = ['image/png', 'image/jpeg', 'image/jpg'];
+        if (!supportedFormats.includes(attachment.contentType.toLowerCase())) {
+            await message.reply(`❌ Formato não suportado (${attachment.contentType}). Use PNG ou JPEG.`);
+            continue;
+        }
+
         // Verificar tamanho (5MB = 5 * 1024 * 1024 bytes)
         const maxSize = 5 * 1024 * 1024; // 5MB
         if (attachment.size > maxSize) {
@@ -616,53 +631,95 @@ client.on('messageCreate', async (message) => {
         }
 
         const filePath = path.join(backgroundsPath, `background_${message.guild.id}.png`);
+        
         try {
             console.log(`Baixando background: ${attachment.url} (${attachment.size} bytes)`);
             
-            // Timeout de 30 segundos para o download
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000);
-            
-            const response = await fetch(attachment.url, {
-                signal: controller.signal,
-                headers: {
-                    'User-Agent': 'DiscordBot/1.0'
-                }
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
+            // MÉTODO HTTPS: Substitui fetch problemático
+            const downloadWithHttps = () => {
+                return new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        reject(new Error('Timeout de 60 segundos'));
+                    }, 60000); // 60 segundos
+                    
+                    const parsedUrl = url.parse(attachment.url);
+                    const options = {
+                        hostname: parsedUrl.hostname,
+                        port: parsedUrl.port || 443,
+                        path: parsedUrl.path,
+                        method: 'GET',
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                            'Accept': 'image/*,*/*;q=0.8',
+                            'Accept-Encoding': 'identity'
+                        },
+                        timeout: 30000
+                    };
+                    
+                    const req = https.request(options, (res) => {
+                        if (res.statusCode !== 200) {
+                            clearTimeout(timeout);
+                            return reject(new Error(`HTTP ${res.statusCode}: ${res.statusMessage}`));
+                        }
+                        
+                        const chunks = [];
+                        let totalLength = 0;
+                        
+                        res.on('data', (chunk) => {
+                            chunks.push(chunk);
+                            totalLength += chunk.length;
+                            console.log(`📥 Baixado: ${totalLength}/${attachment.size} bytes (${Math.round(totalLength/attachment.size*100)}%)`);
+                        });
+                        
+                        res.on('end', () => {
+                            clearTimeout(timeout);
+                            const buffer = Buffer.concat(chunks);
+                            console.log(`✅ Download concluído: ${buffer.length} bytes`);
+                            resolve(buffer);
+                        });
+                        
+                        res.on('error', (err) => {
+                            clearTimeout(timeout);
+                            reject(err);
+                        });
+                    });
+                    
+                    req.on('error', (err) => {
+                        clearTimeout(timeout);
+                        reject(err);
+                    });
+                    
+                    req.on('timeout', () => {
+                        req.destroy();
+                        clearTimeout(timeout);
+                        reject(new Error('Request timeout'));
+                    });
+                    
+                    req.end();
+                });
+            };
 
-            console.log('📥 Download iniciado, aguardando buffer...');
-            const buffer = await response.arrayBuffer();
-            const imageBuffer = Buffer.from(buffer);
-            console.log(`✅ Download concluído: ${imageBuffer.length} bytes`);
-
+            console.log('📥 Iniciando download com método HTTPS...');
+            const imageBuffer = await downloadWithHttps();
+            
             // Verificar se é uma imagem válida tentando carregar
             try {
                 await loadImage(imageBuffer);
                 console.log('✅ Imagem validada com sucesso');
             } catch (imageError) {
                 console.error('❌ Imagem inválida:', imageError.message);
-                
-                // Dar feedback específico sobre o tipo de imagem
-                const contentType = attachment.contentType.toLowerCase();
-                if (contentType.includes('webp')) {
-                    return await message.reply('❌ WebP não é suportado. Converta para PNG, JPG ou JPEG.');
-                } else if (contentType.includes('gif')) {
-                    return await message.reply('❌ GIF animado não é suportado. Use PNG ou JPG.');
-                } else {
-                    return await message.reply(`❌ Formato não suportado (${attachment.contentType}). Use PNG, JPG ou JPEG.`);
-                }
+                await message.reply('❌ Arquivo corrompido ou formato inválido. Tente novamente.');
+                continue;
             }
 
+            // Salvar arquivo
             fs.writeFileSync(filePath, imageBuffer);
+            
+            // Atualizar config
             const config = getConfig(message.guild.id);
             config.background = filePath;
             saveConfig();
+            
             console.log(`Config atualizado para guild ${message.guild.id}:`, config);
             await message.reply('✅ Background atualizado com sucesso!');
             console.log(`Background salvo em: ${filePath}`);
@@ -670,23 +727,24 @@ client.on('messageCreate', async (message) => {
             // Verificar se arquivo foi criado
             if (fs.existsSync(filePath)) {
                 const stats = fs.statSync(filePath);
-                console.log(`Arquivo criado: ${stats.size} bytes`);
+                console.log(`✅ Arquivo criado: ${stats.size} bytes`);
             } else {
-                console.log('ERRO: Arquivo não foi criado!');
+                console.log('❌ ERRO: Arquivo não foi criado!');
             }
+            
         } catch (error) {
-            console.error('Erro ao salvar background:', error);
+            console.error('❌ Erro ao salvar background:', error);
             
             let errorMessage = '❌ Erro ao salvar o background. Tente novamente.';
             
-            if (error.name === 'AbortError') {
-                errorMessage = '❌ Timeout: Download demorou mais de 30 segundos. Tente uma imagem menor.';
+            if (error.message.includes('Timeout') || error.message.includes('timeout')) {
+                errorMessage = '❌ Timeout: Download demorou muito. Tente uma imagem menor ou verifique sua conexão.';
                 console.error('⏰ Timeout no download da imagem');
             } else if (error.message.includes('HTTP')) {
                 errorMessage = '❌ Erro no download da imagem. Verifique se o arquivo ainda existe.';
                 console.error('🌐 Erro HTTP no download:', error.message);
             } else if (error.message.includes('loadImage')) {
-                errorMessage = '❌ Formato de imagem não suportado. Use PNG, JPG ou JPEG.';
+                errorMessage = '❌ Formato de imagem não suportado. Use PNG ou JPEG válidos.';
                 console.error('🖼️ Erro na validação da imagem:', error.message);
             }
             
