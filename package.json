@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "bottickets.js",
   "scripts": {
-    "start": "concurrently \"npm run start:tickets\" \"npm run start:welcome\"",
+    "start": "node botwelcom.js",
     "start:tickets": "node bottickets.js",
     "start:calls": "node botcallprivada.js",
     "start:welcome": "node botwelcom.js",
