@@ -262,9 +262,61 @@ async function generateBanner(member, text, isWelcome = true) {
         console.log(`member.user existe: ${!!member.user}`);
         console.log(`member.user.displayAvatarURL existe: ${!!member.user?.displayAvatarURL}`);
 
-        const avatarURL = member.user?.displayAvatarURL({ format: 'png', size: 128, dynamic: false }) || 'path/to/placeholder.png';
+        const avatarURL = member.user?.displayAvatarURL({
+            format: 'png',
+            size: 128,
+            dynamic: false
+        }) || 'path/to/placeholder.png';
         console.log(`Avatar URL gerado: ${avatarURL}`);
         console.log(`URL é placeholder: ${avatarURL === 'path/to/placeholder.png'}`);
+
+        // 🔍 TESTE DE CONECTIVIDADE COM CDN
+        if (avatarURL !== 'path/to/placeholder.png') {
+            console.log(`🌐 Testando conectividade com CDN do Discord (forçando PNG)...`);
+            try {
+                const testURL = new URL(avatarURL);
+
+                const connectivityTest = new Promise((resolve, reject) => {
+                    const req = https.request({
+                        hostname: testURL.hostname,
+                        path: testURL.pathname + testURL.search,
+                        method: 'HEAD', // Apenas testa se o servidor responde
+                        timeout: 5000
+                    }, (res) => {
+                        console.log(`🌐 Status da resposta: ${res.statusCode}`);
+                        console.log(`🌐 Content-Type: ${res.headers['content-type']}`);
+                        console.log(`🌐 Content-Length: ${res.headers['content-length']}`);
+                        console.log(`🌐 Formato forçado: PNG (Canvas-compatible)`);
+                        resolve(res.statusCode === 200);
+                    });
+
+                    req.on('error', (error) => {
+                        console.log(`🌐 ❌ Erro de conectividade: ${error.message}`);
+                        reject(error);
+                    });
+
+                    req.on('timeout', () => {
+                        console.log(`🌐 ❌ Timeout na conexão (5s)`);
+                        req.destroy();
+                        reject(new Error('Timeout de conectividade'));
+                    });
+
+                    req.end();
+                });
+
+                const isReachable = await connectivityTest;
+                console.log(`🌐 ✅ Servidor CDN acessível: ${isReachable}`);
+
+            } catch (connectivityError) {
+                console.log(`🌐 ❌ Problema de conectividade detectado: ${connectivityError.message}`);
+                console.log(`🌐 💡 Isso explica por que o avatar não carrega!`);
+                console.log(`🌐 🔧 Possíveis causas:`);
+                console.log(`🌐   - Firewall bloqueando conexões externas`);
+                console.log(`🌐   - Rede lenta no servidor de hospedagem`);
+                console.log(`🌐   - Limitação do plano (Railway/Discloud)`);
+                console.log(`🌐   - CDN do Discord temporariamente indisponível`);
+            }
+        }
 
         // Testar diferentes formatos
         if (member.user?.displayAvatarURL) {
@@ -281,8 +333,11 @@ async function generateBanner(member, text, isWelcome = true) {
             // Primeiro tentar o formato solicitado
             const avatarPromise = loadImage(avatarURL);
             const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Timeout no carregamento do avatar')), 30000) // Aumentado para 20s
+                setTimeout(() => reject(new Error('Timeout no carregamento do avatar')), 30000) // 30s
             );
+
+            console.log(`⏱️ Timeout configurado: 30 segundos`);
+            console.log(`🔄 Iniciando carregamento do avatar...`);
 
             avatar = await Promise.race([avatarPromise, timeoutPromise]);
             console.log('✅ Avatar carregado com sucesso no primeiro formato');
