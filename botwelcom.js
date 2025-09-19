@@ -434,8 +434,25 @@ async function generateBanner(member, text, isWelcome = true) {
 
 // Função para gerar banner rápido (sempre usa placeholder)
 async function generateBannerFast(member, text, isWelcome = true) {
-    const username = member.user?.username || member.displayName || 'Unknown';
-    console.log(`🎨 generateBannerFast iniciada para ${username}`);
+    console.log(`🎨 generateBannerFast iniciada para ${member?.user?.username || member?.displayName || 'Unknown'}`);
+
+    // 🔍 LOGS DETALHADOS DO MEMBER RECEBIDO NO PREVIEW
+    console.log(`\n🔍 === DEBUG FAST BANNER: MEMBER ===`);
+    console.log(`Member ID: ${member?.id}`);
+    console.log(`Member Display Name: ${member?.displayName}`);
+    console.log(`Member Nickname: ${member?.nickname}`);
+    console.log(`Member User ID: ${member?.user?.id}`);
+    console.log(`Member User Username: ${member?.user?.username}`);
+    console.log(`Member User Global Name: ${member?.user?.globalName}`);
+    console.log(`Member User Display Name: ${member?.user?.displayName}`);
+    console.log(`Member User Bot: ${member?.user?.bot}`);
+
+    // 🔍 EXTRAÇÃO DO USERNAME
+    const username = member?.user?.username || member?.displayName || 'Usuário Desconhecido';
+    console.log(`\n🔍 === EXTRAÇÃO DO USERNAME (FAST) ===`);
+    console.log(`member?.user?.username: ${member?.user?.username}`);
+    console.log(`member?.displayName: ${member?.displayName}`);
+    console.log(`Username final usado: "${username}"`);
 
     let canvas, ctx;
     try {
@@ -888,6 +905,26 @@ client.on('interactionCreate', async (interaction) => {
             } else if (interaction.customId === 'preview') {
                 console.log('🔍 Iniciando preview...');
                 console.log(`   Replied: ${interaction.replied}, Deferred: ${interaction.deferred}`);
+
+                // 🔍 LOGS DETALHADOS DO USUÁRIO QUE EXECUTOU O PREVIEW
+                console.log(`\n🔍 === DEBUG PREVIEW: INTERACTION ===`);
+                console.log(`Interaction User: ${interaction.user?.username} (${interaction.user?.id})`);
+                console.log(`Interaction Member: ${interaction.member?.displayName} (${interaction.member?.id})`);
+
+                console.log(`\n🔍 === DEBUG PREVIEW: MEMBER OBJECT ===`);
+                console.log(`Member ID: ${interaction.member?.id}`);
+                console.log(`Member Display Name: ${interaction.member?.displayName}`);
+                console.log(`Member Nickname: ${interaction.member?.nickname}`);
+                console.log(`Member User Username: ${interaction.member?.user?.username}`);
+                console.log(`Member User Global Name: ${interaction.member?.user?.globalName}`);
+                console.log(`Member User Display Name: ${interaction.member?.user?.displayName}`);
+
+                console.log(`\n🔍 === DEBUG PREVIEW: AVATAR INFO ===`);
+                console.log(`Avatar URL (PNG): ${interaction.member?.user?.displayAvatarURL?.({ format: 'png', size: 128 })}`);
+                console.log(`Avatar URL (WEBP): ${interaction.member?.user?.displayAvatarURL?.({ format: 'webp', size: 128 })}`);
+                console.log(`Default Avatar URL: ${interaction.member?.user?.defaultAvatarURL}`);
+                console.log(`Avatar Hash: ${interaction.member?.user?.avatar}`);
+                console.log(`=====================================\n`);
 
                 // Para preview, defer primeiro pois pode demorar
                 console.log('🔍 Fazendo deferReply...');
