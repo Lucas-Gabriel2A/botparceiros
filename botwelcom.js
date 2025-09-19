@@ -805,7 +805,11 @@ client.on('interactionCreate', async (interaction) => {
                         new ButtonBuilder()
                             .setCustomId('preview')
                             .setLabel('Preview')
-                            .setStyle(ButtonStyle.Success)
+                            .setStyle(ButtonStyle.Success),
+                        new ButtonBuilder()
+                            .setCustomId('preview_fast')
+                            .setLabel('Preview (Rápido)')
+                            .setStyle(ButtonStyle.Secondary)
                     );
 
                 await safeReply(interaction, {
@@ -934,7 +938,18 @@ client.on('interactionCreate', async (interaction) => {
                 try {
                     const config = getConfig(interaction.guild.id);
                     console.log('🔍 Gerando banner...');
-                    const buffer = await generateBannerFast(interaction.member, config.welcomeText, true);
+
+                    // 🔄 TENTAR AVATAR REAL NO PREVIEW
+                    let buffer;
+                    try {
+                        console.log('🎨 Tentando gerar banner com avatar real...');
+                        buffer = await generateBanner(interaction.member, config.welcomeText, true);
+                        console.log('✅ Preview com avatar real gerado!');
+                    } catch (avatarError) {
+                        console.log(`⚠️ Avatar real falhou (${avatarError.message}), usando placeholder...`);
+                        buffer = await generateBannerFast(interaction.member, config.welcomeText, true);
+                        console.log('✅ Preview com placeholder gerado!');
+                    }
                     console.log('🔍 Banner gerado, enviando...');
                     const attachment = new AttachmentBuilder(buffer, { name: 'preview.png' });
 
@@ -948,6 +963,35 @@ client.on('interactionCreate', async (interaction) => {
                     console.error('❌ Erro no preview:', previewError);
                     await interaction.editReply({
                         content: '❌ Erro ao gerar preview.'
+                    });
+                }
+
+            } else if (interaction.customId === 'preview_fast') {
+                console.log('🔍 Iniciando preview rápido (sempre placeholder)...');
+                console.log(`   Replied: ${interaction.replied}, Deferred: ${interaction.deferred}`);
+
+                // Para preview rápido, defer primeiro
+                console.log('🔍 Fazendo deferReply...');
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+                console.log('✅ DeferReply feito com sucesso');
+
+                try {
+                    const config = getConfig(interaction.guild.id);
+                    console.log('🔍 Gerando banner rápido...');
+                    const buffer = await generateBannerFast(interaction.member, config.welcomeText, true);
+                    console.log('🔍 Banner rápido gerado, enviando...');
+                    const attachment = new AttachmentBuilder(buffer, { name: 'preview-fast.png' });
+
+                    await interaction.editReply({
+                        content: '⚡ **Preview Rápido (Placeholder):**',
+                        files: [attachment]
+                    });
+                    console.log('✅ Preview rápido enviado');
+
+                } catch (previewError) {
+                    console.error('❌ Erro no preview rápido:', previewError);
+                    await interaction.editReply({
+                        content: '❌ Erro ao gerar preview rápido.'
                     });
                 }
             }
