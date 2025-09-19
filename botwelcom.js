@@ -275,14 +275,44 @@ async function generateBanner(member, text, isWelcome = true) {
 
         console.log(`🖼️ Tentando carregar avatar: ${avatarURL}`);
 
-        // Adicionar timeout para carregamento do avatar
-        const avatarPromise = loadImage(avatarURL);
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout no carregamento do avatar')), 10000)
-        );
+        // Tentar múltiplos formatos se disponível
+        let avatar;
+        try {
+            // Primeiro tentar o formato solicitado
+            const avatarPromise = loadImage(avatarURL);
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Timeout no carregamento do avatar')), 15000) // Aumentado para 15s
+            );
 
-        const avatar = await Promise.race([avatarPromise, timeoutPromise]);
-        console.log('✅ Avatar carregado com sucesso');
+            avatar = await Promise.race([avatarPromise, timeoutPromise]);
+            console.log('✅ Avatar carregado com sucesso no primeiro formato');
+        } catch (firstError) {
+            console.log(`⚠️ Primeiro formato falhou (${firstError.message}), tentando formatos alternativos...`);
+
+            // Tentar outros formatos
+            const formats = ['webp', 'png', 'jpeg'];
+            for (const format of formats) {
+                try {
+                    const altURL = member.user.displayAvatarURL({ format: format, size: 128, dynamic: false });
+                    console.log(`🔄 Tentando formato ${format}: ${altURL}`);
+
+                    const altPromise = loadImage(altURL);
+                    const altTimeout = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error(`Timeout ${format}`)), 10000)
+                    );
+
+                    avatar = await Promise.race([altPromise, altTimeout]);
+                    console.log(`✅ Avatar carregado com sucesso no formato ${format}`);
+                    break;
+                } catch (altError) {
+                    console.log(`❌ Formato ${format} também falhou: ${altError.message}`);
+                }
+            }
+
+            if (!avatar) {
+                throw new Error('Todos os formatos de avatar falharam');
+            }
+        }
 
         ctx.save();
         ctx.beginPath();
@@ -522,7 +552,20 @@ client.on('guildMemberAdd', async (member) => {
     try {
         console.log(`🎨 Gerando banner para ${member.user?.username || member.displayName || 'Unknown'}...`);
         const config = getConfig(member.guild.id);
-        const buffer = await generateBanner(member, config.welcomeText, true);
+        let buffer;
+
+        try {
+            // Primeiro tentar gerar banner completo com avatar
+            buffer = await generateBanner(member, config.welcomeText, true);
+            console.log('✅ Banner completo gerado com sucesso');
+        } catch (bannerError) {
+            console.log(`⚠️ Banner completo falhou (${bannerError.message}), usando versão rápida...`);
+
+            // Fallback para banner rápido (sempre funciona)
+            buffer = await generateBannerFast(member, config.welcomeText, true);
+            console.log('✅ Banner rápido gerado como fallback');
+        }
+
         const attachment = new AttachmentBuilder(buffer, { name: 'welcome.png' });
         await channel.send({ files: [attachment] });
         console.log(`✅ Welcome enviado com sucesso para ${member.user?.username || member.displayName || 'Unknown'} no canal ${channel.name}`);
@@ -592,7 +635,20 @@ client.on('guildMemberRemove', async (member) => {
 
     try {
         const config = getConfig(member.guild.id);
-        const buffer = await generateBanner(member, config.leaveText, false);
+        let buffer;
+
+        try {
+            // Primeiro tentar gerar banner completo com avatar
+            buffer = await generateBanner(member, config.leaveText, false);
+            console.log('✅ Banner completo gerado com sucesso');
+        } catch (bannerError) {
+            console.log(`⚠️ Banner completo falhou (${bannerError.message}), usando versão rápida...`);
+
+            // Fallback para banner rápido (sempre funciona)
+            buffer = await generateBannerFast(member, config.leaveText, false);
+            console.log('✅ Banner rápido gerado como fallback');
+        }
+
         const attachment = new AttachmentBuilder(buffer, { name: 'leave.png' });
         await channel.send({ files: [attachment] });
         console.log(`✅ Leave enviado para ${member.user?.username || member.displayName || 'Unknown'}`);
