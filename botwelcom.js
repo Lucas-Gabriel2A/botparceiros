@@ -281,7 +281,7 @@ async function generateBanner(member, text, isWelcome = true) {
             // Primeiro tentar o formato solicitado
             const avatarPromise = loadImage(avatarURL);
             const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Timeout no carregamento do avatar')), 15000) // Aumentado para 15s
+                setTimeout(() => reject(new Error('Timeout no carregamento do avatar')), 30000) // Aumentado para 20s
             );
 
             avatar = await Promise.race([avatarPromise, timeoutPromise]);
@@ -298,7 +298,7 @@ async function generateBanner(member, text, isWelcome = true) {
 
                     const altPromise = loadImage(altURL);
                     const altTimeout = new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error(`Timeout ${format}`)), 10000)
+                        setTimeout(() => reject(new Error(`Timeout ${format}`)), 20000) // 15s para alternativos
                     );
 
                     avatar = await Promise.race([altPromise, altTimeout]);
@@ -561,7 +561,7 @@ client.on('guildMemberAdd', async (member) => {
         } catch (bannerError) {
             console.log(`⚠️ Banner completo falhou (${bannerError.message}), usando versão rápida...`);
 
-            // Fallback para banner rápido (sempre funciona)
+            // Fallback para banner rápido (sempre funciona, mais rápido)
             buffer = await generateBannerFast(member, config.welcomeText, true);
             console.log('✅ Banner rápido gerado como fallback');
         }
@@ -644,7 +644,7 @@ client.on('guildMemberRemove', async (member) => {
         } catch (bannerError) {
             console.log(`⚠️ Banner completo falhou (${bannerError.message}), usando versão rápida...`);
 
-            // Fallback para banner rápido (sempre funciona)
+            // Fallback para banner rápido (sempre funciona, mais rápido)
             buffer = await generateBannerFast(member, config.leaveText, false);
             console.log('✅ Banner rápido gerado como fallback');
         }
