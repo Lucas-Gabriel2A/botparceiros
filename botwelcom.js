@@ -188,7 +188,31 @@ function hasPermission(member) {
 
 // Função para gerar banner (completo com avatar)
 async function generateBanner(member, text, isWelcome = true) {
+    console.log(`\n🎨 === GERANDO BANNER ===`);
+    console.log(`Texto: "${text}"`);
+    console.log(`É Welcome: ${isWelcome}`);
+
+    // 🔍 LOGS DETALHADOS DO MEMBER RECEBIDO
+    console.log(`\n🔍 === MEMBER RECEBIDO NA FUNÇÃO ===`);
+    console.log(`Member ID: ${member?.id}`);
+    console.log(`Member Display Name: ${member?.displayName}`);
+    console.log(`Member Nickname: ${member?.nickname}`);
+
+    console.log(`\n🔍 === USER RECEBIDO NA FUNÇÃO ===`);
+    console.log(`User ID: ${member?.user?.id}`);
+    console.log(`User Username: ${member?.user?.username}`);
+    console.log(`User Discriminator: ${member?.user?.discriminator}`);
+    console.log(`User Global Name: ${member?.user?.globalName}`);
+    console.log(`User Display Name: ${member?.user?.displayName}`);
+    console.log(`User Bot: ${member?.user?.bot}`);
+
+    // 🔍 EXTRAÇÃO DO USERNAME
     const username = member.user?.username || member.displayName || 'Usuário Desconhecido';
+    console.log(`\n🔍 === EXTRAÇÃO DO USERNAME ===`);
+    console.log(`member.user?.username: ${member.user?.username}`);
+    console.log(`member.displayName: ${member.displayName}`);
+    console.log(`Username final usado: "${username}"`);
+
     console.log(`🎨 generateBanner iniciada para ${username}`);
 
     let canvas, ctx;
@@ -232,7 +256,23 @@ async function generateBanner(member, text, isWelcome = true) {
 
     // Avatar circular
     try {
+        console.log(`\n🖼️ === CARREGAMENTO DO AVATAR ===`);
+
+        // 🔍 LOGS DETALHADOS DO AVATAR
+        console.log(`member.user existe: ${!!member.user}`);
+        console.log(`member.user.displayAvatarURL existe: ${!!member.user?.displayAvatarURL}`);
+
         const avatarURL = member.user?.displayAvatarURL({ format: 'png', size: 128, dynamic: false }) || 'path/to/placeholder.png';
+        console.log(`Avatar URL gerado: ${avatarURL}`);
+        console.log(`URL é placeholder: ${avatarURL === 'path/to/placeholder.png'}`);
+
+        // Testar diferentes formatos
+        if (member.user?.displayAvatarURL) {
+            console.log(`Avatar PNG: ${member.user.displayAvatarURL({ format: 'png', size: 128 })}`);
+            console.log(`Avatar WEBP: ${member.user.displayAvatarURL({ format: 'webp', size: 128 })}`);
+            console.log(`Avatar JPEG: ${member.user.displayAvatarURL({ format: 'jpeg', size: 128 })}`);
+        }
+
         console.log(`🖼️ Tentando carregar avatar: ${avatarURL}`);
 
         // Adicionar timeout para carregamento do avatar
@@ -252,6 +292,17 @@ async function generateBanner(member, text, isWelcome = true) {
         ctx.drawImage(avatar, 336, 86, 128, 128);
         ctx.restore();
     } catch (error) {
+        console.log(`\n❌ === ERRO NO AVATAR ===`);
+        console.log(`Erro: ${error.message}`);
+        console.log(`Tipo do erro: ${error.constructor.name}`);
+        console.log(`Stack: ${error.stack}`);
+        console.log(`member.user existe: ${!!member.user}`);
+        console.log(`member.user.displayAvatarURL existe: ${!!member.user?.displayAvatarURL}`);
+
+        if (member.user?.displayAvatarURL) {
+            console.log(`Tentando gerar URL novamente: ${member.user.displayAvatarURL({ format: 'png', size: 128 })}`);
+        }
+
         console.log('❌ Erro ao carregar avatar, usando placeholder épico:', error.message);
         
         // Criar placeholder usando canvas (gradiente dourado com inicial do usuário)
@@ -415,7 +466,33 @@ client.on('guildMemberAdd', async (member) => {
     console.log(`   👤 Usuário: ${member.user.username} (${member.user.id})`);
     console.log(`   🏠 Servidor: ${member.guild.name} (${member.guild.id})`);
     console.log(`   💡 Sistema: WELCOME (categoria Galáxia)`);
-    
+
+    // 🔍 LOGS DETALHADOS PARA DEBUG
+    console.log(`\n🔍 === DEBUG: Propriedades do MEMBER ===`);
+    console.log(`Member ID: ${member.id}`);
+    console.log(`Member Display Name: ${member.displayName}`);
+    console.log(`Member Nickname: ${member.nickname}`);
+    console.log(`Member Joined At: ${member.joinedAt}`);
+    console.log(`Member Roles: ${member.roles.cache.map(r => r.name).join(', ')}`);
+
+    console.log(`\n🔍 === DEBUG: Propriedades do USER ===`);
+    console.log(`User ID: ${member.user?.id}`);
+    console.log(`User Username: ${member.user?.username}`);
+    console.log(`User Discriminator: ${member.user?.discriminator}`);
+    console.log(`User Global Name: ${member.user?.globalName}`);
+    console.log(`User Display Name: ${member.user?.displayName}`);
+    console.log(`User Bot: ${member.user?.bot}`);
+    console.log(`User System: ${member.user?.system}`);
+    console.log(`User Created At: ${member.user?.createdAt}`);
+
+    console.log(`\n🔍 === DEBUG: AVATAR INFO ===`);
+    console.log(`Avatar URL (PNG): ${member.user?.displayAvatarURL({ format: 'png', size: 128 })}`);
+    console.log(`Avatar URL (WEBP): ${member.user?.displayAvatarURL({ format: 'webp', size: 128 })}`);
+    console.log(`Avatar URL (JPEG): ${member.user?.displayAvatarURL({ format: 'jpeg', size: 128 })}`);
+    console.log(`Default Avatar URL: ${member.user?.defaultAvatarURL}`);
+    console.log(`Avatar Hash: ${member.user?.avatar}`);
+    console.log(`=====================================\n`);
+
     if (!WELCOME_CHANNEL_ID) {
         console.error("❌ WELCOME_CHANNEL_ID não configurado - pulando welcome");
         return;
@@ -461,7 +538,33 @@ client.on('guildMemberRemove', async (member) => {
     console.log(`   👤 Usuário: ${member.user?.username || member.displayName || 'Unknown'} (${member.user?.id || member.id})`);
     console.log(`   🏠 Servidor: ${member.guild.name} (${member.guild.id})`);
     console.log(`   💡 Sistema: LEAVE (categoria Galáxia)`);
-    
+
+    // 🔍 LOGS DETALHADOS PARA DEBUG (LEAVE)
+    console.log(`\n🔍 === DEBUG LEAVE: Propriedades do MEMBER ===`);
+    console.log(`Member ID: ${member.id}`);
+    console.log(`Member Display Name: ${member.displayName}`);
+    console.log(`Member Nickname: ${member.nickname}`);
+    console.log(`Member Joined At: ${member.joinedAt}`);
+    console.log(`Member Roles: ${member.roles?.cache ? member.roles.cache.map(r => r.name).join(', ') : 'N/A'}`);
+
+    console.log(`\n🔍 === DEBUG LEAVE: Propriedades do USER ===`);
+    console.log(`User ID: ${member.user?.id}`);
+    console.log(`User Username: ${member.user?.username}`);
+    console.log(`User Discriminator: ${member.user?.discriminator}`);
+    console.log(`User Global Name: ${member.user?.globalName}`);
+    console.log(`User Display Name: ${member.user?.displayName}`);
+    console.log(`User Bot: ${member.user?.bot}`);
+    console.log(`User System: ${member.user?.system}`);
+    console.log(`User Created At: ${member.user?.createdAt}`);
+
+    console.log(`\n🔍 === DEBUG LEAVE: AVATAR INFO ===`);
+    console.log(`Avatar URL (PNG): ${member.user?.displayAvatarURL?.({ format: 'png', size: 128 })}`);
+    console.log(`Avatar URL (WEBP): ${member.user?.displayAvatarURL?.({ format: 'webp', size: 128 })}`);
+    console.log(`Avatar URL (JPEG): ${member.user?.displayAvatarURL?.({ format: 'jpeg', size: 128 })}`);
+    console.log(`Default Avatar URL: ${member.user?.defaultAvatarURL}`);
+    console.log(`Avatar Hash: ${member.user?.avatar}`);
+    console.log(`=====================================\n`);
+
     if (!LEAVE_CHANNEL_ID) {
         console.error("❌ LEAVE_CHANNEL_ID não configurado - pulando leave");
         return;
