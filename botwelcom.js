@@ -267,14 +267,23 @@ async function generateBanner(member, text, isWelcome = true) {
             size: 128,
             dynamic: false
         }) || 'path/to/placeholder.png';
+
+        // 🔧 FORÇAR PNG MANUALMENTE SE AINDA FOR WEBP
+        let finalAvatarURL = avatarURL;
+        if (avatarURL && avatarURL.includes('.webp')) {
+            finalAvatarURL = avatarURL.replace('.webp', '.png');
+            console.log(`🔧 URL convertida de WEBP para PNG: ${finalAvatarURL}`);
+        }
+
         console.log(`Avatar URL gerado: ${avatarURL}`);
+        console.log(`Avatar URL final: ${finalAvatarURL}`);
         console.log(`URL é placeholder: ${avatarURL === 'path/to/placeholder.png'}`);
 
         // 🔍 TESTE DE CONECTIVIDADE COM CDN
-        if (avatarURL !== 'path/to/placeholder.png') {
+        if (finalAvatarURL !== 'path/to/placeholder.png') {
             console.log(`🌐 Testando conectividade com CDN do Discord (forçando PNG)...`);
             try {
-                const testURL = new URL(avatarURL);
+                const testURL = new URL(finalAvatarURL);
 
                 const connectivityTest = new Promise((resolve, reject) => {
                     const req = https.request({
@@ -320,18 +329,22 @@ async function generateBanner(member, text, isWelcome = true) {
 
         // Testar diferentes formatos
         if (member.user?.displayAvatarURL) {
-            console.log(`Avatar PNG: ${member.user.displayAvatarURL({ format: 'png', size: 128 })}`);
+            let logPngURL = member.user.displayAvatarURL({ format: 'png', size: 128 });
+            if (logPngURL && logPngURL.includes('.webp')) {
+                logPngURL = logPngURL.replace('.webp', '.png');
+            }
+            console.log(`Avatar PNG: ${logPngURL}`);
             console.log(`Avatar WEBP: ${member.user.displayAvatarURL({ format: 'webp', size: 128 })}`);
             console.log(`Avatar JPEG: ${member.user.displayAvatarURL({ format: 'jpeg', size: 128 })}`);
         }
 
-        console.log(`🖼️ Tentando carregar avatar: ${avatarURL}`);
+        console.log(`🖼️ Tentando carregar avatar: ${finalAvatarURL}`);
 
         // Tentar múltiplos formatos se disponível
         let avatar;
         try {
             // Primeiro tentar o formato solicitado
-            const avatarPromise = loadImage(avatarURL);
+            const avatarPromise = loadImage(finalAvatarURL);
             const timeoutPromise = new Promise((_, reject) =>
                 setTimeout(() => reject(new Error('Timeout no carregamento do avatar')), 30000) // 30s
             );
@@ -348,7 +361,11 @@ async function generateBanner(member, text, isWelcome = true) {
             const formats = ['webp', 'png', 'jpeg'];
             for (const format of formats) {
                 try {
-                    const altURL = member.user.displayAvatarURL({ format: format, size: 128, dynamic: false });
+                    let altURL = member.user.displayAvatarURL({ format: format, size: 128, dynamic: false });
+                    // 🔧 FORÇAR PNG SE FOR WEBP
+                    if (altURL && altURL.includes('.webp')) {
+                        altURL = altURL.replace('.webp', '.png');
+                    }
                     console.log(`🔄 Tentando formato ${format}: ${altURL}`);
 
                     const altPromise = loadImage(altURL);
@@ -385,7 +402,11 @@ async function generateBanner(member, text, isWelcome = true) {
         console.log(`member.user.displayAvatarURL existe: ${!!member.user?.displayAvatarURL}`);
 
         if (member.user?.displayAvatarURL) {
-            console.log(`Tentando gerar URL novamente: ${member.user.displayAvatarURL({ format: 'png', size: 128 })}`);
+            let retryURL = member.user.displayAvatarURL({ format: 'png', size: 128 });
+            if (retryURL && retryURL.includes('.webp')) {
+                retryURL = retryURL.replace('.webp', '.png');
+            }
+            console.log(`Tentando gerar URL novamente: ${retryURL}`);
         }
 
         console.log('❌ Erro ao carregar avatar, usando placeholder épico:', error.message);
@@ -588,7 +609,11 @@ client.on('guildMemberAdd', async (member) => {
     console.log(`User Created At: ${member.user?.createdAt}`);
 
     console.log(`\n🔍 === DEBUG: AVATAR INFO ===`);
-    console.log(`Avatar URL (PNG): ${member.user?.displayAvatarURL({ format: 'png', size: 128 })}`);
+    let fastPngURL = member.user?.displayAvatarURL({ format: 'png', size: 128 });
+    if (fastPngURL && fastPngURL.includes('.webp')) {
+        fastPngURL = fastPngURL.replace('.webp', '.png');
+    }
+    console.log(`Avatar URL (PNG): ${fastPngURL}`);
     console.log(`Avatar URL (WEBP): ${member.user?.displayAvatarURL({ format: 'webp', size: 128 })}`);
     console.log(`Avatar URL (JPEG): ${member.user?.displayAvatarURL({ format: 'jpeg', size: 128 })}`);
     console.log(`Default Avatar URL: ${member.user?.defaultAvatarURL}`);
@@ -673,7 +698,11 @@ client.on('guildMemberRemove', async (member) => {
     console.log(`User Created At: ${member.user?.createdAt}`);
 
     console.log(`\n🔍 === DEBUG LEAVE: AVATAR INFO ===`);
-    console.log(`Avatar URL (PNG): ${member.user?.displayAvatarURL?.({ format: 'png', size: 128 })}`);
+    let leavePngURL = member.user?.displayAvatarURL?.({ format: 'png', size: 128 });
+    if (leavePngURL && leavePngURL.includes('.webp')) {
+        leavePngURL = leavePngURL.replace('.webp', '.png');
+    }
+    console.log(`Avatar URL (PNG): ${leavePngURL}`);
     console.log(`Avatar URL (WEBP): ${member.user?.displayAvatarURL?.({ format: 'webp', size: 128 })}`);
     console.log(`Avatar URL (JPEG): ${member.user?.displayAvatarURL?.({ format: 'jpeg', size: 128 })}`);
     console.log(`Default Avatar URL: ${member.user?.defaultAvatarURL}`);
@@ -924,7 +953,11 @@ client.on('interactionCreate', async (interaction) => {
                 console.log(`Member User Display Name: ${interaction.member?.user?.displayName}`);
 
                 console.log(`\n🔍 === DEBUG PREVIEW: AVATAR INFO ===`);
-                console.log(`Avatar URL (PNG): ${interaction.member?.user?.displayAvatarURL?.({ format: 'png', size: 128 })}`);
+                let previewPngURL = interaction.member?.user?.displayAvatarURL?.({ format: 'png', size: 128 });
+                if (previewPngURL && previewPngURL.includes('.webp')) {
+                    previewPngURL = previewPngURL.replace('.webp', '.png');
+                }
+                console.log(`Avatar URL (PNG): ${previewPngURL}`);
                 console.log(`Avatar URL (WEBP): ${interaction.member?.user?.displayAvatarURL?.({ format: 'webp', size: 128 })}`);
                 console.log(`Default Avatar URL: ${interaction.member?.user?.defaultAvatarURL}`);
                 console.log(`Avatar Hash: ${interaction.member?.user?.avatar}`);
