@@ -200,13 +200,13 @@ function renderTextCentered(ctx, text, centerX, startY, maxWidth, lineHeight = 7
         lines[maxLines - 1] = last.substring(0, Math.max(0, Math.floor(maxWidth / 10) - 3)) + '...';
     }
 
-    // Draw centered lines
+    // Draw centered lines: stroke first (underlay), then fill so fill stays vibrant
     ctx.textAlign = 'center';
     for (let i = 0; i < lines.length; i++) {
         const lineY = startY + (i * lineHeight);
-        // Shadow / stroke handled by caller's ctx state
-        ctx.fillText(lines[i], centerX, lineY);
+        // Draw stroke under the fill to avoid covering the fill
         ctx.strokeText(lines[i], centerX, lineY);
+        ctx.fillText(lines[i], centerX, lineY);
     }
 
     return lines.length;
@@ -633,8 +633,9 @@ async function generateBanner(member, text, isWelcome = true) {
     grad.addColorStop(1, '#ffeaa7');
 
     // Stroke (contrast) then fill with gradient
-    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-    ctx.strokeText(displayText, 400, mainY);
+    // Use a subtle stroke under the fill so gradient remains visible
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+    ctx.lineWidth = 4;
     ctx.fillStyle = grad;
     // If text is long, use renderText for wrapping while keeping styling
     try {
@@ -755,8 +756,9 @@ async function generateBannerFast(member, text, isWelcome = true) {
     gradFast.addColorStop(0.7, '#ff3d00');
     gradFast.addColorStop(1, '#ffeaa7');
 
-    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-    ctx.strokeText(displayText, 400, mainYFast);
+    // subtle under-stroke so gradient shows
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+    ctx.lineWidth = 4;
     ctx.fillStyle = gradFast;
     try {
         ctx.font = `bold 56px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
