@@ -867,8 +867,18 @@ client.on('guildMemberAdd', async (member) => {
     try {
         console.log(`?? Gerando banner para ${member.user?.username || member.displayName || 'Unknown'}...`);
         const config = getConfig(member.guild.id);
-        let avatar;
-        avatar = await loadAvatarSafe(finalAvatarURL, 6000);
+        let buffer;
+
+        try {
+            buffer = await generateBanner(member, config.welcomeText, true);
+            console.log('? Banner completo gerado com sucesso');
+        } catch (bannerError) {
+            console.log(`?? Banner completo falhou (${bannerError.message}), usando versao rapido...`);
+            buffer = await generateBannerFast(member, config.welcomeText, true);
+            console.log('? Banner rapido gerado como fallback');
+        }
+
+        const attachment = new AttachmentBuilder(buffer, { name: 'welcome.png' });
         await channel.send({ files: [attachment] });
         console.log(`? Welcome enviado com sucesso para ${member.user?.username || member.displayName || 'Unknown'} no canal ${channel.name}`);
     } catch (error) {
