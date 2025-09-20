@@ -10,6 +10,28 @@ const path = require('path');
 const https = require('https');
 const url = require('url');
 
+// 🔄 IMPLEMENTAR FETCH COM TIMEOUT PARA RAILWAY
+const fetchWithTimeout = async (url, options = {}, timeout = 5000) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal,
+            headers: {
+                'User-Agent': 'DiscordBot/1.0',
+                ...options.headers
+            }
+        });
+        clearTimeout(timeoutId);
+        return response;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
+    }
+};
+
 // Configurações
 const TOKEN = process.env.DISCORD_TOKENS;
 const CLIENT_ID = process.env.CLIENT_ID;
@@ -353,82 +375,76 @@ async function generateBanner(member, text, isWelcome = true) {
             console.log(`🌐 Plataforma: ${process.platform}`);
             console.log(`🌐 Node version: ${process.version}`);
 
-            // 🔥 DETECTAR AMBIENTE HOSPEDADO E PULAR DIRETO PARA PLACEHOLDER
-            if (process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT || process.env.DISLOUD_TOKEN) {
-                console.log(`🏭 Ambiente hospedado detectado! Pulando carregamento de avatar para evitar travamentos.`);
-                console.log(`💡 O preview funcionará com placeholder épico.`);
-                throw new Error('Ambiente hospedado - pulando avatar');
-            }
-
             try {
                 console.log(`⏳ Tentando loadImage direto primeiro...`);
                 avatar = await loadImage(finalAvatarURL);
                 console.log('✅ Avatar carregado com sucesso via loadImage');
             } catch (loadImageError) {
-                console.log(`⚠️ loadImage falhou: ${loadImageError.message}, tentando https.get...`);
+                console.log(`⚠️ loadImage falhou: ${loadImageError.message}, tentando fetch...`);
 
-                // Método alternativo: baixar via https e criar imagem
-                console.log(`📥 Iniciando download via https.get...`);
-                const imageBuffer = await new Promise((resolve, reject) => {
-                    const url = new URL(finalAvatarURL);
-                    console.log(`🌐 Fazendo request para: ${url.hostname}${url.pathname}`);
+                // 🔥 MÉTODO OTIMIZADO PARA RAILWAY: Usar fetch nativo
+                console.log(`� Tentando fetch nativo (otimizado para Railway)...`);
+                try {
+                    const response = await fetchWithTimeout(finalAvatarURL, {}, 3000); // 3s timeout
 
-                    const options = {
-                        hostname: url.hostname,
-                        path: url.pathname + url.search,
-                        method: 'GET',
-                        timeout: 8000, // Reduzido para 8s
-                        headers: {
-                            'User-Agent': 'DiscordBot/1.0'
-                        }
-                    };
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
 
-                    console.log(`⏱️ Timeout configurado: 8 segundos`);
-                    const req = https.request(options, (res) => {
-                        console.log(`📡 Resposta recebida: Status ${res.statusCode}`);
-                        console.log(`📡 Content-Type: ${res.headers['content-type']}`);
-                        console.log(`📡 Content-Length: ${res.headers['content-length']}`);
+                    console.log(`📡 Fetch response: ${response.status} ${response.statusText}`);
+                    console.log(`📡 Content-Type: ${response.headers.get('content-type')}`);
 
-                        if (res.statusCode !== 200) {
-                            reject(new Error(`HTTP ${res.statusCode}`));
-                            return;
-                        }
+                    const arrayBuffer = await response.arrayBuffer();
+                    const buffer = Buffer.from(arrayBuffer);
 
-                        const chunks = [];
-                        let totalBytes = 0;
+                    console.log(`📦 Buffer baixado via fetch: ${buffer.length} bytes`);
 
-                        res.on('data', (chunk) => {
-                            chunks.push(chunk);
-                            totalBytes += chunk.length;
-                            console.log(`📦 Recebendo dados: ${totalBytes} bytes`);
+                    avatar = await loadImage(buffer);
+                    console.log('✅ Avatar carregado com sucesso via fetch + buffer');
+
+                } catch (fetchError) {
+                    console.log(`⚠️ Fetch também falhou: ${fetchError.message}, tentando https.get como fallback...`);
+
+                    // Método alternativo final: https.get simplificado
+                    console.log(`� Último recurso: https.get simplificado...`);
+                    const imageBuffer = await new Promise((resolve, reject) => {
+                        const urlObj = new URL(finalAvatarURL);
+                        const options = {
+                            hostname: urlObj.hostname,
+                            path: urlObj.pathname + urlObj.search,
+                            method: 'GET',
+                            timeout: 2000, // Timeout bem curto
+                            headers: {
+                                'User-Agent': 'DiscordBot/1.0'
+                            }
+                        };
+
+                        const req = https.request(options, (res) => {
+                            if (res.statusCode !== 200) {
+                                reject(new Error(`HTTP ${res.statusCode}`));
+                                return;
+                            }
+
+                            const chunks = [];
+                            res.on('data', (chunk) => chunks.push(chunk));
+                            res.on('end', () => {
+                                const buffer = Buffer.concat(chunks);
+                                resolve(buffer);
+                            });
                         });
 
-                        res.on('end', () => {
-                            const buffer = Buffer.concat(chunks);
-                            console.log(`✅ Download completo: ${buffer.length} bytes`);
-                            resolve(buffer);
+                        req.on('timeout', () => {
+                            req.destroy();
+                            reject(new Error('Timeout final'));
                         });
+
+                        req.on('error', (err) => reject(err));
+                        req.end();
                     });
 
-                    req.on('timeout', () => {
-                        console.log(`⏰ Timeout no https.get (8s)`);
-                        req.destroy();
-                        reject(new Error('Timeout no download'));
-                    });
-
-                    req.on('error', (err) => {
-                        console.log(`❌ Erro no https.get: ${err.message}`);
-                        reject(err);
-                    });
-
-                    console.log(`🚀 Enviando request...`);
-                    req.end();
-                });
-
-                console.log(`🖼️ Criando imagem do buffer...`);
-                // Criar imagem do buffer
-                avatar = await loadImage(imageBuffer);
-                console.log('✅ Avatar carregado com sucesso via https.get + buffer');
+                    avatar = await loadImage(imageBuffer);
+                    console.log('✅ Avatar carregado via https.get final');
+                }
             }
         } catch (firstError) {
             console.log(`⚠️ Primeiro formato falhou (${firstError.message}), tentando formatos alternativos...`);
@@ -445,67 +461,27 @@ async function generateBanner(member, text, isWelcome = true) {
                     console.log(`🔄 Tentando formato ${format}: ${altURL}`);
 
                     try {
-                        console.log(`⏳ Tentando loadImage para ${format}...`);
                         avatar = await loadImage(altURL);
-                        console.log(`✅ Avatar carregado com sucesso no formato ${format} via loadImage`);
+                        console.log(`✅ Avatar carregado via loadImage (${format})`);
                         break;
                     } catch (altLoadImageError) {
-                        console.log(`⚠️ loadImage falhou para ${format}: ${altLoadImageError.message}, tentando https.get...`);
+                        console.log(`⚠️ loadImage falhou para ${format}, tentando fetch...`);
 
-                        // Método alternativo para formatos alternativos
-                        console.log(`📥 Download alternativo para ${format}...`);
-                        const altImageBuffer = await new Promise((resolveAlt, rejectAlt) => {
-                            const altUrlObj = new URL(altURL);
-                            console.log(`🌐 Request para ${format}: ${altUrlObj.hostname}${altUrlObj.pathname}`);
-
-                            const altOptions = {
-                                hostname: altUrlObj.hostname,
-                                path: altUrlObj.pathname + altUrlObj.search,
-                                method: 'GET',
-                                timeout: 5000, // 5s para alternativos
-                                headers: {
-                                    'User-Agent': 'DiscordBot/1.0'
-                                }
-                            };
-
-                            const altReq = https.request(altOptions, (altRes) => {
-                                console.log(`📡 ${format} - Status: ${altRes.statusCode}`);
-
-                                if (altRes.statusCode !== 200) {
-                                    rejectAlt(new Error(`HTTP ${altRes.statusCode} for ${format}`));
-                                    return;
-                                }
-
-                                const altChunks = [];
-                                altRes.on('data', (chunk) => altChunks.push(chunk));
-                                altRes.on('end', () => {
-                                    const altBuffer = Buffer.concat(altChunks);
-                                    console.log(`✅ ${format} - Download: ${altBuffer.length} bytes`);
-                                    resolveAlt(altBuffer);
-                                });
-                            });
-
-                            altReq.on('timeout', () => {
-                                console.log(`⏰ ${format} - Timeout (5s)`);
-                                altReq.destroy();
-                                rejectAlt(new Error(`Timeout ${format}`));
-                            });
-
-                            altReq.on('error', (err) => {
-                                console.log(`❌ ${format} - Erro: ${err.message}`);
-                                rejectAlt(err);
-                            });
-
-                            altReq.end();
-                        });
-
-                        console.log(`🖼️ Criando imagem do buffer ${format}...`);
-                        avatar = await loadImage(altImageBuffer);
-                        console.log(`✅ Avatar carregado com sucesso no formato ${format} via https.get`);
-                        break;
+                        try {
+                            const response = await fetchWithTimeout(altURL, {}, 2000);
+                            if (response.ok) {
+                                const arrayBuffer = await response.arrayBuffer();
+                                const buffer = Buffer.from(arrayBuffer);
+                                avatar = await loadImage(buffer);
+                                console.log(`✅ Avatar carregado via fetch (${format})`);
+                                break;
+                            }
+                        } catch (fetchError) {
+                            console.log(`⚠️ Fetch falhou para ${format}: ${fetchError.message}`);
+                        }
                     }
                 } catch (altError) {
-                    console.log(`❌ Formato ${format} também falhou: ${altError.message}`);
+                    console.log(`❌ Formato ${format} falhou completamente: ${altError.message}`);
                 }
             }
 
