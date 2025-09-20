@@ -353,6 +353,13 @@ async function generateBanner(member, text, isWelcome = true) {
             console.log(`🌐 Plataforma: ${process.platform}`);
             console.log(`🌐 Node version: ${process.version}`);
 
+            // 🔥 DETECTAR AMBIENTE HOSPEDADO E PULAR DIRETO PARA PLACEHOLDER
+            if (process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT || process.env.DISLOUD_TOKEN) {
+                console.log(`🏭 Ambiente hospedado detectado! Pulando carregamento de avatar para evitar travamentos.`);
+                console.log(`💡 O preview funcionará com placeholder épico.`);
+                throw new Error('Ambiente hospedado - pulando avatar');
+            }
+
             try {
                 console.log(`⏳ Tentando loadImage direto primeiro...`);
                 avatar = await loadImage(finalAvatarURL);
@@ -505,9 +512,10 @@ async function generateBanner(member, text, isWelcome = true) {
             if (!avatar) {
                 console.log(`❌ Todos os métodos falharam, usando placeholder`);
                 console.log(`💡 Possíveis causas:`);
-                console.log(`   - Ambiente hospedado com restrições de rede`);
+                console.log(`   - Ambiente hospedado com restrições de rede (Railway/Discloud)`);
                 console.log(`   - Firewall bloqueando conexões externas`);
                 console.log(`   - Plano gratuito com limitações`);
+                console.log(`   - Para desenvolvimento local: funciona normalmente`);
                 throw new Error('Todos os formatos de avatar falharam');
             }
         }
