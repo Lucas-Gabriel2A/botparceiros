@@ -349,50 +349,76 @@ async function generateBanner(member, text, isWelcome = true) {
         try {
             // 🔄 MÉTODO ALTERNATIVO: Usar https.get se loadImage falhar
             console.log(`🔄 Tentando método alternativo com https.get...`);
+            console.log(`🌐 Ambiente: ${process.env.NODE_ENV || 'desenvolvimento'}`);
+            console.log(`🌐 Plataforma: ${process.platform}`);
+            console.log(`🌐 Node version: ${process.version}`);
 
             try {
+                console.log(`⏳ Tentando loadImage direto primeiro...`);
                 avatar = await loadImage(finalAvatarURL);
                 console.log('✅ Avatar carregado com sucesso via loadImage');
             } catch (loadImageError) {
                 console.log(`⚠️ loadImage falhou: ${loadImageError.message}, tentando https.get...`);
 
                 // Método alternativo: baixar via https e criar imagem
+                console.log(`📥 Iniciando download via https.get...`);
                 const imageBuffer = await new Promise((resolve, reject) => {
                     const url = new URL(finalAvatarURL);
+                    console.log(`🌐 Fazendo request para: ${url.hostname}${url.pathname}`);
+
                     const options = {
                         hostname: url.hostname,
                         path: url.pathname + url.search,
                         method: 'GET',
-                        timeout: 15000
+                        timeout: 8000, // Reduzido para 8s
+                        headers: {
+                            'User-Agent': 'DiscordBot/1.0'
+                        }
                     };
 
+                    console.log(`⏱️ Timeout configurado: 8 segundos`);
                     const req = https.request(options, (res) => {
+                        console.log(`📡 Resposta recebida: Status ${res.statusCode}`);
+                        console.log(`📡 Content-Type: ${res.headers['content-type']}`);
+                        console.log(`📡 Content-Length: ${res.headers['content-length']}`);
+
                         if (res.statusCode !== 200) {
                             reject(new Error(`HTTP ${res.statusCode}`));
                             return;
                         }
 
                         const chunks = [];
-                        res.on('data', (chunk) => chunks.push(chunk));
+                        let totalBytes = 0;
+
+                        res.on('data', (chunk) => {
+                            chunks.push(chunk);
+                            totalBytes += chunk.length;
+                            console.log(`📦 Recebendo dados: ${totalBytes} bytes`);
+                        });
+
                         res.on('end', () => {
                             const buffer = Buffer.concat(chunks);
-                            console.log(`📦 Buffer baixado: ${buffer.length} bytes`);
+                            console.log(`✅ Download completo: ${buffer.length} bytes`);
                             resolve(buffer);
                         });
                     });
 
                     req.on('timeout', () => {
+                        console.log(`⏰ Timeout no https.get (8s)`);
                         req.destroy();
                         reject(new Error('Timeout no download'));
                     });
 
                     req.on('error', (err) => {
+                        console.log(`❌ Erro no https.get: ${err.message}`);
                         reject(err);
                     });
 
+                    console.log(`🚀 Enviando request...`);
                     req.end();
                 });
 
+                console.log(`🖼️ Criando imagem do buffer...`);
                 // Criar imagem do buffer
                 avatar = await loadImage(imageBuffer);
                 console.log('✅ Avatar carregado com sucesso via https.get + buffer');
@@ -412,6 +438,7 @@ async function generateBanner(member, text, isWelcome = true) {
                     console.log(`🔄 Tentando formato ${format}: ${altURL}`);
 
                     try {
+                        console.log(`⏳ Tentando loadImage para ${format}...`);
                         avatar = await loadImage(altURL);
                         console.log(`✅ Avatar carregado com sucesso no formato ${format} via loadImage`);
                         break;
@@ -419,16 +446,24 @@ async function generateBanner(member, text, isWelcome = true) {
                         console.log(`⚠️ loadImage falhou para ${format}: ${altLoadImageError.message}, tentando https.get...`);
 
                         // Método alternativo para formatos alternativos
+                        console.log(`📥 Download alternativo para ${format}...`);
                         const altImageBuffer = await new Promise((resolveAlt, rejectAlt) => {
                             const altUrlObj = new URL(altURL);
+                            console.log(`🌐 Request para ${format}: ${altUrlObj.hostname}${altUrlObj.pathname}`);
+
                             const altOptions = {
                                 hostname: altUrlObj.hostname,
                                 path: altUrlObj.pathname + altUrlObj.search,
                                 method: 'GET',
-                                timeout: 10000
+                                timeout: 5000, // 5s para alternativos
+                                headers: {
+                                    'User-Agent': 'DiscordBot/1.0'
+                                }
                             };
 
                             const altReq = https.request(altOptions, (altRes) => {
+                                console.log(`📡 ${format} - Status: ${altRes.statusCode}`);
+
                                 if (altRes.statusCode !== 200) {
                                     rejectAlt(new Error(`HTTP ${altRes.statusCode} for ${format}`));
                                     return;
@@ -438,22 +473,26 @@ async function generateBanner(member, text, isWelcome = true) {
                                 altRes.on('data', (chunk) => altChunks.push(chunk));
                                 altRes.on('end', () => {
                                     const altBuffer = Buffer.concat(altChunks);
+                                    console.log(`✅ ${format} - Download: ${altBuffer.length} bytes`);
                                     resolveAlt(altBuffer);
                                 });
                             });
 
                             altReq.on('timeout', () => {
+                                console.log(`⏰ ${format} - Timeout (5s)`);
                                 altReq.destroy();
                                 rejectAlt(new Error(`Timeout ${format}`));
                             });
 
                             altReq.on('error', (err) => {
+                                console.log(`❌ ${format} - Erro: ${err.message}`);
                                 rejectAlt(err);
                             });
 
                             altReq.end();
                         });
 
+                        console.log(`🖼️ Criando imagem do buffer ${format}...`);
                         avatar = await loadImage(altImageBuffer);
                         console.log(`✅ Avatar carregado com sucesso no formato ${format} via https.get`);
                         break;
@@ -464,6 +503,11 @@ async function generateBanner(member, text, isWelcome = true) {
             }
 
             if (!avatar) {
+                console.log(`❌ Todos os métodos falharam, usando placeholder`);
+                console.log(`💡 Possíveis causas:`);
+                console.log(`   - Ambiente hospedado com restrições de rede`);
+                console.log(`   - Firewall bloqueando conexões externas`);
+                console.log(`   - Plano gratuito com limitações`);
                 throw new Error('Todos os formatos de avatar falharam');
             }
         }
