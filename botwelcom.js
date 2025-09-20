@@ -340,20 +340,63 @@ async function generateBanner(member, text, isWelcome = true) {
 
         console.log(`🖼️ Tentando carregar avatar: ${finalAvatarURL}`);
 
+        // 🔍 DEBUG EXTRA PARA loadImage
+        console.log(`🔍 DEBUG loadImage: URL final = ${finalAvatarURL}`);
+        console.log(`🔍 DEBUG loadImage: URL includes .png = ${finalAvatarURL.includes('.png')}`);
+
         // Tentar múltiplos formatos se disponível
         let avatar;
         try {
-            // Primeiro tentar o formato solicitado
-            const avatarPromise = loadImage(finalAvatarURL);
-            const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Timeout no carregamento do avatar')), 30000) // 30s
-            );
+            // 🔄 MÉTODO ALTERNATIVO: Usar https.get se loadImage falhar
+            console.log(`🔄 Tentando método alternativo com https.get...`);
 
-            console.log(`⏱️ Timeout configurado: 30 segundos`);
-            console.log(`🔄 Iniciando carregamento do avatar...`);
+            try {
+                avatar = await loadImage(finalAvatarURL);
+                console.log('✅ Avatar carregado com sucesso via loadImage');
+            } catch (loadImageError) {
+                console.log(`⚠️ loadImage falhou: ${loadImageError.message}, tentando https.get...`);
 
-            avatar = await Promise.race([avatarPromise, timeoutPromise]);
-            console.log('✅ Avatar carregado com sucesso no primeiro formato');
+                // Método alternativo: baixar via https e criar imagem
+                const imageBuffer = await new Promise((resolve, reject) => {
+                    const url = new URL(finalAvatarURL);
+                    const options = {
+                        hostname: url.hostname,
+                        path: url.pathname + url.search,
+                        method: 'GET',
+                        timeout: 15000
+                    };
+
+                    const req = https.request(options, (res) => {
+                        if (res.statusCode !== 200) {
+                            reject(new Error(`HTTP ${res.statusCode}`));
+                            return;
+                        }
+
+                        const chunks = [];
+                        res.on('data', (chunk) => chunks.push(chunk));
+                        res.on('end', () => {
+                            const buffer = Buffer.concat(chunks);
+                            console.log(`📦 Buffer baixado: ${buffer.length} bytes`);
+                            resolve(buffer);
+                        });
+                    });
+
+                    req.on('timeout', () => {
+                        req.destroy();
+                        reject(new Error('Timeout no download'));
+                    });
+
+                    req.on('error', (err) => {
+                        reject(err);
+                    });
+
+                    req.end();
+                });
+
+                // Criar imagem do buffer
+                avatar = await loadImage(imageBuffer);
+                console.log('✅ Avatar carregado com sucesso via https.get + buffer');
+            }
         } catch (firstError) {
             console.log(`⚠️ Primeiro formato falhou (${firstError.message}), tentando formatos alternativos...`);
 
@@ -362,20 +405,59 @@ async function generateBanner(member, text, isWelcome = true) {
             for (const format of formats) {
                 try {
                     let altURL = member.user.displayAvatarURL({ format: format, size: 128, dynamic: false });
-                    // 🔧 FORÇAR PNG SE FOR WEBP
-                    if (altURL && altURL.includes('.webp')) {
+                    // 🔧 APENAS PARA FORMATO PNG: forçar conversão se necessário
+                    if (format === 'png' && altURL && altURL.includes('.webp')) {
                         altURL = altURL.replace('.webp', '.png');
                     }
                     console.log(`🔄 Tentando formato ${format}: ${altURL}`);
 
-                    const altPromise = loadImage(altURL);
-                    const altTimeout = new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error(`Timeout ${format}`)), 20000) // 15s para alternativos
-                    );
+                    try {
+                        avatar = await loadImage(altURL);
+                        console.log(`✅ Avatar carregado com sucesso no formato ${format} via loadImage`);
+                        break;
+                    } catch (altLoadImageError) {
+                        console.log(`⚠️ loadImage falhou para ${format}: ${altLoadImageError.message}, tentando https.get...`);
 
-                    avatar = await Promise.race([altPromise, altTimeout]);
-                    console.log(`✅ Avatar carregado com sucesso no formato ${format}`);
-                    break;
+                        // Método alternativo para formatos alternativos
+                        const altImageBuffer = await new Promise((resolveAlt, rejectAlt) => {
+                            const altUrlObj = new URL(altURL);
+                            const altOptions = {
+                                hostname: altUrlObj.hostname,
+                                path: altUrlObj.pathname + altUrlObj.search,
+                                method: 'GET',
+                                timeout: 10000
+                            };
+
+                            const altReq = https.request(altOptions, (altRes) => {
+                                if (altRes.statusCode !== 200) {
+                                    rejectAlt(new Error(`HTTP ${altRes.statusCode} for ${format}`));
+                                    return;
+                                }
+
+                                const altChunks = [];
+                                altRes.on('data', (chunk) => altChunks.push(chunk));
+                                altRes.on('end', () => {
+                                    const altBuffer = Buffer.concat(altChunks);
+                                    resolveAlt(altBuffer);
+                                });
+                            });
+
+                            altReq.on('timeout', () => {
+                                altReq.destroy();
+                                rejectAlt(new Error(`Timeout ${format}`));
+                            });
+
+                            altReq.on('error', (err) => {
+                                rejectAlt(err);
+                            });
+
+                            altReq.end();
+                        });
+
+                        avatar = await loadImage(altImageBuffer);
+                        console.log(`✅ Avatar carregado com sucesso no formato ${format} via https.get`);
+                        break;
+                    }
                 } catch (altError) {
                     console.log(`❌ Formato ${format} também falhou: ${altError.message}`);
                 }
