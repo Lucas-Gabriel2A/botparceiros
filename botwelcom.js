@@ -176,6 +176,42 @@ function renderText(ctx, text, x, y, maxWidth, lineHeight = 70) {
     return lines.length;
 }
 
+// Render centered wrapped text (keeps lines centered at centerX)
+function renderTextCentered(ctx, text, centerX, startY, maxWidth, lineHeight = 70, maxLines = 3) {
+    const words = text.split(' ');
+    let line = '';
+    const lines = [];
+
+    for (let i = 0; i < words.length; i++) {
+        const testLine = line ? line + ' ' + words[i] : words[i];
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && line) {
+            lines.push(line);
+            line = words[i];
+        } else {
+            line = testLine;
+        }
+    }
+    if (line) lines.push(line);
+
+    if (lines.length > maxLines) {
+        lines.splice(maxLines - 1, lines.length - (maxLines - 1));
+        const last = lines[maxLines - 1];
+        lines[maxLines - 1] = last.substring(0, Math.max(0, Math.floor(maxWidth / 10) - 3)) + '...';
+    }
+
+    // Draw centered lines
+    ctx.textAlign = 'center';
+    for (let i = 0; i < lines.length; i++) {
+        const lineY = startY + (i * lineHeight);
+        // Shadow / stroke handled by caller's ctx state
+        ctx.fillText(lines[i], centerX, lineY);
+        ctx.strokeText(lines[i], centerX, lineY);
+    }
+
+    return lines.length;
+}
+
 // Fun��o para detectar tipo real da imagem pelos bytes
 function getImageTypeFromBuffer(buffer) {
     const firstBytes = buffer.slice(0, 12);
@@ -512,9 +548,9 @@ async function generateBanner(member, text, isWelcome = true) {
             }
         }
 
-    // Make avatar larger and more central
+    // Make avatar larger and more central (moved down to center content)
     const avatarCenterX = 400;
-    const avatarCenterY = 140;
+    const avatarCenterY = 180; // moved down
     const avatarRadius = 100; // larger avatar
     const avatarSize = avatarRadius * 2;
 
@@ -589,7 +625,7 @@ async function generateBanner(member, text, isWelcome = true) {
     ctx.shadowOffsetY = 4;
 
     // Create a vibrant gradient for the main text
-    const mainY = 320;
+    const mainY = 360; // moved down to balance with avatar
     const grad = ctx.createLinearGradient(200, mainY - 40, 600, mainY + 40);
     grad.addColorStop(0, '#ffd54f');
     grad.addColorStop(0.4, '#ff8a00');
@@ -602,9 +638,10 @@ async function generateBanner(member, text, isWelcome = true) {
     ctx.fillStyle = grad;
     // If text is long, use renderText for wrapping while keeping styling
     try {
-        // Set a font size suitable for renderText's measurement
-        ctx.font = `bold 56px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
-        renderText(ctx, displayText, 400, mainY - 40, 700, 72);
+    // Set a font size suitable for renderText's measurement
+    ctx.font = `bold 56px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
+    // Use centered wrapper to keep text centered
+    renderTextCentered(ctx, displayText, 400, mainY - 24, 700, 72, 3);
     } catch (e) {
         ctx.fillText(displayText, 400, mainY);
     }
@@ -671,7 +708,7 @@ async function generateBannerFast(member, text, isWelcome = true) {
 
     // Avatar: larger centered placeholder for fast preview
     const avatarCenterX = 400;
-    const avatarCenterY = 140;
+    const avatarCenterY = 180; // moved down
     const avatarRadius = 100;
     ctx.save();
     const placeholderGradient = ctx.createRadialGradient(avatarCenterX, avatarCenterY, 0, avatarCenterX, avatarCenterY, avatarRadius);
@@ -711,7 +748,7 @@ async function generateBannerFast(member, text, isWelcome = true) {
     ctx.shadowOffsetY = 4;
 
     const displayText = text.replace('[username]', username);
-    const mainYFast = 320;
+    const mainYFast = 360; // moved down to center
     const gradFast = ctx.createLinearGradient(200, mainYFast - 40, 600, mainYFast + 40);
     gradFast.addColorStop(0, '#ffd54f');
     gradFast.addColorStop(0.4, '#ff8a00');
@@ -723,7 +760,7 @@ async function generateBannerFast(member, text, isWelcome = true) {
     ctx.fillStyle = gradFast;
     try {
         ctx.font = `bold 56px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
-        renderText(ctx, displayText, 400, mainYFast - 40, 700, 72);
+        renderTextCentered(ctx, displayText, 400, mainYFast - 24, 700, 72, 3);
     } catch (e) {
         ctx.fillText(displayText, 400, mainYFast);
     }
