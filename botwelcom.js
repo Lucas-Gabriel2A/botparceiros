@@ -32,6 +32,23 @@ const fetchWithTimeout = async (url, options = {}, timeout = 5000) => {
     }
 };
 
+// Ler response como ArrayBuffer com timeout para evitar bloqueios
+const arrayBufferWithTimeout = async (response, timeout = 2500) => {
+    // Promise que rejeita após timeout ms
+    const timeoutPromise = new Promise((_, reject) => {
+        const id = setTimeout(() => {
+            clearTimeout(id);
+            reject(new Error(`arrayBuffer timeout after ${timeout}ms`));
+        }, timeout);
+    });
+
+    // race entre arrayBuffer() e timeout
+    return Promise.race([
+        response.arrayBuffer(),
+        timeoutPromise,
+    ]);
+};
+
 // Configura��es
 const TOKEN = process.env.DISCORD_TOKENS;
 const CLIENT_ID = process.env.CLIENT_ID;
@@ -393,8 +410,8 @@ async function generateBanner(member, text, isWelcome = true) {
 
                 try {
                     console.log(`🚨 CHEGANDO NO response.arrayBuffer() - linha crítica`);
-                    console.log(`⚠️ Tentando response.arrayBuffer()...`);
-                    const arrayBuffer = await response.arrayBuffer();
+                    console.log(`⚠️ Tentando response.arrayBuffer()... (timeout 2500ms)`);
+                    const arrayBuffer = await arrayBufferWithTimeout(response, 2500);
                     console.log(`✅ ArrayBuffer criado: ${arrayBuffer.byteLength} bytes`);
 
                     console.log(`⚠️ Tentando Buffer.from(arrayBuffer)...`);
@@ -434,8 +451,8 @@ async function generateBanner(member, text, isWelcome = true) {
                     console.log(`⚠️ Content-Type: ${response.headers.get('content-type')}`);
 
                     try {
-                        console.log(`⚠️ Tentando response.arrayBuffer() (fallback)...`);
-                        const arrayBuffer = await response.arrayBuffer();
+                        console.log(`⚠️ Tentando response.arrayBuffer() (fallback)... (timeout 2000ms)`);
+                        const arrayBuffer = await arrayBufferWithTimeout(response, 2000);
                         console.log(`✅ ArrayBuffer criado (fallback): ${arrayBuffer.byteLength} bytes`);
 
                         console.log(`⚠️ Tentando Buffer.from(arrayBuffer) (fallback)...`);
@@ -525,7 +542,7 @@ async function generateBanner(member, text, isWelcome = true) {
                         try {
                             const response = await fetchWithTimeout(altURL, {}, 2000);
                             if (response.ok) {
-                                const arrayBuffer = await response.arrayBuffer();
+                                const arrayBuffer = await arrayBufferWithTimeout(response, 1500);
                                 const buffer = Buffer.from(arrayBuffer);
                                 avatar = await loadImage(buffer);
                                 console.log(`? Avatar carregado via fetch (${format})`);
