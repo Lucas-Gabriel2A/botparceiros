@@ -553,8 +553,8 @@ async function generateBanner(member, text, isWelcome = true) {
         ctx.lineWidth = 4;
         ctx.stroke();
 
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 48px "Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold 48px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
@@ -572,7 +572,7 @@ async function generateBanner(member, text, isWelcome = true) {
     // Substituir texto
     const displayText = text.replace('[username]', username);
     ctx.fillStyle = '#ffffff';
-    ctx.font = '30px Arial';
+    ctx.font = `30px ${PREFERRED_FONT}`;
     ctx.fillText(displayText, 400, 300);
 
     console.log('? Banner gerado com sucesso');
@@ -652,7 +652,7 @@ async function generateBannerFast(member, text, isWelcome = true) {
     ctx.stroke();
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 48px "Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
+    ctx.font = `bold 48px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
@@ -680,7 +680,7 @@ async function generateBannerFast(member, text, isWelcome = true) {
         const memberCount = member.guild.memberCount;
         const memberText = `Voc� � o ${memberCount}� Membro!`;
 
-        ctx.font = 'bold 32px "Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
+    ctx.font = `bold 32px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
 
         // Posicionar baseado no n�mero de linhas do texto principal
         const memberY = 280 + (linesUsed * 60) + 40;
@@ -1445,6 +1445,22 @@ client.on('clientReady', () => {
         console.log(`?? Categoria Gal�xia: ${galaxiaCategory ? galaxiaCategory.name : 'N�O ENCONTRADA'}`);
     }
 });
+
+// Registrar fontes opcionais para suportar glyphs especiais (Noto) e evitar quadrados
+const notoSansPath = path.join(__dirname, 'fonts', 'NotoSans-Regular.ttf');
+const notoSansBoldPath = path.join(__dirname, 'fonts', 'NotoSans-Bold.ttf');
+if (fs.existsSync(notoSansPath) && fs.existsSync(notoSansBoldPath)) {
+    try {
+        registerFont(notoSansPath, { family: 'NotoSans' });
+        registerFont(notoSansBoldPath, { family: 'NotoSans', weight: 'bold' });
+        console.log('✅ Fonts Noto registradas: NotoSans');
+    } catch (e) {
+        console.log('⚠️ Falha ao registrar fonts Noto:', e.message);
+    }
+} else {
+    console.log('⚠️ Fonts Noto não encontradas em ./fonts — textos com caracteres especiais podem aparecer como quadrados');
+}
+const PREFERRED_FONT = fs.existsSync(notoSansPath) ? 'NotoSans' : 'sans-serif';
 
 
 
