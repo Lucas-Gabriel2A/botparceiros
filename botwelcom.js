@@ -384,25 +384,39 @@ async function generateBanner(member, text, isWelcome = true) {
                     throw new Error(`HTTP ${response.status}`);
                 }
 
-                console.log(`?? Fetch response: ${response.status} ${response.statusText}`);
-                console.log(`?? Content-Type: ${response.headers.get('content-type')}`);
-
-                const arrayBuffer = await response.arrayBuffer();
-                console.log(`⚠️ ArrayBuffer criado: ${arrayBuffer.byteLength} bytes`);
-
-                const buffer = Buffer.from(arrayBuffer);
-                console.log(`⚠️ Buffer convertido: ${buffer.length} bytes`);
-                console.log(`⚠️ Buffer type: ${buffer.constructor.name}`);
-                console.log(`⚠️ Primeiros 10 bytes do buffer: ${buffer.slice(0, 10).toString('hex')}`);
+                console.log(`⚠️ Fetch response: ${response.status} ${response.statusText}`);
+                console.log(`⚠️ Content-Type: ${response.headers.get('content-type')}`);
+                console.log(`⚠️ Content-Length: ${response.headers.get('content-length')}`);
+                console.log(`⚠️ Response type: ${response.type}`);
+                console.log(`⚠️ Response ok: ${response.ok}`);
+                console.log(`⚠️ Response bodyUsed: ${response.bodyUsed}`);
 
                 try {
-                    console.log(`⚠️ Tentando loadImage com buffer...`);
-                    avatar = await loadImage(buffer);
-                    console.log('✅ Avatar carregado com sucesso via fetch direto (Railway)');
-                } catch (loadImageError) {
-                    console.log(`❌ loadImage falhou mesmo com buffer: ${loadImageError.message}`);
-                    console.log(`❌ Tipo do erro: ${loadImageError.constructor.name}`);
-                    throw loadImageError; // Re-throw para ir pro catch externo
+                    console.log(`🚨 CHEGANDO NO response.arrayBuffer() - linha crítica`);
+                    console.log(`⚠️ Tentando response.arrayBuffer()...`);
+                    const arrayBuffer = await response.arrayBuffer();
+                    console.log(`✅ ArrayBuffer criado: ${arrayBuffer.byteLength} bytes`);
+
+                    console.log(`⚠️ Tentando Buffer.from(arrayBuffer)...`);
+                    const buffer = Buffer.from(arrayBuffer);
+                    console.log(`✅ Buffer convertido: ${buffer.length} bytes`);
+                    console.log(`⚠️ Buffer type: ${buffer.constructor.name}`);
+                    console.log(`⚠️ Primeiros 10 bytes do buffer: ${buffer.slice(0, 10).toString('hex')}`);
+
+                    try {
+                        console.log(`⚠️ Tentando loadImage com buffer...`);
+                        avatar = await loadImage(buffer);
+                        console.log('✅ Avatar carregado com sucesso via fetch direto (Railway)');
+                    } catch (loadImageError) {
+                        console.log(`❌ loadImage falhou mesmo com buffer: ${loadImageError.message}`);
+                        console.log(`❌ Tipo do erro: ${loadImageError.constructor.name}`);
+                        throw loadImageError; // Re-throw para ir pro catch externo
+                    }
+                } catch (bufferError) {
+                    console.log(`❌ ERRO CRÍTICO no processamento do buffer: ${bufferError.message}`);
+                    console.log(`❌ Tipo do erro de buffer: ${bufferError.constructor.name}`);
+                    console.log(`❌ Stack trace: ${bufferError.stack}`);
+                    throw bufferError; // Re-throw para ir pro catch externo
                 }
             } catch (fetchError) {
                 console.log(`⚠️ Fetch direto falhou: ${fetchError.message}, tentando https.get...`);
@@ -416,22 +430,31 @@ async function generateBanner(member, text, isWelcome = true) {
                         throw new Error(`HTTP ${response.status}`);
                     }
 
-                    console.log(`?? Fetch response: ${response.status} ${response.statusText}`);
-                    console.log(`?? Content-Type: ${response.headers.get('content-type')}`);
-
-                    const arrayBuffer = await response.arrayBuffer();
-                    console.log(`⚠️ ArrayBuffer criado (fallback): ${arrayBuffer.byteLength} bytes`);
-
-                    const buffer = Buffer.from(arrayBuffer);
-                    console.log(`⚠️ Buffer convertido (fallback): ${buffer.length} bytes`);
+                    console.log(`⚠️ Fetch response: ${response.status} ${response.statusText}`);
+                    console.log(`⚠️ Content-Type: ${response.headers.get('content-type')}`);
 
                     try {
-                        console.log(`⚠️ Tentando loadImage com buffer (fallback)...`);
-                        avatar = await loadImage(buffer);
-                        console.log('✅ Avatar carregado com sucesso via fetch + buffer');
-                    } catch (loadImageError) {
-                        console.log(`❌ loadImage falhou no fallback: ${loadImageError.message}`);
-                        throw loadImageError; // Re-throw para ir pro catch externo
+                        console.log(`⚠️ Tentando response.arrayBuffer() (fallback)...`);
+                        const arrayBuffer = await response.arrayBuffer();
+                        console.log(`✅ ArrayBuffer criado (fallback): ${arrayBuffer.byteLength} bytes`);
+
+                        console.log(`⚠️ Tentando Buffer.from(arrayBuffer) (fallback)...`);
+                        const buffer = Buffer.from(arrayBuffer);
+                        console.log(`✅ Buffer convertido (fallback): ${buffer.length} bytes`);
+
+                        try {
+                            console.log(`⚠️ Tentando loadImage com buffer (fallback)...`);
+                            avatar = await loadImage(buffer);
+                            console.log('✅ Avatar carregado com sucesso via fetch + buffer');
+                        } catch (loadImageError) {
+                            console.log(`❌ loadImage falhou no fallback: ${loadImageError.message}`);
+                            throw loadImageError; // Re-throw para ir pro catch externo
+                        }
+                    } catch (bufferError) {
+                        console.log(`❌ ERRO CRÍTICO no processamento do buffer (fallback): ${bufferError.message}`);
+                        console.log(`❌ Tipo do erro de buffer (fallback): ${bufferError.constructor.name}`);
+                        console.log(`❌ Stack trace (fallback): ${bufferError.stack}`);
+                        throw bufferError; // Re-throw para ir pro catch externo
                     }
 
                 } catch (fetchError) {
