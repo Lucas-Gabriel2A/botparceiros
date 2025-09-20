@@ -378,155 +378,105 @@ async function generateBanner(member, text, isWelcome = true) {
         }
 
         console.log(`??? Tentando carregar avatar: ${finalAvatarURL}`);
-
-        // ?? DEBUG EXTRA PARA loadImage
         console.log(`?? DEBUG loadImage: URL final = ${finalAvatarURL}`);
         console.log(`?? DEBUG loadImage: URL includes .png = ${finalAvatarURL.includes('.png')}`);
 
-        // Tentar m�ltiplos formatos se dispon�vel
-        let avatar;
-        try {
-            // ?? M�TODO ALTERNATIVO: Usar https.get se loadImage falhar
-            console.log(`?? Tentando m�todo alternativo com https.get...`);
-            console.log(`?? Ambiente: ${process.env.NODE_ENV || 'desenvolvimento'}`);
-            console.log(`?? Plataforma: ${process.platform}`);
-            console.log(`?? Node version: ${process.version}`);
+        // Função segura para carregar avatar com timeout total, fallbacks e logs
+        const loadAvatarSafe = async (urlToLoad, totalTimeout = 6000) => {
+            const start = Date.now();
 
-            try {
-                console.log(`? Ambiente Railway detectado - pulando loadImage problem�tico`);
-                console.log(`?? Indo direto para fetch otimizado...`);
+            const placeholderPath = path.join(__dirname, 'backgrounds', 'default_avatar.png');
 
-                const response = await fetchWithTimeout(finalAvatarURL, {}, 3000);
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+            const watchdog = new Promise((_, reject) => {
+                const id = setTimeout(() => reject(new Error('watchdog timeout')), totalTimeout);
+            });
+
+            const attempt = async () => {
+                // 1) try fetchWithTimeout + arrayBufferWithTimeout
+                try {
+                    console.log(`⚠️ loadAvatarSafe: tentando fetchWithTimeout ${urlToLoad}`);
+                    const resp = await fetchWithTimeout(urlToLoad, {}, 3000);
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    const ab = await arrayBufferWithTimeout(resp, 2500);
+                    const buf = Buffer.from(ab);
+                    console.log(`⚠️ loadAvatarSafe: buffer recebido ${buf.length} bytes`);
+                    try {
+                        const img = await loadImage(buf);
+                        console.log('✅ loadAvatarSafe: loadImage via fetch OK');
+                        return img;
+                    } catch (err) {
+                        console.log(`❌ loadAvatarSafe: loadImage falhou com buffer: ${err.message}`);
+                        // continue to https fallback
+                    }
+                } catch (err) {
+                    console.log(`⚠️ loadAvatarSafe: fetch falhou: ${err.message}`);
                 }
 
-                console.log(`⚠️ Fetch response: ${response.status} ${response.statusText}`);
-                console.log(`⚠️ Content-Type: ${response.headers.get('content-type')}`);
-                console.log(`⚠️ Content-Length: ${response.headers.get('content-length')}`);
-                console.log(`⚠️ Response type: ${response.type}`);
-                console.log(`⚠️ Response ok: ${response.ok}`);
-                console.log(`⚠️ Response bodyUsed: ${response.bodyUsed}`);
-
+                // 2) https.get fallback
                 try {
-                    console.log(`🚨 CHEGANDO NO response.arrayBuffer() - linha crítica`);
-                    console.log(`⚠️ Tentando response.arrayBuffer()... (timeout 2500ms)`);
-                    const arrayBuffer = await arrayBufferWithTimeout(response, 2500);
-                    console.log(`✅ ArrayBuffer criado: ${arrayBuffer.byteLength} bytes`);
-
-                    console.log(`⚠️ Tentando Buffer.from(arrayBuffer)...`);
-                    const buffer = Buffer.from(arrayBuffer);
-                    console.log(`✅ Buffer convertido: ${buffer.length} bytes`);
-                    console.log(`⚠️ Buffer type: ${buffer.constructor.name}`);
-                    console.log(`⚠️ Primeiros 10 bytes do buffer: ${buffer.slice(0, 10).toString('hex')}`);
-
-                    try {
-                        console.log(`⚠️ Tentando loadImage com buffer...`);
-                        avatar = await loadImage(buffer);
-                        console.log('✅ Avatar carregado com sucesso via fetch direto (Railway)');
-                    } catch (loadImageError) {
-                        console.log(`❌ loadImage falhou mesmo com buffer: ${loadImageError.message}`);
-                        console.log(`❌ Tipo do erro: ${loadImageError.constructor.name}`);
-                        throw loadImageError; // Re-throw para ir pro catch externo
-                    }
-                } catch (bufferError) {
-                    console.log(`❌ ERRO CRÍTICO no processamento do buffer: ${bufferError.message}`);
-                    console.log(`❌ Tipo do erro de buffer: ${bufferError.constructor.name}`);
-                    console.log(`❌ Stack trace: ${bufferError.stack}`);
-                    throw bufferError; // Re-throw para ir pro catch externo
-                }
-            } catch (fetchError) {
-                console.log(`⚠️ Fetch direto falhou: ${fetchError.message}, tentando https.get...`);
-
-                // ?? M�TODO OTIMIZADO PARA RAILWAY: Usar fetch nativo
-                console.log(`?? Tentando fetch nativo (otimizado para Railway)...`);
-                try {
-                    const response = await fetchWithTimeout(finalAvatarURL, {}, 3000); // 3s timeout
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
-                    }
-
-                    console.log(`⚠️ Fetch response: ${response.status} ${response.statusText}`);
-                    console.log(`⚠️ Content-Type: ${response.headers.get('content-type')}`);
-
-                    try {
-                        console.log(`⚠️ Tentando response.arrayBuffer() (fallback)... (timeout 2000ms)`);
-                        const arrayBuffer = await arrayBufferWithTimeout(response, 2000);
-                        console.log(`✅ ArrayBuffer criado (fallback): ${arrayBuffer.byteLength} bytes`);
-
-                        console.log(`⚠️ Tentando Buffer.from(arrayBuffer) (fallback)...`);
-                        const buffer = Buffer.from(arrayBuffer);
-                        console.log(`✅ Buffer convertido (fallback): ${buffer.length} bytes`);
-
-                        try {
-                            console.log(`⚠️ Tentando loadImage com buffer (fallback)...`);
-                            avatar = await loadImage(buffer);
-                            console.log('✅ Avatar carregado com sucesso via fetch + buffer');
-                        } catch (loadImageError) {
-                            console.log(`❌ loadImage falhou no fallback: ${loadImageError.message}`);
-                            throw loadImageError; // Re-throw para ir pro catch externo
-                        }
-                    } catch (bufferError) {
-                        console.log(`❌ ERRO CRÍTICO no processamento do buffer (fallback): ${bufferError.message}`);
-                        console.log(`❌ Tipo do erro de buffer (fallback): ${bufferError.constructor.name}`);
-                        console.log(`❌ Stack trace (fallback): ${bufferError.stack}`);
-                        throw bufferError; // Re-throw para ir pro catch externo
-                    }
-
-                } catch (fetchError) {
-                    console.log(`?? Fetch tamb�m falhou: ${fetchError.message}, tentando https.get como fallback...`);
-
-                    // M�todo alternativo final: https.get simplificado
-                    console.log(`?? �ltimo recurso: https.get simplificado...`);
+                    console.log(`⚠️ loadAvatarSafe: tentando https.get fallback ${urlToLoad}`);
                     const imageBuffer = await new Promise((resolve, reject) => {
-                        const urlObj = new URL(finalAvatarURL);
+                        const urlObj = new URL(urlToLoad);
                         const options = {
                             hostname: urlObj.hostname,
                             path: urlObj.pathname + urlObj.search,
                             method: 'GET',
-                            timeout: 2000, // Timeout bem curto
-                            headers: {
-                                'User-Agent': 'DiscordBot/1.0'
-                            }
+                            timeout: 2000,
+                            headers: { 'User-Agent': 'DiscordBot/1.0' }
                         };
-
                         const req = https.request(options, (res) => {
                             if (res.statusCode !== 200) {
                                 reject(new Error(`HTTP ${res.statusCode}`));
                                 return;
                             }
-
                             const chunks = [];
-                            res.on('data', (chunk) => chunks.push(chunk));
-                            res.on('end', () => {
-                                const buffer = Buffer.concat(chunks);
-                                resolve(buffer);
-                            });
+                            res.on('data', (c) => chunks.push(c));
+                            res.on('end', () => resolve(Buffer.concat(chunks)));
                         });
-
-                        req.on('timeout', () => {
-                            req.destroy();
-                            reject(new Error('Timeout final'));
-                        });
-
-                        req.on('error', (err) => reject(err));
+                        req.on('timeout', () => { req.destroy(); reject(new Error('https.get timeout')); });
+                        req.on('error', (e) => reject(e));
                         req.end();
                     });
 
-                    avatar = await loadImage(imageBuffer);
-                    console.log('✅ Avatar carregado via https.get final');
+                    try {
+                        const img = await loadImage(imageBuffer);
+                        console.log('✅ loadAvatarSafe: loadImage via https.get OK');
+                        return img;
+                    } catch (err) {
+                        console.log(`❌ loadAvatarSafe: loadImage falhou no https.get: ${err.message}`);
+                    }
+                } catch (err) {
+                    console.log(`⚠️ loadAvatarSafe: https.get falhou: ${err.message}`);
                 }
-            }
-        } catch (firstError) {
-            console.log(`?? Primeiro formato falhou (${firstError.message}), tentando formatos alternativos...`);
+
+                // 3) fallback: placeholder
+                try {
+                    if (fs.existsSync(placeholderPath)) {
+                        const img = await loadImage(placeholderPath);
+                        console.log('⚠️ loadAvatarSafe: usando placeholder local');
+                        return img;
+                    }
+                } catch (err) {
+                    console.log(`❌ loadAvatarSafe: placeholder falhou: ${err.message}`);
+                }
+
+                throw new Error('loadAvatarSafe: não foi possível obter avatar');
+            };
+
+            return Promise.race([attempt(), watchdog]);
+        };
+
+        let avatar;
+        try {
+            avatar = await loadAvatarSafe(finalAvatarURL, 6000);
+        } catch (primaryErr) {
+            console.log(`⚠️ loadAvatarSafe falhou: ${primaryErr.message} — tentando formatos alternativos...`);
 
             // Tentar outros formatos
             const formats = ['webp', 'png', 'jpeg'];
             for (const format of formats) {
                 try {
                     let altURL = member.user.displayAvatarURL({ format: format, size: 128, dynamic: false });
-                    // ?? APENAS PARA FORMATO PNG: for�ar convers�o se necess�rio
                     if (format === 'png' && altURL && altURL.includes('.webp')) {
                         altURL = altURL.replace('.webp', '.png');
                     }
@@ -538,7 +488,6 @@ async function generateBanner(member, text, isWelcome = true) {
                         break;
                     } catch (altLoadImageError) {
                         console.log(`?? loadImage falhou para ${format}, tentando fetch...`);
-
                         try {
                             const response = await fetchWithTimeout(altURL, {}, 2000);
                             if (response.ok) {
@@ -558,12 +507,7 @@ async function generateBanner(member, text, isWelcome = true) {
             }
 
             if (!avatar) {
-                console.log(`? Todos os m�todos falharam, usando placeholder`);
-                console.log(`?? Poss�veis causas:`);
-                console.log(`   - Ambiente hospedado com restri��es de rede (Railway/Discloud)`);
-                console.log(`   - Firewall bloqueando conex�es externas`);
-                console.log(`   - Plano gratuito com limita��es`);
-                console.log(`   - Para desenvolvimento local: funciona normalmente`);
+                console.log(`? Todos os métodos falharam, usando placeholder`);
                 throw new Error('Todos os formatos de avatar falharam');
             }
         }
@@ -831,21 +775,8 @@ client.on('guildMemberAdd', async (member) => {
     try {
         console.log(`?? Gerando banner para ${member.user?.username || member.displayName || 'Unknown'}...`);
         const config = getConfig(member.guild.id);
-        let buffer;
-
-        try {
-            // Primeiro tentar gerar banner completo com avatar
-            buffer = await generateBanner(member, config.welcomeText, true);
-            console.log('? Banner completo gerado com sucesso');
-        } catch (bannerError) {
-            console.log(`?? Banner completo falhou (${bannerError.message}), usando vers�o r�pida...`);
-
-            // Fallback para banner r�pido (sempre funciona, mais r�pido)
-            buffer = await generateBannerFast(member, config.welcomeText, true);
-            console.log('? Banner r�pido gerado como fallback');
-        }
-
-        const attachment = new AttachmentBuilder(buffer, { name: 'welcome.png' });
+        let avatar;
+        avatar = await loadAvatarSafe(finalAvatarURL, 6000);
         await channel.send({ files: [attachment] });
         console.log(`? Welcome enviado com sucesso para ${member.user?.username || member.displayName || 'Unknown'} no canal ${channel.name}`);
     } catch (error) {
