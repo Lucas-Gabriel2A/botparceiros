@@ -388,11 +388,22 @@ async function generateBanner(member, text, isWelcome = true) {
                 console.log(`?? Content-Type: ${response.headers.get('content-type')}`);
 
                 const arrayBuffer = await response.arrayBuffer();
-                const buffer = Buffer.from(arrayBuffer);
-                console.log(`?? Buffer baixado via fetch: ${buffer.length} bytes`);
+                console.log(`⚠️ ArrayBuffer criado: ${arrayBuffer.byteLength} bytes`);
 
-                avatar = await loadImage(buffer);
-                console.log('? Avatar carregado com sucesso via fetch direto (Railway)');
+                const buffer = Buffer.from(arrayBuffer);
+                console.log(`⚠️ Buffer convertido: ${buffer.length} bytes`);
+                console.log(`⚠️ Buffer type: ${buffer.constructor.name}`);
+                console.log(`⚠️ Primeiros 10 bytes do buffer: ${buffer.slice(0, 10).toString('hex')}`);
+
+                try {
+                    console.log(`⚠️ Tentando loadImage com buffer...`);
+                    avatar = await loadImage(buffer);
+                    console.log('✅ Avatar carregado com sucesso via fetch direto (Railway)');
+                } catch (loadImageError) {
+                    console.log(`❌ loadImage falhou mesmo com buffer: ${loadImageError.message}`);
+                    console.log(`❌ Tipo do erro: ${loadImageError.constructor.name}`);
+                    throw loadImageError; // Re-throw para ir pro catch externo
+                }
             } catch (fetchError) {
                 console.log(`⚠️ Fetch direto falhou: ${fetchError.message}, tentando https.get...`);
 
@@ -409,12 +420,19 @@ async function generateBanner(member, text, isWelcome = true) {
                     console.log(`?? Content-Type: ${response.headers.get('content-type')}`);
 
                     const arrayBuffer = await response.arrayBuffer();
+                    console.log(`⚠️ ArrayBuffer criado (fallback): ${arrayBuffer.byteLength} bytes`);
+
                     const buffer = Buffer.from(arrayBuffer);
+                    console.log(`⚠️ Buffer convertido (fallback): ${buffer.length} bytes`);
 
-                    console.log(`?? Buffer baixado via fetch: ${buffer.length} bytes`);
-
-                    avatar = await loadImage(buffer);
-                    console.log('? Avatar carregado com sucesso via fetch + buffer');
+                    try {
+                        console.log(`⚠️ Tentando loadImage com buffer (fallback)...`);
+                        avatar = await loadImage(buffer);
+                        console.log('✅ Avatar carregado com sucesso via fetch + buffer');
+                    } catch (loadImageError) {
+                        console.log(`❌ loadImage falhou no fallback: ${loadImageError.message}`);
+                        throw loadImageError; // Re-throw para ir pro catch externo
+                    }
 
                 } catch (fetchError) {
                     console.log(`?? Fetch tamb�m falhou: ${fetchError.message}, tentando https.get como fallback...`);
@@ -457,7 +475,7 @@ async function generateBanner(member, text, isWelcome = true) {
                     });
 
                     avatar = await loadImage(imageBuffer);
-                    console.log('? Avatar carregado via https.get final');
+                    console.log('✅ Avatar carregado via https.get final');
                 }
             }
         } catch (firstError) {
