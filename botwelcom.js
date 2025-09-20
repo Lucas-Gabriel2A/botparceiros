@@ -1447,20 +1447,45 @@ client.on('clientReady', () => {
 });
 
 // Registrar fontes opcionais para suportar glyphs especiais (Noto) e evitar quadrados
-const notoSansPath = path.join(__dirname, 'fonts', 'NotoSans-Regular.ttf');
+const notoSansRegularPaths = [
+    path.join(__dirname, 'fonts', 'NotoSans-Regular.ttf'),
+    path.join(__dirname, 'fonts', 'NotoSans.ttf')
+];
 const notoSansBoldPath = path.join(__dirname, 'fonts', 'NotoSans-Bold.ttf');
-if (fs.existsSync(notoSansPath) && fs.existsSync(notoSansBoldPath)) {
-    try {
-        registerFont(notoSansPath, { family: 'NotoSans' });
-        registerFont(notoSansBoldPath, { family: 'NotoSans', weight: 'bold' });
-        console.log('✅ Fonts Noto registradas: NotoSans');
-    } catch (e) {
-        console.log('⚠️ Falha ao registrar fonts Noto:', e.message);
+const notoSansItalicPath = path.join(__dirname, 'fonts', 'NotoSans-Italic.ttf');
+
+let registeredNoto = false;
+try {
+    // Register regular (or alternative) if present
+    const regPath = notoSansRegularPaths.find(p => fs.existsSync(p));
+    if (regPath) {
+        registerFont(regPath, { family: 'NotoSans' });
+        registeredNoto = true;
+        console.log(`✅ Font registrada: ${path.basename(regPath)} as NotoSans`);
     }
-} else {
-    console.log('⚠️ Fonts Noto não encontradas em ./fonts — textos com caracteres especiais podem aparecer como quadrados');
+
+    // Register bold if available
+    if (fs.existsSync(notoSansBoldPath)) {
+        registerFont(notoSansBoldPath, { family: 'NotoSans', weight: 'bold' });
+        registeredNoto = true;
+        console.log(`✅ Font registrada: ${path.basename(notoSansBoldPath)} (bold)`);
+    }
+
+    // Register italic if available
+    if (fs.existsSync(notoSansItalicPath)) {
+        registerFont(notoSansItalicPath, { family: 'NotoSans', style: 'italic' });
+        registeredNoto = true;
+        console.log(`✅ Font registrada: ${path.basename(notoSansItalicPath)} (italic)`);
+    }
+
+    if (!registeredNoto) {
+        console.log('⚠️ Fonts Noto não encontradas em ./fonts — textos com caracteres especiais podem aparecer como quadrados');
+    }
+} catch (e) {
+    console.log('⚠️ Falha ao registrar fonts Noto:', e.message);
 }
-const PREFERRED_FONT = fs.existsSync(notoSansPath) ? 'NotoSans' : 'sans-serif';
+
+const PREFERRED_FONT = registeredNoto ? 'NotoSans' : 'sans-serif';
 
 
 
