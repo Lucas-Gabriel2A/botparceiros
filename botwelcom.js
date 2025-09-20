@@ -512,13 +512,20 @@ async function generateBanner(member, text, isWelcome = true) {
             }
         }
 
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(400, 150, 64, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.clip();
-        ctx.drawImage(avatar, 336, 86, 128, 128);
-        ctx.restore();
+    // Make avatar larger and more central
+    const avatarCenterX = 400;
+    const avatarCenterY = 140;
+    const avatarRadius = 100; // larger avatar
+    const avatarSize = avatarRadius * 2;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(avatarCenterX, avatarCenterY, avatarRadius, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    // drawImage expects top-left x,y
+    ctx.drawImage(avatar, avatarCenterX - avatarRadius, avatarCenterY - avatarRadius, avatarSize, avatarSize);
+    ctx.restore();
     } catch (error) {
         console.log(`\n? === ERRO NO AVATAR ===`);
         console.log(`Erro: ${error.message}`);
@@ -569,11 +576,38 @@ async function generateBanner(member, text, isWelcome = true) {
         ctx.restore();
     }
 
-    // Substituir texto
+    // Substituir texto — centralizado, maior e com destaque
     const displayText = text.replace('[username]', username);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `30px ${PREFERRED_FONT}`;
-    ctx.fillText(displayText, 400, 300);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Use a larger font and apply shadow + gradient for emphasis
+    ctx.font = `bold 56px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
+    ctx.lineWidth = 6;
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 4;
+
+    // Create a vibrant gradient for the main text
+    const mainY = 320;
+    const grad = ctx.createLinearGradient(200, mainY - 40, 600, mainY + 40);
+    grad.addColorStop(0, '#ffd54f');
+    grad.addColorStop(0.4, '#ff8a00');
+    grad.addColorStop(0.7, '#ff3d00');
+    grad.addColorStop(1, '#ffeaa7');
+
+    // Stroke (contrast) then fill with gradient
+    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    ctx.strokeText(displayText, 400, mainY);
+    ctx.fillStyle = grad;
+    // If text is long, use renderText for wrapping while keeping styling
+    try {
+        // Set a font size suitable for renderText's measurement
+        ctx.font = `bold 56px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
+        renderText(ctx, displayText, 400, mainY - 40, 700, 72);
+    } catch (e) {
+        ctx.fillText(displayText, 400, mainY);
+    }
 
     console.log('? Banner gerado com sucesso');
     return canvas.toBuffer();
@@ -635,45 +669,64 @@ async function generateBannerFast(member, text, isWelcome = true) {
         ctx.drawImage(backgroundImage, 0, 0, 800, 600);
     }
 
-    // Avatar: sempre usar placeholder r�pido
+    // Avatar: larger centered placeholder for fast preview
+    const avatarCenterX = 400;
+    const avatarCenterY = 140;
+    const avatarRadius = 100;
     ctx.save();
-    const placeholderGradient = ctx.createRadialGradient(400, 150, 0, 400, 150, 64);
+    const placeholderGradient = ctx.createRadialGradient(avatarCenterX, avatarCenterY, 0, avatarCenterX, avatarCenterY, avatarRadius);
     placeholderGradient.addColorStop(0, '#ffdd44');
     placeholderGradient.addColorStop(0.7, '#ffaa00');
     placeholderGradient.addColorStop(1, '#cc6600');
 
     ctx.fillStyle = placeholderGradient;
     ctx.beginPath();
-    ctx.arc(400, 150, 64, 0, Math.PI * 2);
+    ctx.arc(avatarCenterX, avatarCenterY, avatarRadius, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.strokeStyle = '#ffdd44';
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 6;
     ctx.stroke();
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = `bold 48px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
+    ctx.font = `bold 72px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    ctx.fillText(username.charAt(0).toUpperCase(), 402, 152);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.fillText(username.charAt(0).toUpperCase(), avatarCenterX + 2, avatarCenterY + 4);
 
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(username.charAt(0).toUpperCase(), 400, 150);
+    ctx.fillText(username.charAt(0).toUpperCase(), avatarCenterX, avatarCenterY);
 
     ctx.restore();
 
-    // Texto principal
-    ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 3;
-    ctx.font = 'bold 48px "Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
+    // Texto principal — centralizado, maior e chamativo
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    ctx.font = `bold 56px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
+    ctx.lineWidth = 6;
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 4;
 
     const displayText = text.replace('[username]', username);
-    const linesUsed = renderText(ctx, displayText, 400, 280, 700, 60);
+    const mainYFast = 320;
+    const gradFast = ctx.createLinearGradient(200, mainYFast - 40, 600, mainYFast + 40);
+    gradFast.addColorStop(0, '#ffd54f');
+    gradFast.addColorStop(0.4, '#ff8a00');
+    gradFast.addColorStop(0.7, '#ff3d00');
+    gradFast.addColorStop(1, '#ffeaa7');
+
+    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+    ctx.strokeText(displayText, 400, mainYFast);
+    ctx.fillStyle = gradFast;
+    try {
+        ctx.font = `bold 56px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
+        renderText(ctx, displayText, 400, mainYFast - 40, 700, 72);
+    } catch (e) {
+        ctx.fillText(displayText, 400, mainYFast);
+    }
 
     // Texto secund�rio (n�mero do membro) com fonte menor
     if (isWelcome) {
@@ -1486,6 +1539,16 @@ try {
 }
 
 const PREFERRED_FONT = registeredNoto ? 'NotoSans' : 'sans-serif';
+
+// Export functions for local testing and preview generation
+try {
+    module.exports = {
+        generateBanner,
+        generateBannerFast
+    };
+} catch (e) {
+    // ignore in environments where module.exports is not available
+}
 
 
 
