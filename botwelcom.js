@@ -376,8 +376,8 @@ async function generateBanner(member, text, isWelcome = true) {
             console.log(`🌐 Node version: ${process.version}`);
 
             try {
-                console.log(`⏳ Tentando loadImage direto primeiro...`);
-                avatar = await loadImage(finalAvatarURL);
+                console.log(`⏳ Ambiente Railway detectado - pulando loadImage problem�tico`);
+                const response = await fetchWithTimeout(finalAvatarURL, {}, 3000);
                 console.log('✅ Avatar carregado com sucesso via loadImage');
             } catch (loadImageError) {
                 console.log(`⚠️ loadImage falhou: ${loadImageError.message}, tentando fetch...`);
