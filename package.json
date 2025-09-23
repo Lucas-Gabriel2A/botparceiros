@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "main": "bottickets.js",
   "scripts": {
-    "start": "concurrently \"npm run start:tickets\" \"npm run start:welcome\" \"npm run start:calls\"",
+    "start": "concurrently \"npm run start:tickets\" \"npm run start:welcome\" \"npm run start:calls\" \"npm run start:vip\" ",
     "start:tickets": "node bottickets.js",
     "start:calls": "node botcallprivada.js",
     "start:welcome": "node botwelcom.js",
+    "start:vip":"node botticketvip.js",
     "dev": "nodemon bottickets.js",
     "test": "echo \"No tests specified\" && exit 0"
   },
