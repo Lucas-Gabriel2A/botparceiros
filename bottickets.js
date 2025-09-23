@@ -135,11 +135,6 @@ const ticketTypes = {
     description: "Ajuda com configurações de canal",
     emoji: "📺",
   },
-  comprar_vip: {
-    name: "💎 Comprar VIP",
-    description: "Informações sobre VIP e pagamento",
-    emoji: "💎",
-  },
   suporte_geral: {
     name: "🛠️ Suporte Geral",
     description: "Outros tipos de suporte",
