@@ -49,7 +49,7 @@ const arrayBufferWithTimeout = async (response, timeout = 2500) => {
     ]);
 };
 
-// Configura��es
+// Configurações
 const TOKEN = process.env.DISCORD_TOKENS;
 const CLIENT_ID = process.env.CLIENT_ID;
 
@@ -60,34 +60,34 @@ const CATEGORY_ID = process.env.CATEGORY_ID;
 const WELCOME_CHANNEL_ID = process.env.WELCOME_CHANNEL_ID;
 const LEAVE_CHANNEL_ID = process.env.LEAVE_CHANNEL_ID;
 
-// Log das configura��es carregadas
-console.log('?? Configura��es carregadas:');
-console.log(`TOKEN: ${TOKEN ? '? Definido' : '? N�o definido'}`);
-console.log(`CLIENT_ID: ${CLIENT_ID || '? N�o definido'}`);
-console.log(`WELCOME_CHANNEL_ID: ${WELCOME_CHANNEL_ID || '? N�o definido'}`);
-console.log(`LEAVE_CHANNEL_ID: ${LEAVE_CHANNEL_ID || '? N�o definido'}`);
-console.log(`CATEGORY_ID: ${CATEGORY_ID || '? N�o definido'}`);
-console.log(`OWNER_ROLE_ID: ${OWNER_ROLE_ID || '? N�o definido'}`);
-console.log(`SEMI_OWNER_ROLE_ID: ${SEMI_OWNER_ROLE_ID || '? N�o definido'}`);
-console.log('?? Iniciando bot welcome...\n');
+// Log das configurações carregadas
+console.log('✅ Configurações carregadas:');
+console.log(`TOKEN: ${TOKEN ? '✔️ Definido' : '❌ Não definido'}`);
+console.log(`CLIENT_ID: ${CLIENT_ID || '❌ Não definido'}`);
+console.log(`WELCOME_CHANNEL_ID: ${WELCOME_CHANNEL_ID || '❌ Não definido'}`);
+console.log(`LEAVE_CHANNEL_ID: ${LEAVE_CHANNEL_ID || '❌ Não definido'}`);
+console.log(`CATEGORY_ID: ${CATEGORY_ID || '❌ Não definido'}`);
+console.log(`OWNER_ROLE_ID: ${OWNER_ROLE_ID || '❌ Não definido'}`);
+console.log(`SEMI_OWNER_ROLE_ID: ${SEMI_OWNER_ROLE_ID || '❌ Não definido'}`);
+console.log('✅ Iniciando bot welcome...\n');
 
-// Valida��o das vari�veis de ambiente cr�ticas
+// Validação das variáveis de ambiente críticas
 if (!TOKEN) {
-    console.error("? DISCORD_TOKENS n�o configurado no arquivo .env");
+    console.error("❌ DISCORD_TOKENS não configurado no arquivo .env");
     process.exit(1);
 }
 if (!CLIENT_ID) {
-    console.error("? CLIENT_ID n�o configurado no arquivo .env");
+    console.error("❌ CLIENT_ID não configurado no arquivo .env");
     process.exit(1);
 }
 if (!WELCOME_CHANNEL_ID) {
-    console.error("? WELCOME_CHANNEL_ID n�o configurado no arquivo .env");
+    console.error("❌ WELCOME_CHANNEL_ID não configurado no arquivo .env");
 }
 if (!LEAVE_CHANNEL_ID) {
-    console.error("? LEAVE_CHANNEL_ID n�o configurado no arquivo .env");
+    console.error("❌ LEAVE_CHANNEL_ID não configurado no arquivo .env");
 }
 if (!CATEGORY_ID) {
-    console.error("? CATEGORY_ID n�o configurado no arquivo .env");
+    console.error("❌ CATEGORY_ID não configurado no arquivo .env");
 }
 
 // Cliente Discord
@@ -104,7 +104,7 @@ const client = new Client({
 const configPath = path.join(__dirname, 'config.json');
 const backgroundsPath = path.join(__dirname, 'backgrounds');
 
-// Garantir diret�rios
+// Garantir diretórios
 fs.ensureDirSync(backgroundsPath);
 
 // Carregar configs
@@ -118,12 +118,12 @@ if (fs.existsSync(configPath)) {
     console.log('Arquivo de config criado');
 }
 
-// Fun��o para salvar config
+// Função para salvar config
 function saveConfig() {
     fs.writeJsonSync(configPath, configs);
 }
 
-// Fun��o para renderizar texto com quebra autom�tica
+// Função para renderizar texto com quebra automátrica
 function renderText(ctx, text, x, y, maxWidth, lineHeight = 70) {
     const words = text.split(' ');
     let line = '';
@@ -144,7 +144,7 @@ function renderText(ctx, text, x, y, maxWidth, lineHeight = 70) {
     }
     lines.push(line.trim());
 
-    // Limitar a 3 linhas para n�o sobrecarregar
+    // Limitar a 3 linhas para não sobrecarregar
     if (lines.length > 3) {
         lines = lines.slice(0, 3);
         lines[2] = lines[2].substring(0, maxCharsPerLine - 3) + '...';
@@ -154,7 +154,7 @@ function renderText(ctx, text, x, y, maxWidth, lineHeight = 70) {
     lines.forEach((lineText, index) => {
         const lineY = y + (index * lineHeight);
 
-        // Sombra para efeito �pico
+        // Sombra para efeito épico
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillText(lineText, x + 2, lineY + 2);
 
@@ -212,7 +212,7 @@ function renderTextCentered(ctx, text, centerX, startY, maxWidth, lineHeight = 7
     return lines.length;
 }
 
-// Fun��o para detectar tipo real da imagem pelos bytes
+// Função para detectar tipo real da imagem pelos bytes
 function getImageTypeFromBuffer(buffer) {
     const firstBytes = buffer.slice(0, 12);
     
@@ -254,26 +254,26 @@ function getConfig(guildId) {
     return configs[guildId];
 }
 
-// Fun��o para verificar permiss�es
+// Função para verificar permissões
 function hasPermission(member) {
     if (member.id === member.guild.ownerId) return true;
     if (member.roles.cache.has(OWNER_ROLE_ID) || member.roles.cache.has(SEMI_OWNER_ROLE_ID)) return true;
     return false;
 }
 
-// Fun��o para gerar banner (completo com avatar)
+// Função para gerar banner (completo com avatar)
 async function generateBanner(member, text, isWelcome = true) {
     console.log(`\n?? === GERANDO BANNER ===`);
     console.log(`Texto: "${text}"`);
-    console.log(`� Welcome: ${isWelcome}`);
+    console.log(`É Welcome: ${isWelcome}`);
 
     // ?? LOGS DETALHADOS DO MEMBER RECEBIDO
-    console.log(`\n?? === MEMBER RECEBIDO NA FUN��O ===`);
+    console.log(`\n?? === MEMBER RECEBIDO NA FUNÇÃO ===`);
     console.log(`Member ID: ${member?.id}`);
     console.log(`Member Display Name: ${member?.displayName}`);
     console.log(`Member Nickname: ${member?.nickname}`);
 
-    console.log(`\n?? === USER RECEBIDO NA FUN��O ===`);
+    console.log(`\n?? === USER RECEBIDO NA FUNÇÃO ===`);
     console.log(`User ID: ${member?.user?.id}`);
     console.log(`User Username: ${member?.user?.username}`);
     console.log(`User Discriminator: ${member?.user?.discriminator}`);
@@ -281,9 +281,9 @@ async function generateBanner(member, text, isWelcome = true) {
     console.log(`User Display Name: ${member?.user?.displayName}`);
     console.log(`User Bot: ${member?.user?.bot}`);
 
-    // ?? EXTRA��O DO USERNAME
-    const username = member.user?.username || member.displayName || 'Usu�rio Desconhecido';
-    console.log(`\n?? === EXTRA��O DO USERNAME ===`);
+    // ?? EXTRAÇÃO DO USERNAME
+    const username = member.user?.username || member.displayName || 'Usuário Desconhecido';
+    console.log(`\n?? === EXTRAÇÃO DO USERNAME ===`);
     console.log(`member.user?.username: ${member.user?.username}`);
     console.log(`member.displayName: ${member.displayName}`);
     console.log(`Username final usado: "${username}"`);
@@ -300,7 +300,7 @@ async function generateBanner(member, text, isWelcome = true) {
         throw new Error('Falha ao criar canvas para o banner');
     }
 
-    // Fundo padr�o ou customizado
+    // Fundo padrão ou customizado
     let backgroundImage;
     if (getConfig(member.guild.id).background && fs.existsSync(getConfig(member.guild.id).background)) {
         try {
@@ -313,7 +313,7 @@ async function generateBanner(member, text, isWelcome = true) {
     }
 
     if (!backgroundImage) {
-        // Fundo padr�o c�smico
+        // Fundo padrão cósmico
         ctx.fillStyle = '#1a0033';
         ctx.fillRect(0, 0, 800, 600);
         // Estrelas
@@ -343,7 +343,7 @@ async function generateBanner(member, text, isWelcome = true) {
             dynamic: false
         }) || 'path/to/placeholder.png';
 
-        // ?? FOR�AR PNG MANUALMENTE SE AINDA FOR WEBP
+        // ?? FORÇAR PNG MANUALMENTE SE AINDA FOR WEBP
         let finalAvatarURL = avatarURL;
         if (avatarURL && avatarURL.includes('.webp')) {
             finalAvatarURL = avatarURL.replace('.webp', '.png');
@@ -352,11 +352,11 @@ async function generateBanner(member, text, isWelcome = true) {
 
         console.log(`Avatar URL gerado: ${avatarURL}`);
         console.log(`Avatar URL final: ${finalAvatarURL}`);
-        console.log(`URL � placeholder: ${avatarURL === 'path/to/placeholder.png'}`);
+        console.log(`URL é placeholder: ${avatarURL === 'path/to/placeholder.png'}`);
 
         // ?? TESTE DE CONECTIVIDADE COM CDN
         if (finalAvatarURL !== 'path/to/placeholder.png') {
-            console.log(`?? Testando conectividade com CDN do Discord (for�ando PNG)...`);
+            console.log(`?? Testando conectividade com CDN do Discord (forçando PNG)...`);
             try {
                 const testURL = new URL(finalAvatarURL);
 
@@ -370,7 +370,7 @@ async function generateBanner(member, text, isWelcome = true) {
                         console.log(`?? Status da resposta: ${res.statusCode}`);
                         console.log(`?? Content-Type: ${res.headers['content-type']}`);
                         console.log(`?? Content-Length: ${res.headers['content-length']}`);
-                        console.log(`?? Formato for�ado: PNG (Canvas-compatible)`);
+                        console.log(`?? Formato forçado: PNG (Canvas-compatible)`);
                         resolve(res.statusCode === 200);
                     });
 
@@ -380,7 +380,7 @@ async function generateBanner(member, text, isWelcome = true) {
                     });
 
                     req.on('timeout', () => {
-                        console.log(`?? ? Timeout na conex�o (5s)`);
+                        console.log(`?? ? Timeout na conexão (5s)`);
                         req.destroy();
                         reject(new Error('Timeout de conectividade'));
                     });
@@ -389,16 +389,16 @@ async function generateBanner(member, text, isWelcome = true) {
                 });
 
                 const isReachable = await connectivityTest;
-                console.log(`?? ? Servidor CDN acess�vel: ${isReachable}`);
+                console.log(`?? ? Servidor CDN acessível: ${isReachable}`);
 
             } catch (connectivityError) {
                 console.log(`?? ? Problema de conectividade detectado: ${connectivityError.message}`);
-                console.log(`?? ?? Isso explica por que o avatar n�o carrega!`);
-                console.log(`?? ?? Poss�veis causas:`);
-                console.log(`??   - Firewall bloqueando conex�es externas`);
+                console.log(`?? ?? Isso explica por que o avatar não carrega!`);
+                console.log(`?? ?? Possíveis causas:`);
+                console.log(`??   - Firewall bloqueando conexões externas`);
                 console.log(`??   - Rede lenta no servidor de hospedagem`);
-                console.log(`??   - Limita��o do plano (Railway/Discloud)`);
-                console.log(`??   - CDN do Discord temporariamente indispon�vel`);
+                console.log(`??   - Limitação do plano (Railway/Discloud)`);
+                console.log(`??   - CDN do Discord temporariamente indisponível`);
             }
         }
 
@@ -578,9 +578,9 @@ async function generateBanner(member, text, isWelcome = true) {
             console.log(`Tentando gerar URL novamente: ${retryURL}`);
         }
 
-        console.log('? Erro ao carregar avatar, usando placeholder �pico:', error.message);
+        console.log('? Erro ao carregar avatar, usando placeholder épico:', error.message);
         
-        // Criar placeholder usando canvas (gradiente dourado com inicial do usu�rio)
+        // Criar placeholder usando canvas (gradiente dourado com inicial do usuáiro)
         ctx.save();
         const placeholderGradient = ctx.createRadialGradient(400, 150, 0, 400, 150, 64);
         placeholderGradient.addColorStop(0, '#ffdd44');
@@ -651,7 +651,7 @@ async function generateBanner(member, text, isWelcome = true) {
     return canvas.toBuffer();
 }
 
-// Fun��o para gerar banner r�pido (sempre usa placeholder)
+// Função para gerar banner rápido (sempre usa placeholder)
 async function generateBannerFast(member, text, isWelcome = true) {
     console.log(`?? generateBannerFast iniciada para ${member?.user?.username || member?.displayName || 'Unknown'}`);
 
@@ -666,9 +666,9 @@ async function generateBannerFast(member, text, isWelcome = true) {
     console.log(`Member User Display Name: ${member?.user?.displayName}`);
     console.log(`Member User Bot: ${member?.user?.bot}`);
 
-    // ?? EXTRA��O DO USERNAME
-    const username = member?.user?.username || member?.displayName || 'Usu�rio Desconhecido';
-    console.log(`\n?? === EXTRA��O DO USERNAME (FAST) ===`);
+    // ?? EXTRAÇÃO DO USERNAME
+    const username = member?.user?.username || member?.displayName || 'Usuário Desconhecido';
+    console.log(`\n?? === EXTRAÇÃO DO USERNAME (FAST) ===`);
     console.log(`member?.user?.username: ${member?.user?.username}`);
     console.log(`member?.displayName: ${member?.displayName}`);
     console.log(`Username final usado: "${username}"`);
@@ -681,7 +681,7 @@ async function generateBannerFast(member, text, isWelcome = true) {
         throw new Error('Falha ao criar canvas para o banner');
     }
 
-    // Fundo padr�o ou customizado
+    // Fundo padrão ou customizado
     let backgroundImage;
     if (getConfig(member.guild.id).background && fs.existsSync(getConfig(member.guild.id).background)) {
         try {
@@ -692,7 +692,7 @@ async function generateBannerFast(member, text, isWelcome = true) {
     }
 
     if (!backgroundImage) {
-        // Fundo padr�o c�smico
+        // Fundo padrão cósmico
         ctx.fillStyle = '#1a0033';
         ctx.fillRect(0, 0, 800, 600);
         ctx.fillStyle = '#00ffff';
@@ -767,14 +767,14 @@ async function generateBannerFast(member, text, isWelcome = true) {
         ctx.fillText(displayText, 400, mainYFast);
     }
 
-    // Texto secund�rio (n�mero do membro) com fonte menor
+    // Texto secundário (número do membro) com fonte menor
     if (isWelcome) {
         const memberCount = member.guild.memberCount;
-        const memberText = `Voc� � o ${memberCount}� Membro!`;
+        const memberText = `Você é o ${memberCount}º Membro!`;
 
     ctx.font = `bold 32px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
 
-        // Posicionar baseado no n�mero de linhas do texto principal
+        // Posicionar baseado no número de linhas do texto principal
         const memberY = 280 + (linesUsed * 60) + 40;
 
         // Sombra
@@ -797,16 +797,16 @@ async function generateBannerFast(member, text, isWelcome = true) {
     }
 
     const buffer = canvas.toBuffer();
-    console.log(`? Banner r�pido gerado. Tamanho: ${buffer.length} bytes`);
+    console.log(`? Banner rápido gerado. Tamanho: ${buffer.length} bytes`);
     return buffer;
 }
 
-// Eventos de Welcome/Leave (SISTEMA AUTOM�TICO - Categoria Gal�xia)
+// Eventos de Welcome/Leave (SISTEMA AUTOMÁTICO - Categoria Galáxia)
 client.on('guildMemberAdd', async (member) => {
-    console.log(`?? EVENTO guildMemberAdd DISPARADO (WELCOME AUTOM�TICO):`);
-    console.log(`   ?? Usu�rio: ${member.user.username} (${member.user.id})`);
+    console.log(`?? EVENTO guildMemberAdd DISPARADO (WELCOME AUTOMÁTICO):`);
+    console.log(`   ?? Usuário: ${member.user.username} (${member.user.id})`);
     console.log(`   ?? Servidor: ${member.guild.name} (${member.guild.id})`);
-    console.log(`   ?? Sistema: WELCOME (categoria Gal�xia)`);
+    console.log(`   ?? Sistema: WELCOME (categoria Galáxia)`);
 
     // ?? LOGS DETALHADOS PARA DEBUG
     console.log(`\n?? === DEBUG: Propriedades do MEMBER ===`);
@@ -839,28 +839,28 @@ client.on('guildMemberAdd', async (member) => {
     console.log(`=====================================\n`);
 
     if (!WELCOME_CHANNEL_ID) {
-        console.error("? WELCOME_CHANNEL_ID n�o configurado - pulando welcome");
+        console.error("? WELCOME_CHANNEL_ID não configurado - pulando welcome");
         return;
     }
     
     const channel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
     if (!channel) {
-        console.error(`? Canal de welcome n�o encontrado. ID: ${WELCOME_CHANNEL_ID}`);
-        console.log(`?? Canais dispon�veis no servidor:`, member.guild.channels.cache.map(c => `${c.name} (${c.id})`).join(', '));
+        console.error(`? Canal de welcome não encontrado. ID: ${WELCOME_CHANNEL_ID}`);
+        console.log(`?? Canais disponíveis no servidor:`, member.guild.channels.cache.map(c => `${c.name} (${c.id})`).join(', '));
         return;
     }
     
     // Nota: Canais de welcome/leave podem estar em qualquer categoria
     console.log(`?? Canal welcome encontrado: ${channel.name} (Categoria: ${channel.parentId || 'Nenhuma'})`);
     
-    // Verificar permiss�es do bot
+    // Verificar permissões do bot
     const botPermissions = channel.permissionsFor(member.guild.members.me);
     if (!botPermissions.has('SendMessages')) {
-        console.error(`? Bot n�o tem permiss�o para enviar mensagens no canal ${channel.name}`);
+        console.error(`? Bot não tem permissao para enviar mensagens no canal ${channel.name}`);
         return;
     }
     if (!botPermissions.has('AttachFiles')) {
-        console.error(`? Bot n�o tem permiss�o para anexar arquivos no canal ${channel.name}`);
+        console.error(`? Bot não tem permissao para anexar arquivos no canal ${channel.name}`);
         return;
     }
 
@@ -887,12 +887,12 @@ client.on('guildMemberAdd', async (member) => {
     }
 });
 
-// Eventos de Welcome/Leave (SISTEMA AUTOM�TICO - Categoria Gal�xia)
+// Eventos de Welcome/Leave (SISTEMA AUTOMÁTICO - Categoria Galáxia)
 client.on('guildMemberRemove', async (member) => {
-    console.log(`?? EVENTO guildMemberRemove DISPARADO (LEAVE AUTOM�TICO):`);
-    console.log(`   ?? Usu�rio: ${member.user?.username || member.displayName || 'Unknown'} (${member.user?.id || member.id})`);
+    console.log(`?? EVENTO guildMemberRemove DISPARADO (LEAVE AUTOMÁTICO):`);
+    console.log(`   ?? Usuário: ${member.user?.username || member.displayName || 'Unknown'} (${member.user?.id || member.id})`);
     console.log(`   ?? Servidor: ${member.guild.name} (${member.guild.id})`);
-    console.log(`   ?? Sistema: LEAVE (categoria Gal�xia)`);
+    console.log(`   ?? Sistema: LEAVE (categoria Galáxia)`);
 
     // ?? LOGS DETALHADOS PARA DEBUG (LEAVE)
     console.log(`\n?? === DEBUG LEAVE: Propriedades do MEMBER ===`);
@@ -925,27 +925,27 @@ client.on('guildMemberRemove', async (member) => {
     console.log(`=====================================\n`);
 
     if (!LEAVE_CHANNEL_ID) {
-        console.error("? LEAVE_CHANNEL_ID n�o configurado - pulando leave");
+        console.error("? LEAVE_CHANNEL_ID não configurado - pulando leave");
         return;
     }
     
     const channel = member.guild.channels.cache.get(LEAVE_CHANNEL_ID);
     if (!channel) {
-        console.error(`? Canal de leave n�o encontrado. ID: ${LEAVE_CHANNEL_ID}`);
+        console.error(`? Canal de leave não encontrado. ID: ${LEAVE_CHANNEL_ID}`);
         return;
     }
     
     // Nota: Canais de welcome/leave podem estar em qualquer categoria
     console.log(`?? Canal leave encontrado: ${channel.name} (Categoria: ${channel.parentId || 'Nenhuma'})`);
     
-    // Verificar permiss�es do bot
+    // Verificar permissões do bot
     const botPermissions = channel.permissionsFor(member.guild.members.me);
     if (!botPermissions.has('SendMessages')) {
-        console.error(`? Bot n�o tem permiss�o para enviar mensagens no canal ${channel.name}`);
+        console.error(`? Bot não tem permissao para enviar mensagens no canal ${channel.name}`);
         return;
     }
     if (!botPermissions.has('AttachFiles')) {
-        console.error(`? Bot n�o tem permiss�o para anexar arquivos no canal ${channel.name}`);
+        console.error(`? Bot não tem permissao para anexar arquivos no canal ${channel.name}`);
         return;
     }
 
@@ -958,11 +958,11 @@ client.on('guildMemberRemove', async (member) => {
             buffer = await generateBanner(member, config.leaveText, false);
             console.log('? Banner completo gerado com sucesso');
         } catch (bannerError) {
-            console.log(`?? Banner completo falhou (${bannerError.message}), usando vers�o r�pida...`);
+            console.log(`?? Banner completo falhou (${bannerError.message}), usando vers�o rápida...`);
 
-            // Fallback para banner r�pido (sempre funciona, mais r�pido)
+            // Fallback para banner rápido (sempre funciona, mais rápido)
             buffer = await generateBannerFast(member, config.leaveText, false);
-            console.log('? Banner r�pido gerado como fallback');
+            console.log('? Banner rápido gerado como fallback');
         }
 
         const attachment = new AttachmentBuilder(buffer, { name: 'leave.png' });
@@ -993,8 +993,8 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
     }
 })();
 
-// Fun��o helper para responder intera��es com tratamento de erro SIMPLIFICADO
-// --------------- Fun��o segura para comandos r�pidos ---------------
+// Função helper para responder interações com tratamento de erro SIMPLIFICADO
+// --------------- Função segura para comandos rápidos ---------------
 async function safeReply(interaction, options) {
     try {
         if (interaction.replied || interaction.deferred) {
@@ -1007,13 +1007,13 @@ async function safeReply(interaction, options) {
     }
 }
 
-// Handler consolidado para todas as intera��es
+// Handler consolidado para todas as interações
 client.on('interactionCreate', async (interaction) => {
     // Handler de comandos slash
     if (interaction.isChatInputCommand()) {
         console.log(`? Comando: ${interaction.commandName} por ${interaction.user.username}`);
 
-        // Verifica��es b�sicas
+        // Verificações básicas
         if (!hasPermission(interaction.member)) {
             await safeReply(interaction, {
                 content: '? Sem permiss�o.',
@@ -1052,7 +1052,7 @@ client.on('interactionCreate', async (interaction) => {
                             .setStyle(ButtonStyle.Success),
                         new ButtonBuilder()
                             .setCustomId('preview_fast')
-                            .setLabel('Preview (R�pido)')
+                            .setLabel('Preview (Rápido)')
                             .setStyle(ButtonStyle.Secondary)
                     );
 
@@ -1085,11 +1085,11 @@ client.on('interactionCreate', async (interaction) => {
         return;
     }
 
-    // Handler de bot�es
+    // Handler de botões
     if (interaction.isButton()) {
         console.log(`?? Bot�o: ${interaction.customId} por ${interaction.user.username}`);
 
-        // Verifica��es b�sicas
+        // Verificações básicas
         if (!hasPermission(interaction.member)) {
             await safeReply(interaction, {
                 content: '? Sem permiss�o.',
@@ -1146,7 +1146,7 @@ client.on('interactionCreate', async (interaction) => {
 
             } else if (interaction.customId === 'upload_background') {
                 await safeReply(interaction, {
-                    content: '?? **Upload de Background:**\n\nEnvie uma imagem PNG ou JPEG (m�x 5MB) neste canal.\nO bot detectar� automaticamente.',
+                    content: '?? **Upload de Background:**\n\nEnvie uma imagem PNG ou JPEG (máx 5MB) neste canal.\nO bot detectará automaticamente.',
                     flags: MessageFlags.Ephemeral
                 });
 
@@ -1154,7 +1154,7 @@ client.on('interactionCreate', async (interaction) => {
                 console.log('?? Iniciando preview...');
                 console.log(`   Replied: ${interaction.replied}, Deferred: ${interaction.deferred}`);
 
-                // ?? LOGS DETALHADOS DO USU�RIO QUE EXECUTOU O PREVIEW
+                // ?? LOGS DETALHADOS DO USUÁRIO QUE EXECUTOU O PREVIEW
                 console.log(`\n?? === DEBUG PREVIEW: INTERACTION ===`);
                 console.log(`Interaction User: ${interaction.user?.username} (${interaction.user?.id})`);
                 console.log(`Interaction Member: ${interaction.member?.displayName} (${interaction.member?.id})`);
@@ -1215,31 +1215,31 @@ client.on('interactionCreate', async (interaction) => {
                 }
 
             } else if (interaction.customId === 'preview_fast') {
-                console.log('?? Iniciando preview r�pido (sempre placeholder)...');
+                console.log('?? Iniciando preview rápido (sempre placeholder)...');
                 console.log(`   Replied: ${interaction.replied}, Deferred: ${interaction.deferred}`);
 
-                // Para preview r�pido, defer primeiro
+                // Para preview rápido, defer primeiro
                 console.log('?? Fazendo deferReply...');
                 await interaction.deferReply({ flags: MessageFlags.Ephemeral });
                 console.log('? DeferReply feito com sucesso');
 
                 try {
                     const config = getConfig(interaction.guild.id);
-                    console.log('?? Gerando banner r�pido...');
+                    console.log('?? Gerando banner rápido...');
                     const buffer = await generateBannerFast(interaction.member, config.welcomeText, true);
-                    console.log('?? Banner r�pido gerado, enviando...');
+                    console.log('?? Banner rápido gerado, enviando...');
                     const attachment = new AttachmentBuilder(buffer, { name: 'preview-fast.png' });
 
                     await interaction.editReply({
-                        content: '? **Preview R�pido (Placeholder):**',
+                        content: '? **Preview Rápido (Placeholder):**',
                         files: [attachment]
                     });
-                    console.log('? Preview r�pido enviado');
+                    console.log('? Preview rápido enviado');
 
                 } catch (previewError) {
-                    console.error('? Erro no preview r�pido:', previewError);
+                    console.error('? Erro no preview rápido:', previewError);
                     await interaction.editReply({
-                        content: '? Erro ao gerar preview r�pido.'
+                        content: '? Erro ao gerar preview rápido.'
                     });
                 }
             }
@@ -1277,45 +1277,45 @@ client.on('interactionCreate', async (interaction) => {
         return;
     }
 
-    // Handler de select menus (se necess�rio no futuro)
+    // Handler de select menus (se necessáiro no futuro)
     if (interaction.isStringSelectMenu()) {
-        // Por enquanto vazio, mas estrutura mantida para futuras expans�es
+        // Por enquanto vazio, mas estrutura mantida para futuras expansões
         return;
     }
 });
 
-// Mensagens para configura��o (upload de backgrounds nos canais de entrada/sa�da)
+// Mensagens para configura��o (upload de backgrounds nos canais de entrada/saída)
 client.on('messageCreate', async (message) => {
     console.log(`?? NOVA MENSAGEM DETECTADA (CONFIGURA��O):`);
-    console.log(`   ?? Usu�rio: ${message.author.username} (${message.author.id})`);
+    console.log(`   ?? Usuário: ${message.author.username} (${message.author.id})`);
     console.log(`   ?? Canal: ${message.channel.name} (${message.channel.id})`);
     console.log(`   ?? Parent ID: ${message.channel.parentId}`);
     console.log(`   ?? Categoria esperada: ${CATEGORY_ID}`);
     console.log(`   ?? Anexos: ${message.attachments.size}`);
     
     if (message.author.bot) {
-        console.log('   ?? � bot - IGNORANDO');
+        console.log('   ?? É bot - IGNORANDO');
         return;
     }
     
     if (!message.guild) {
-        console.log('   ?? � DM - IGNORANDO');
+        console.log('   ?? É DM - IGNORANDO');
         return;
     }
     
-    // Verificar se est� na categoria Gal�xia E � um dos canais de entrada/sa�da
+    // Verificar se está na categoria Galáxia E É um dos canais de entrada/saída
     const isWelcomeChannel = message.channel.id === WELCOME_CHANNEL_ID;
     const isLeaveChannel = message.channel.id === LEAVE_CHANNEL_ID;
     
     if (message.channel.parentId !== CATEGORY_ID || (!isWelcomeChannel && !isLeaveChannel)) {
-        console.log(`   ?? Canal n�o � Portal de Entrada/Sa�da na categoria Gal�xia - IGNORANDO`);
+        console.log(`   ?? Canal não é Portal de Entrada/Saída na categoria Galáxia - IGNORANDO`);
         return;
     }
     
-    console.log(`   ?? Canal v�lido para configura��o - CONTINUANDO`);
+    console.log(`   ?? Canal válido para configura��o - CONTINUANDO`);
     
     const hasPerm = hasPermission(message.member);
-    console.log(`   ?? Permiss�o: ${hasPerm ? 'SIM' : 'N�O'}`);
+    console.log(`   ?? Permissão: ${hasPerm ? 'SIM' : 'NÃO'}`);
     
     if (!hasPerm) {
         console.log('   ?? Sem permiss�o - IGNORANDO');
@@ -1336,7 +1336,7 @@ client.on('messageCreate', async (message) => {
         // Verificar tamanho primeiro (5MB)
         const maxSize = 5 * 1024 * 1024;
         if (attachment.size > maxSize) {
-            await message.reply('? A imagem deve ter no m�ximo 5MB!');
+            await message.reply('? A imagem deve ter no máximo 5MB!');
             continue;
         }
 
@@ -1388,7 +1388,7 @@ client.on('messageCreate', async (message) => {
                         res.on('end', () => {
                             clearTimeout(timeout);
                             const buffer = Buffer.concat(chunks);
-                            console.log(`? Download conclu�do: ${buffer.length} bytes`);
+                            console.log(`? Download concluído: ${buffer.length} bytes`);
                             resolve(buffer);
                         });
                         
@@ -1420,19 +1420,19 @@ client.on('messageCreate', async (message) => {
             console.log(`?? Tipo detectado pelo Discord: ${attachment.contentType}`);
             console.log(`?? Tipo real da imagem: ${realImageType}`);
             
-            // Verificar se � formato suportado
+            // Verificar se é formato suportado
             if (realImageType === 'image/webp') {
-                await message.reply('? **WebP detectado!** \n\nO Discord �s vezes converte PNGs automaticamente. Tente:\n� Salvar a imagem como PNG novamente\n� Usar um editor de imagem para converter\n� Fazer upload direto do arquivo original');
+                await message.reply('? **WebP detectado!** \n\nO Discord às vezes converte PNGs automaticamente. Tente:\n� Salvar a imagem como PNG novamente\n� Usar um editor de imagem para converter\n� Fazer upload direto do arquivo original');
                 continue;
             }
             
             if (realImageType === 'image/gif') {
-                await message.reply('? **GIF n�o suportado!** \n\nUse PNG ou JPEG est�tico.');
+                await message.reply('? **GIF não suportado!** \n\nUse PNG ou JPEG estático.');
                 continue;
             }
             
             if (!['image/png', 'image/jpeg'].includes(realImageType)) {
-                await message.reply(`? **Formato n�o suportado!** \n\nTipo detectado: \`${realImageType}\`\nUse apenas PNG ou JPEG.`);
+                await message.reply(`? **Formato não suportado!** \n\nTipo detectado: \`${realImageType}\`\nUse apenas PNG ou JPEG.`);
                 continue;
             }
             
@@ -1442,15 +1442,15 @@ client.on('messageCreate', async (message) => {
                 await loadImage(imageBuffer);
                 console.log('? Imagem validada com sucesso');
             } catch (imageError) {
-                console.error('? Erro na valida��o da imagem:', imageError.message);
+                console.error('? Erro na validação da imagem:', imageError.message);
                 
-                // Verificar se � erro de WebP
+                // Verificar se é erro de WebP
                 if (imageError.message.includes('webp') || imageError.message.includes('WebP')) {
-                    await message.reply('? **WebP n�o suportado pelo canvas!** \n\nConverta para PNG ou JPEG antes de fazer upload.');
+                    await message.reply('? **WebP não suportado pelo canvas!** \n\nConverta para PNG ou JPEG antes de fazer upload.');
                     continue;
                 }
                 
-                await message.reply(`? **Arquivo corrompido ou inv�lido!** \n\nErro: \`${imageError.message}\`\n\nTente:\n� Reabrir e salvar a imagem novamente\n� Converter para PNG\n� Usar outra imagem`);
+                await message.reply(`? **Arquivo corrompido ou inválido!** \n\nErro: \`${imageError.message}\`\n\nTente:\n� Reabrir e salvar a imagem novamente\n� Converter para PNG\n� Usar outra imagem`);
                 continue;
             }
 
@@ -1472,7 +1472,7 @@ client.on('messageCreate', async (message) => {
                 
                 await message.reply(`? **Background atualizado com sucesso!** \n\n?? **Detalhes:**\n� Tipo: ${realImageType}\n� Tamanho: ${Math.round(stats.size / 1024)}KB\n� Resolu��o detectada automaticamente\n\n?? Use \`/config-welcome\` ? Preview para ver o resultado!`);
             } else {
-                console.log('? ERRO: Arquivo n�o foi criado!');
+                console.log('? ERRO: Arquivo não foi criado!');
                 await message.reply('? Erro interno ao salvar arquivo. Contate o desenvolvedor.');
             }
             
@@ -1482,7 +1482,7 @@ client.on('messageCreate', async (message) => {
             let errorMessage = '? Erro ao processar o background.';
             
             if (error.message.includes('Timeout') || error.message.includes('timeout')) {
-                errorMessage = '? **Timeout no download!** \n\nTente:\n� Uma imagem menor\n� Verificar sua conex�o\n� Tentar novamente em alguns minutos';
+                errorMessage = '? **Timeout no download!** \n\nTente:\n� Uma imagem menor\n� Verificar sua conexão\n� Tentar novamente em alguns minutos';
             } else if (error.message.includes('HTTP')) {
                 errorMessage = '? **Erro no download!** \n\nO link pode ter expirado. Fa�a upload novamente.';
             }
@@ -1601,3 +1601,5 @@ try {
 
 
 
+ 
+ 
