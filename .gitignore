@@ -8,6 +8,7 @@ package-lock.json
 data/
 bot_config.db
 automod_config.db
+!data/automod_data.json
 
 # Logs
 *.log

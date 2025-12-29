@@ -101,6 +101,8 @@ CLIENT_ID_AUTOMOD=SEU_CLIENT_ID_AUTOMOD_AQUI
 
 > ⚠️ **IMPORTANTE**: Crie um **bot separado** no Discord Developer Portal para a automoderação, pois ele precisa de permissões diferentes (ler mensagens, deletar mensagens, etc.).
 
+> 💡 **SISTEMA SIMPLIFICADO**: O bot agora usa **arquivo JSON** em vez de banco de dados, garantindo compatibilidade total com a Railway!
+
 ### 5. 📊 Monitoramento
 
 #### 5.1 Verificar Logs
@@ -114,7 +116,7 @@ CLIENT_ID_AUTOMOD=SEU_CLIENT_ID_AUTOMOD_AQUI
    ?? Banco de dados SQLite conectado
    ✅ Comandos registrados com sucesso!
    ✅ Bot AutoMod BotName#9999 está online!
-   ?? Banco de dados SQLite conectado (AutoMod)
+   ?? Dados de automoderação carregados
    ✅ Comandos registrados com sucesso (AutoMod)!
    ```
 

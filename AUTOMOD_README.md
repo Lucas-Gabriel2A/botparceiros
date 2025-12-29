@@ -77,11 +77,29 @@ CLIENT_ID_AUTOMOD=SEU_CLIENT_ID_AQUI
 ```
 
 ### Banco de Dados
-- **Arquivo**: `data/automod_config.db`
-- **Tabelas**:
-  - `moderation_channels`: Canais configurados
-  - `prohibited_words`: Palavras proibidas
-  - `moderation_logs`: Histórico de ações
+- **Arquivo**: `data/automod_data.json`
+- **Estrutura**:
+  ```json
+  {
+    "channels": {
+      "guildId": "channelId"
+    },
+    "words": {
+      "guildId": ["word1", "word2"]
+    },
+    "logs": [
+      {
+        "guildId": "string",
+        "userId": "string",
+        "channelId": "string",
+        "messageContent": "string",
+        "violationType": "prohibited_word",
+        "actionTaken": "message_deleted",
+        "timestamp": "ISO string"
+      }
+    ]
+  }
+  ```
 
 ## 🚀 Deploy
 

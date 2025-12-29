@@ -6,7 +6,6 @@ require('dotenv').config();
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const fs = require('fs-extra');
 const path = require('path');
-const Database = require('better-sqlite3');
 
 // Configurações
 const TOKEN = process.env.DISCORD_TOKEN_AUTOMOD;
@@ -33,109 +32,102 @@ const client = new Client({
 });
 
 // Caminhos
-const dbPath = path.join(__dirname, 'data', 'automod_config.db');
+const automodDataPath = path.join(__dirname, 'data', 'automod_data.json');
 
 // Garantir diretório data
-fs.ensureDirSync(path.dirname(dbPath));
+fs.ensureDirSync(path.dirname(automodDataPath));
 
-// Inicializar banco de dados SQLite
-let db;
+// Inicializar armazenamento JSON para Railway (mais compatível)
+let automodData = {};
+
 try {
-    db = new Database(dbPath);
-    console.log('?? Banco de dados SQLite conectado (AutoMod)');
-
-    // Criar tabelas se não existirem
-    db.exec(`
-        CREATE TABLE IF NOT EXISTS moderation_channels (
-            guild_id TEXT PRIMARY KEY,
-            channel_id TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS prohibited_words (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            guild_id TEXT NOT NULL,
-            word TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(guild_id, word)
-        );
-
-        CREATE TABLE IF NOT EXISTS moderation_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            guild_id TEXT NOT NULL,
-            user_id TEXT NOT NULL,
-            channel_id TEXT NOT NULL,
-            message_content TEXT,
-            violation_type TEXT,
-            action_taken TEXT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-    `);
-    console.log('?? Tabelas criadas/verificada');
+    if (fs.existsSync(automodDataPath)) {
+        automodData = fs.readJsonSync(automodDataPath);
+        console.log('?? Dados de automoderação carregados');
+    } else {
+        automodData = {
+            channels: {}, // guildId -> channelId
+            words: {},    // guildId -> [words]
+            logs: []      // [{guildId, userId, channelId, message, violation, action, timestamp}]
+        };
+        fs.ensureDirSync(path.dirname(automodDataPath));
+        fs.writeJsonSync(automodDataPath, automodData);
+        console.log('?? Arquivo de dados automod criado');
+    }
 } catch (error) {
-    console.error('❌ Erro ao conectar banco de dados:', error.message);
-    process.exit(1);
+    console.error('❌ Erro ao carregar dados de automoderação:', error.message);
+    automodData = { channels: {}, words: {}, logs: [] };
 }
 
-// Funções de banco de dados
-function getModerationChannel(guildId) {
+// Funções de armazenamento JSON
+function saveAutomodData() {
     try {
-        const row = db.prepare('SELECT channel_id FROM moderation_channels WHERE guild_id = ?').get(guildId);
-        return row ? row.channel_id : null;
+        fs.writeJsonSync(automodDataPath, automodData);
     } catch (error) {
-        console.error('Erro ao buscar canal de moderação:', error);
-        return null;
+        console.error('❌ Erro ao salvar dados de automoderação:', error.message);
     }
+}
+
+function getModerationChannel(guildId) {
+    return automodData.channels[guildId] || null;
 }
 
 function setModerationChannel(guildId, channelId) {
-    try {
-        db.prepare('INSERT OR REPLACE INTO moderation_channels (guild_id, channel_id) VALUES (?, ?)').run(guildId, channelId);
-        return true;
-    } catch (error) {
-        console.error('Erro ao definir canal de moderação:', error);
-        return false;
-    }
+    automodData.channels[guildId] = channelId;
+    saveAutomodData();
+    return true;
 }
 
 function getProhibitedWords(guildId) {
-    try {
-        const rows = db.prepare('SELECT word FROM prohibited_words WHERE guild_id = ?').all(guildId);
-        return rows.map(row => row.word);
-    } catch (error) {
-        console.error('Erro ao buscar palavras proibidas:', error);
-        return [];
-    }
+    return automodData.words[guildId] || [];
 }
 
 function addProhibitedWord(guildId, word) {
-    try {
-        db.prepare('INSERT OR IGNORE INTO prohibited_words (guild_id, word) VALUES (?, ?)').run(guildId, word.toLowerCase());
-        return true;
-    } catch (error) {
-        console.error('Erro ao adicionar palavra proibida:', error);
-        return false;
+    if (!automodData.words[guildId]) {
+        automodData.words[guildId] = [];
     }
+
+    const wordLower = word.toLowerCase();
+    if (!automodData.words[guildId].includes(wordLower)) {
+        automodData.words[guildId].push(wordLower);
+        saveAutomodData();
+        return true;
+    }
+    return false;
 }
 
 function removeProhibitedWord(guildId, word) {
-    try {
-        const result = db.prepare('DELETE FROM prohibited_words WHERE guild_id = ? AND word = ?').run(guildId, word.toLowerCase());
-        return result.changes > 0;
-    } catch (error) {
-        console.error('Erro ao remover palavra proibida:', error);
-        return false;
+    if (!automodData.words[guildId]) return false;
+
+    const wordLower = word.toLowerCase();
+    const index = automodData.words[guildId].indexOf(wordLower);
+    if (index > -1) {
+        automodData.words[guildId].splice(index, 1);
+        saveAutomodData();
+        return true;
     }
+    return false;
 }
 
 function logModerationAction(guildId, userId, channelId, messageContent, violationType, actionTaken) {
-    try {
-        db.prepare(`
-            INSERT INTO moderation_logs (guild_id, user_id, channel_id, message_content, violation_type, action_taken)
-            VALUES (?, ?, ?, ?, ?, ?)
-        `).run(guildId, userId, channelId, messageContent, violationType, actionTaken);
-    } catch (error) {
-        console.error('Erro ao registrar log de moderação:', error);
+    const logEntry = {
+        guildId,
+        userId,
+        channelId,
+        messageContent,
+        violationType,
+        actionTaken,
+        timestamp: new Date().toISOString()
+    };
+
+    automodData.logs.push(logEntry);
+
+    // Manter apenas os últimos 1000 logs para não crescer demais
+    if (automodData.logs.length > 1000) {
+        automodData.logs = automodData.logs.slice(-1000);
     }
+
+    saveAutomodData();
 }
 
 // Função para verificar permissões
@@ -339,16 +331,16 @@ client.on('interactionCreate', async (interaction) => {
                 }
 
             } else if (interaction.commandName === 'clear-prohibited-words') {
-                try {
-                    db.prepare('DELETE FROM prohibited_words WHERE guild_id = ?').run(interaction.guild.id);
+                if (automodData.words[interaction.guild.id]) {
+                    delete automodData.words[interaction.guild.id];
+                    saveAutomodData();
                     await interaction.reply({
                         content: '? Todas as palavras proibidas foram removidas.',
                         flags: MessageFlags.Ephemeral
                     });
-                } catch (error) {
-                    console.error('Erro ao limpar palavras proibidas:', error);
+                } else {
                     await interaction.reply({
-                        content: '? Erro ao limpar palavras proibidas.',
+                        content: '? Não há palavras proibidas para remover.',
                         flags: MessageFlags.Ephemeral
                     });
                 }
