@@ -103,6 +103,8 @@ CLIENT_ID_AUTOMOD=SEU_CLIENT_ID_AUTOMOD_AQUI
 
 > 💡 **SISTEMA SIMPLIFICADO**: O bot agora usa **arquivo JSON** em vez de banco de dados, garantindo compatibilidade total com a Railway!
 
+> 🔄 **LIMPEZA DE COMANDOS**: Na primeira execução, o bot automaticamente remove comandos antigos e registra apenas os comandos de automoderação.
+
 ### 5. 📊 Monitoramento
 
 #### 5.1 Verificar Logs

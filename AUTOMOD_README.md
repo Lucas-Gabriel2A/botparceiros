@@ -53,6 +53,19 @@ Quando uma palavra proibida é detectada:
 - 📝 **Log registrado** no banco de dados
 - 📊 **Log no console** para monitoramento
 
+## 🔄 **Atualização de Comandos**
+
+Se comandos antigos ainda aparecem (`/remover`, `/setup-tickets`, etc.):
+1. Execute o bot uma vez para limpar comandos antigos
+2. Aguarde 1-2 minutos
+3. Reinicie o Discord (Ctrl + R)
+4. Os comandos corretos aparecerão:
+   - `/set-moderation-channel`
+   - `/add-prohibited-word`
+   - `/remove-prohibited-word`
+   - `/list-prohibited-words`
+   - `/clear-prohibited-words`
+
 ## 🔒 Permissões Necessárias
 
 O bot precisa das seguintes permissões:
@@ -153,7 +166,28 @@ DELETE FROM moderation_logs WHERE timestamp < datetime('now', '-30 days');
 ### Backup do Banco
 O volume da Railway já faz backup automático.
 
----
+## 🔧 Troubleshooting
 
-**🎯 Sistema completo de moderação automática com configuração dinâmica!**</content>
+### Comandos Antigos Ainda Aparecem
+```bash
+# Execute o bot para limpar comandos antigos
+npm run start:automod
+
+# Aguarde 1-2 minutos
+# Reinicie o Discord (Ctrl + R)
+```
+
+### Bot Não Responde
+- ✅ Verifique se o TOKEN está correto
+- ✅ Verifique se o bot tem permissões no servidor
+- ✅ Verifique se o canal de moderação está configurado
+
+### Palavras Não São Detectadas
+- ✅ Use `/list-prohibited-words` para verificar
+- ✅ Palavras são verificadas em minúsculas
+- ✅ Configure o canal com `/set-moderation-channel`
+
+### Erro de Permissões
+- ✅ Bot precisa de permissões para deletar mensagens
+- ✅ Usuário precisa de permissões de gerenciamento</content>
 <parameter name="filePath">c:\Users\lucas\OneDrive\Documentos\Nexstar\AUTOMOD_README.md

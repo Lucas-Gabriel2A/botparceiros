@@ -144,18 +144,42 @@ async function moderateMessage(message) {
     if (!message.guild) return;
 
     const moderationChannelId = getModerationChannel(message.guild.id);
-    if (!moderationChannelId || message.channel.id !== moderationChannelId) return;
+    console.log(`🔍 Verificando mensagem em ${message.channel.name} (${message.channel.id})`);
+    console.log(`📋 Canal configurado: ${moderationChannelId}`);
+
+    if (!moderationChannelId || message.channel.id !== moderationChannelId) {
+        console.log(`❌ Canal não corresponde ou não configurado`);
+        return;
+    }
+
+    // Verificar permissões do bot
+    const botPermissions = message.guild.members.me.permissionsIn(message.channel);
+    console.log(`🔐 Permissões do bot: ${botPermissions.has('DeleteMessages') ? '✅' : '❌'} DeleteMessages`);
+
+    if (!botPermissions.has('DeleteMessages')) {
+        console.log(`❌ Bot não tem permissão para deletar mensagens neste canal`);
+        return;
+    }
 
     const prohibitedWords = getProhibitedWords(message.guild.id);
-    if (prohibitedWords.length === 0) return;
+    console.log(`📝 Palavras proibidas: ${prohibitedWords.join(', ')}`);
+
+    if (prohibitedWords.length === 0) {
+        console.log(`❌ Nenhuma palavra proibida configurada`);
+        return;
+    }
 
     const messageContent = message.content.toLowerCase();
+    console.log(`💬 Conteúdo da mensagem: "${messageContent}"`);
 
     for (const word of prohibitedWords) {
+        console.log(`🔎 Verificando palavra: "${word}"`);
         if (messageContent.includes(word.toLowerCase())) {
+            console.log(`🚨 PALAVRA PROIBIDA ENCONTRADA: "${word}"`);
             try {
                 // Deletar mensagem
                 await message.delete();
+                console.log(`✅ Mensagem deletada`);
 
                 // Registrar log
                 logModerationAction(
@@ -170,9 +194,9 @@ async function moderateMessage(message) {
                 // Avisar usuário
                 try {
                     await message.author.send(`🚫 Sua mensagem foi removida por conter uma palavra proibida: **${word}**\n\nCanal: ${message.channel.name}\nServidor: ${message.guild.name}`);
+                    console.log(`📩 DM enviado para ${message.author.username}`);
                 } catch (dmError) {
-                    // Usuário pode ter DMs desabilitados
-                    console.log(`Não foi possível enviar DM para ${message.author.username}`);
+                    console.log(`❌ Não foi possível enviar DM para ${message.author.username}: ${dmError.message}`);
                 }
 
                 // Log no console
@@ -180,8 +204,10 @@ async function moderateMessage(message) {
 
                 break; // Para após encontrar primeira palavra proibida
             } catch (error) {
-                console.error('Erro ao moderar mensagem:', error);
+                console.error('❌ Erro ao moderar mensagem:', error.message);
             }
+        } else {
+            console.log(`✅ Palavra "${word}" não encontrada`);
         }
     }
 }
@@ -221,14 +247,20 @@ const commands = [
         .setDescription('Lista todas as palavras proibidas'),
 
     new SlashCommandBuilder()
-        .setName('clear-prohibited-words')
-        .setDescription('Remove todas as palavras proibidas'),
+        .setName('debug-moderation')
+        .setDescription('Verifica o status da configuração de moderação'),
 ];
 
 // Registrar comandos
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 (async () => {
     try {
+        console.log('?? Limpando comandos antigos...');
+
+        // Primeiro, deletar todos os comandos existentes (global e guild)
+        await rest.put(Routes.applicationCommands(CLIENT_ID), { body: [] });
+        console.log('✅ Comandos antigos removidos');
+
         console.log('?? Registrando comandos slash (AutoMod)...');
         console.log(`?? CLIENT_ID: ${CLIENT_ID}`);
         console.log(`?? Número de comandos: ${commands.length}`);
@@ -243,6 +275,7 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 // Handler de mensagens para moderação
 client.on('messageCreate', async (message) => {
+    console.log(`📨 NOVA MENSAGEM: "${message.content}" de ${message.author.username} em ${message.channel.name}`);
     await moderateMessage(message);
 });
 
@@ -344,6 +377,35 @@ client.on('interactionCreate', async (interaction) => {
                         flags: MessageFlags.Ephemeral
                     });
                 }
+
+            } else if (interaction.commandName === 'debug-moderation') {
+                const channelId = getModerationChannel(interaction.guild.id);
+                const words = getProhibitedWords(interaction.guild.id);
+                const channel = channelId ? interaction.guild.channels.cache.get(channelId) : null;
+
+                let debugInfo = '**🔍 Status da Moderação:**\n\n';
+
+                debugInfo += `📋 **Canal configurado:** ${channel ? `${channel.name} (${channelId})` : 'Nenhum'}\n`;
+                debugInfo += `🚫 **Palavras proibidas:** ${words.length > 0 ? words.join(', ') : 'Nenhuma'}\n\n`;
+
+                if (channel) {
+                    const botPermissions = interaction.guild.members.me.permissionsIn(channel);
+                    debugInfo += '**🔐 Permissões do Bot:**\n';
+                    debugInfo += `✅ Ler mensagens: ${botPermissions.has('ReadMessages') ? 'Sim' : 'Não'}\n`;
+                    debugInfo += `✅ Deletar mensagens: ${botPermissions.has('DeleteMessages') ? 'Sim' : 'Não'}\n`;
+                    debugInfo += `✅ Enviar mensagens: ${botPermissions.has('SendMessages') ? 'Sim' : 'Não'}\n\n`;
+                }
+
+                debugInfo += '**💡 Dicas:**\n';
+                debugInfo += '• Use `/set-moderation-channel` para configurar o canal\n';
+                debugInfo += '• Use `/add-prohibited-word` para adicionar palavras\n';
+                debugInfo += '• Certifique-se que o bot tem permissões no canal\n';
+                debugInfo += '• Teste enviando uma mensagem com palavra proibida';
+
+                await interaction.reply({
+                    content: debugInfo,
+                    flags: MessageFlags.Ephemeral
+                });
             }
 
         } catch (error) {
