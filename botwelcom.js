@@ -103,24 +103,96 @@ const client = new Client({
 // Caminhos
 const configPath = path.join(__dirname, 'config.json');
 const backgroundsPath = path.join(__dirname, 'backgrounds');
+const dbPath = path.join(__dirname, 'data', 'bot_config.db');
 
 // Garantir diretórios
 fs.ensureDirSync(backgroundsPath);
+fs.ensureDirSync(path.dirname(dbPath)); // Garantir diretório data
 
-// Carregar configs
-let configs = {};
-if (fs.existsSync(configPath)) {
-    configs = fs.readJsonSync(configPath);
-    console.log('Configs carregados:', Object.keys(configs));
-} else {
-    configs = {};
-    fs.writeJsonSync(configPath, configs);
-    console.log('Arquivo de config criado');
+// Inicializar banco de dados SQLite para Railway
+const Database = require('better-sqlite3');
+let db;
+
+try {
+    db = new Database(dbPath);
+    console.log('?? Banco de dados SQLite conectado');
+
+    // Criar tabela de configurações se não existir
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS guild_configs (
+            guild_id TEXT PRIMARY KEY,
+            welcome_channel TEXT,
+            leave_channel TEXT,
+            welcome_text TEXT DEFAULT 'BOAS-VINDAS [username]!',
+            leave_text TEXT DEFAULT 'Adeus [username]! Esperamos que volte.',
+            background TEXT,
+            semi_dono_role TEXT
+        )
+    `);
+    console.log('?? Tabela guild_configs criada/verificada');
+} catch (error) {
+    console.error('❌ Erro ao conectar banco de dados:', error.message);
+    // Fallback para arquivo JSON se SQLite falhar
+    console.log('?? Usando fallback para arquivo JSON');
 }
 
-// Função para salvar config
-function saveConfig() {
-    fs.writeJsonSync(configPath, configs);
+// Função para carregar configs do banco
+function loadConfigs() {
+    if (!db) return {};
+
+    try {
+        const rows = db.prepare('SELECT * FROM guild_configs').all();
+        const configs = {};
+        rows.forEach(row => {
+            configs[row.guild_id] = {
+                welcomeChannel: row.welcome_channel,
+                leaveChannel: row.leave_channel,
+                welcomeText: row.welcome_text,
+                leaveText: row.leave_text,
+                background: row.background,
+                semiDonoRole: row.semi_dono_role
+            };
+        });
+        return configs;
+    } catch (error) {
+        console.error('❌ Erro ao carregar configs:', error.message);
+        return {};
+    }
+}
+
+// Função para salvar config no banco
+function saveConfigToDB(guildId, config) {
+    if (!db) return;
+
+    try {
+        const stmt = db.prepare(`
+            INSERT OR REPLACE INTO guild_configs
+            (guild_id, welcome_channel, leave_channel, welcome_text, leave_text, background, semi_dono_role)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        stmt.run(
+            guildId,
+            config.welcomeChannel || null,
+            config.leaveChannel || null,
+            config.welcomeText || 'BOAS-VINDAS [username]!',
+            config.leaveText || 'Adeus [username]! Esperamos que volte.',
+            config.background || null,
+            config.semiDonoRole || null
+        );
+        console.log(`?? Config salva no banco para guild ${guildId}`);
+    } catch (error) {
+        console.error('❌ Erro ao salvar config:', error.message);
+    }
+}
+
+// Carregar configs
+let configs = loadConfigs();
+if (Object.keys(configs).length === 0) {
+    configs = {};
+    console.log('?? Arquivo de config vazio ou banco novo');
+} else {
+    console.log('?? Configs carregadas do banco:', Object.keys(configs));
 }
 
 // Função para renderizar texto com quebra automátrica
@@ -252,6 +324,18 @@ function getConfig(guildId) {
         };
     }
     return configs[guildId];
+}
+
+// Função para obter o canal de welcome (configurado ou padrão)
+function getWelcomeChannelId(guildId) {
+    const config = getConfig(guildId);
+    return config.welcomeChannel || WELCOME_CHANNEL_ID;
+}
+
+// Função para obter o canal de leave (configurado ou padrão)
+function getLeaveChannelId(guildId) {
+    const config = getConfig(guildId);
+    return config.leaveChannel || LEAVE_CHANNEL_ID;
 }
 
 // Função para verificar permissões
@@ -838,14 +922,14 @@ client.on('guildMemberAdd', async (member) => {
     console.log(`Avatar Hash: ${member.user?.avatar}`);
     console.log(`=====================================\n`);
 
-    if (!WELCOME_CHANNEL_ID) {
+    if (!getWelcomeChannelId(member.guild.id)) {
         console.error("? WELCOME_CHANNEL_ID não configurado - pulando welcome");
         return;
     }
     
-    const channel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
+    const channel = member.guild.channels.cache.get(getWelcomeChannelId(member.guild.id));
     if (!channel) {
-        console.error(`? Canal de welcome não encontrado. ID: ${WELCOME_CHANNEL_ID}`);
+        console.error(`? Canal de welcome não encontrado. ID: ${getWelcomeChannelId(member.guild.id)}`);
         console.log(`?? Canais disponíveis no servidor:`, member.guild.channels.cache.map(c => `${c.name} (${c.id})`).join(', '));
         return;
     }
@@ -924,14 +1008,14 @@ client.on('guildMemberRemove', async (member) => {
     console.log(`Avatar Hash: ${member.user?.avatar}`);
     console.log(`=====================================\n`);
 
-    if (!LEAVE_CHANNEL_ID) {
+    if (!getLeaveChannelId(member.guild.id)) {
         console.error("? LEAVE_CHANNEL_ID não configurado - pulando leave");
         return;
     }
     
-    const channel = member.guild.channels.cache.get(LEAVE_CHANNEL_ID);
+    const channel = member.guild.channels.cache.get(getLeaveChannelId(member.guild.id));
     if (!channel) {
-        console.error(`? Canal de leave não encontrado. ID: ${LEAVE_CHANNEL_ID}`);
+        console.error(`? Canal de leave não encontrado. ID: ${getLeaveChannelId(member.guild.id)}`);
         return;
     }
     
@@ -979,6 +1063,24 @@ const commands = [
         .setName('config-welcome')
         .setDescription('Configure welcome and leave messages'),
     new SlashCommandBuilder()
+        .setName('set-welcome-channel')
+        .setDescription('Define o canal para mensagens de boas-vindas')
+        .addChannelOption(option =>
+            option.setName('canal')
+                .setDescription('Canal onde as boas-vindas ser�o enviadas')
+                .setRequired(true)
+                .addChannelTypes(0) // TEXT CHANNEL
+        ),
+    new SlashCommandBuilder()
+        .setName('set-leave-channel')
+        .setDescription('Define o canal para mensagens de despedida')
+        .addChannelOption(option =>
+            option.setName('canal')
+                .setDescription('Canal onde as despedidas ser�o enviadas')
+                .setRequired(true)
+                .addChannelTypes(0) // TEXT CHANNEL
+        ),
+    new SlashCommandBuilder()
         .setName('clear-background')
         .setDescription('Remove o background personalizado e volta ao padr�o'),
 ];
@@ -987,9 +1089,15 @@ const commands = [
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 (async () => {
     try {
+        console.log('?? Registrando comandos slash...');
+        console.log(`?? CLIENT_ID: ${CLIENT_ID}`);
+        console.log(`?? Número de comandos: ${commands.length}`);
+        commands.forEach((cmd, i) => console.log(`   ${i+1}. ${cmd.name}`));
+
         await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
+        console.log('✅ Comandos registrados com sucesso!');
     } catch (error) {
-        console.error(error);
+        console.error('❌ Erro ao registrar comandos:', error.message);
     }
 })();
 
@@ -1071,12 +1179,35 @@ client.on('interactionCreate', async (interaction) => {
                 }
 
                 config.background = null;
-                saveConfig();
+                saveConfig(interaction.guild.id);
 
                 await safeReply(interaction, {
                     content: '? Background removido.',
                     flags: MessageFlags.Ephemeral
                 });
+
+            } else if (interaction.commandName === 'set-welcome-channel') {
+                const channel = interaction.options.getChannel('canal');
+                const config = getConfig(interaction.guild.id);
+                config.welcomeChannel = channel.id;
+                saveConfig(interaction.guild.id);
+
+                await safeReply(interaction, {
+                    content: `? Canal de boas-vindas definido para ${channel}.`,
+                    flags: MessageFlags.Ephemeral
+                });
+
+            } else if (interaction.commandName === 'set-leave-channel') {
+                const channel = interaction.options.getChannel('canal');
+                const config = getConfig(interaction.guild.id);
+                config.leaveChannel = channel.id;
+                saveConfig(interaction.guild.id);
+
+                await safeReply(interaction, {
+                    content: `? Canal de despedidas definido para ${channel}.`,
+                    flags: MessageFlags.Ephemeral
+                });
+
             }
 
         } catch (error) {
@@ -1256,7 +1387,7 @@ client.on('interactionCreate', async (interaction) => {
             if (interaction.customId === 'welcome_text_modal') {
                 const config = getConfig(interaction.guild.id);
                 config.welcomeText = interaction.fields.getTextInputValue('welcome_text');
-                saveConfig();
+                saveConfig(interaction.guild.id);
                 await safeReply(interaction, {
                     content: '? Texto welcome atualizado!',
                     flags: MessageFlags.Ephemeral
@@ -1265,7 +1396,7 @@ client.on('interactionCreate', async (interaction) => {
             } else if (interaction.customId === 'leave_text_modal') {
                 const config = getConfig(interaction.guild.id);
                 config.leaveText = interaction.fields.getTextInputValue('leave_text');
-                saveConfig();
+                saveConfig(interaction.guild.id);
                 await safeReply(interaction, {
                     content: '? Texto leave atualizado!',
                     flags: MessageFlags.Ephemeral
@@ -1304,8 +1435,8 @@ client.on('messageCreate', async (message) => {
     }
     
     // Verificar se está na categoria Galáxia E É um dos canais de entrada/saída
-    const isWelcomeChannel = message.channel.id === WELCOME_CHANNEL_ID;
-    const isLeaveChannel = message.channel.id === LEAVE_CHANNEL_ID;
+    const isWelcomeChannel = message.channel.id === getWelcomeChannelId(message.guild.id);
+    const isLeaveChannel = message.channel.id === getLeaveChannelId(message.guild.id);
     
     if (message.channel.parentId !== CATEGORY_ID || (!isWelcomeChannel && !isLeaveChannel)) {
         console.log(`   ?? Canal não é Portal de Entrada/Saída na categoria Galáxia - IGNORANDO`);
@@ -1461,7 +1592,7 @@ client.on('messageCreate', async (message) => {
             // Atualizar config
             const config = getConfig(message.guild.id);
             config.background = filePath;
-            saveConfig();
+            saveConfig(message.guild.id);
             
             console.log(`?? Config atualizado para guild ${message.guild.id}`);
             

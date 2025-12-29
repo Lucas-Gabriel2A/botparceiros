@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "main": "bottickets.js",
   "scripts": {
-    "start": "concurrently \"npm run start:tickets\" \"npm run start:welcome\" \"npm run start:calls\" \"npm run start:vip\" \"npm run start:news\" ",
-    "start:tickets": "node bottickets.js",
+    "start": "concurrently \"npm run start:welcome\" \"npm run start:calls\" \"npm run start:vip\" \"npm run start:news\" \"npm run start:automod\" ",
     "start:calls": "node botcallprivada.js",
     "start:welcome": "node botwelcom.js",
     "start:vip": "node botticketvip.js",
     "start:news": "node botnews.js",
+    "start:automod": "node botautomod.js",
     "dev": "nodemon bottickets.js",
     "test": "echo \"No tests specified\" && exit 0"
   },
@@ -25,6 +25,7 @@
   "description": "Sistema de tickets e calls privadas para Discord",
   "dependencies": {
     "axios": "^1.12.2",
+    "better-sqlite3": "^12.5.0",
     "canvas": "^3.1.0",
     "concurrently": "^8.2.2",
     "discord.js": "^14.21.0",

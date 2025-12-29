@@ -19,6 +19,18 @@
 3. Selecione o repositório: **"Lucas-Gabriel2A/botparceiros"**
 4. Railway detectará automaticamente que é Node.js
 
+### 2.5. 💾 Configurar Volume Persistente (IMPORTANTE!)
+**Antes de configurar os serviços, adicione um volume para persistir dados:**
+
+1. No painel do projeto, vá em **"Volumes"**
+2. Clique **"Add Volume"**
+3. Configure:
+   - **Name**: `patient-recreation-volume` (ou qualquer nome)
+   - **Mount Path**: `/app/data`
+4. Clique **"Create"**
+
+> ⚠️ **IMPORTANTE**: O volume deve ser criado ANTES dos serviços para que os dados persistam entre deploys!
+
 ### 3. ⚙️ Configurar Bot de Tickets
 
 #### 3.1 Configurar Serviço
@@ -54,6 +66,41 @@ VIP_ROLE_ID=1408499708455948459
 CALLS_CATEGORY_ID=1408499733970026516
 ```
 
+### 4.5. 🎨 Adicionar Bot de Welcome (Terceiro Serviço)
+1. No mesmo projeto, clique **"+ New Service"**
+2. Escolha **"GitHub Repo"**
+3. Selecione o mesmo repositório
+4. Configure:
+   - **Start Command**: `node botwelcom.js`
+
+#### 4.6 Variáveis para Bot de Welcome
+```env
+DISCORD_TOKENS=MTQxNzk3NTc3NTQwNzI0MzMwOQ.Gm2x8W.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+CLIENT_ID=1417975775407243309
+WELCOME_CHANNEL_ID=1418057220213444721
+LEAVE_CHANNEL_ID=1408499743398690858
+CATEGORY_ID=1408499718442713199
+OWNER_ROLE_ID=1408499688168230974
+SEMI_OWNER_ROLE_ID=1408499689346699417
+```
+
+> 💡 **DICA**: O bot de welcome agora usa **banco de dados SQLite** no volume persistente. As configurações dos canais são salvas automaticamente e persistem entre deploys!
+
+### 4.7. 🤖 Adicionar Bot de AutoModeração (Quarto Serviço)
+1. No mesmo projeto, clique **"+ New Service"**
+2. Escolha **"GitHub Repo"**
+3. Selecione o mesmo repositório
+4. Configure:
+   - **Start Command**: `node botautomod.js`
+
+#### 4.8 Variáveis para Bot de AutoModeração
+```env
+DISCORD_TOKEN_AUTOMOD=SEU_TOKEN_AUTOMOD_AQUI
+CLIENT_ID_AUTOMOD=SEU_CLIENT_ID_AUTOMOD_AQUI
+```
+
+> ⚠️ **IMPORTANTE**: Crie um **bot separado** no Discord Developer Portal para a automoderação, pois ele precisa de permissões diferentes (ler mensagens, deletar mensagens, etc.).
+
 ### 5. 📊 Monitoramento
 
 #### 5.1 Verificar Logs
@@ -63,6 +110,12 @@ CALLS_CATEGORY_ID=1408499733970026516
    ```
    Sistema de Tickets BotName#1234 está online!
    Bot de Calls Privadas BotName#5678 está online!
+   ✅ Bot NexstarWelcome#3119 está online!
+   ?? Banco de dados SQLite conectado
+   ✅ Comandos registrados com sucesso!
+   ✅ Bot AutoMod BotName#9999 está online!
+   ?? Banco de dados SQLite conectado (AutoMod)
+   ✅ Comandos registrados com sucesso (AutoMod)!
    ```
 
 #### 5.2 Métricas

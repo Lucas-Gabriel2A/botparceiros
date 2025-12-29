@@ -3,6 +3,12 @@
 node_modules/
 package-lock.json
 
+# Banco de dados
+*.db
+data/
+bot_config.db
+automod_config.db
+
 # Logs
 *.log
 logs/
