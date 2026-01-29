@@ -103,96 +103,58 @@ const client = new Client({
 // Caminhos
 const configPath = path.join(__dirname, 'config.json');
 const backgroundsPath = path.join(__dirname, 'backgrounds');
-const dbPath = path.join(__dirname, 'data', 'bot_config.db');
+const dbPath = path.join(__dirname, 'data', 'guild_configs.json');
 
 // Garantir diretórios
 fs.ensureDirSync(backgroundsPath);
-fs.ensureDirSync(path.dirname(dbPath)); // Garantir diretório data
+fs.ensureDirSync(path.dirname(dbPath));
 
-// Inicializar banco de dados SQLite para Railway
-const Database = require('better-sqlite3');
-let db;
+// Inicializar armazenamento JSON (compatível com Railway sem compilação nativa)
+let configs = {};
 
 try {
-    db = new Database(dbPath);
-    console.log('?? Banco de dados SQLite conectado');
-
-    // Criar tabela de configurações se não existir
-    db.exec(`
-        CREATE TABLE IF NOT EXISTS guild_configs (
-            guild_id TEXT PRIMARY KEY,
-            welcome_channel TEXT,
-            leave_channel TEXT,
-            welcome_text TEXT DEFAULT 'BOAS-VINDAS [username]!',
-            leave_text TEXT DEFAULT 'Adeus [username]! Esperamos que volte.',
-            background TEXT,
-            semi_dono_role TEXT
-        )
-    `);
-    console.log('?? Tabela guild_configs criada/verificada');
+    if (fs.existsSync(dbPath)) {
+        configs = fs.readJsonSync(dbPath);
+        console.log('📦 Configs carregadas do arquivo JSON');
+    } else {
+        configs = {};
+        fs.writeJsonSync(dbPath, configs);
+        console.log('📦 Arquivo de configs JSON criado');
+    }
 } catch (error) {
-    console.error('❌ Erro ao conectar banco de dados:', error.message);
-    // Fallback para arquivo JSON se SQLite falhar
-    console.log('?? Usando fallback para arquivo JSON');
+    console.error('❌ Erro ao carregar configs:', error.message);
+    configs = {};
 }
 
-// Função para carregar configs do banco
+// Função para carregar configs
 function loadConfigs() {
-    if (!db) return {};
-
     try {
-        const rows = db.prepare('SELECT * FROM guild_configs').all();
-        const configs = {};
-        rows.forEach(row => {
-            configs[row.guild_id] = {
-                welcomeChannel: row.welcome_channel,
-                leaveChannel: row.leave_channel,
-                welcomeText: row.welcome_text,
-                leaveText: row.leave_text,
-                background: row.background,
-                semiDonoRole: row.semi_dono_role
-            };
-        });
-        return configs;
+        if (fs.existsSync(dbPath)) {
+            return fs.readJsonSync(dbPath);
+        }
+        return {};
     } catch (error) {
         console.error('❌ Erro ao carregar configs:', error.message);
         return {};
     }
 }
 
-// Função para salvar config no banco
+// Função para salvar config
 function saveConfigToDB(guildId, config) {
-    if (!db) return;
-
     try {
-        const stmt = db.prepare(`
-            INSERT OR REPLACE INTO guild_configs
-            (guild_id, welcome_channel, leave_channel, welcome_text, leave_text, background, semi_dono_role)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        `);
-
-        stmt.run(
-            guildId,
-            config.welcomeChannel || null,
-            config.leaveChannel || null,
-            config.welcomeText || 'BOAS-VINDAS [username]!',
-            config.leaveText || 'Adeus [username]! Esperamos que volte.',
-            config.background || null,
-            config.semiDonoRole || null
-        );
-        console.log(`?? Config salva no banco para guild ${guildId}`);
+        configs[guildId] = config;
+        fs.writeJsonSync(dbPath, configs, { spaces: 2 });
+        console.log(`📦 Config salva para guild ${guildId}`);
     } catch (error) {
         console.error('❌ Erro ao salvar config:', error.message);
     }
 }
 
-// Carregar configs
-let configs = loadConfigs();
+// Log inicial
 if (Object.keys(configs).length === 0) {
-    configs = {};
-    console.log('?? Arquivo de config vazio ou banco novo');
+    console.log('📦 Arquivo de config vazio ou novo');
 } else {
-    console.log('?? Configs carregadas do banco:', Object.keys(configs));
+    console.log('📦 Configs carregadas:', Object.keys(configs));
 }
 
 // Função para renderizar texto com quebra automátrica
