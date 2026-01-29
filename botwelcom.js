@@ -359,17 +359,94 @@ async function generateBanner(member, text, isWelcome = true) {
     }
 
     if (!backgroundImage) {
-        // Fundo padrão cósmico
-        ctx.fillStyle = '#1a0033';
+        // 🌌 FUNDO PREMIUM CYBERPUNK/ESPACIAL
+        
+        // Base gradient escuro
+        const bgGradient = ctx.createLinearGradient(0, 0, 800, 600);
+        bgGradient.addColorStop(0, '#0a0015');
+        bgGradient.addColorStop(0.3, '#1a0033');
+        bgGradient.addColorStop(0.6, '#0d001a');
+        bgGradient.addColorStop(1, '#05000a');
+        ctx.fillStyle = bgGradient;
         ctx.fillRect(0, 0, 800, 600);
-        // Estrelas
-        ctx.fillStyle = '#00ffff';
-        for (let i = 0; i < 50; i++) {
+        
+        // Nebulosas coloridas
+        const nebulas = [
+            { x: 150, y: 100, r: 200, color1: 'rgba(138, 43, 226, 0.15)', color2: 'rgba(138, 43, 226, 0)' },
+            { x: 650, y: 450, r: 250, color1: 'rgba(0, 191, 255, 0.12)', color2: 'rgba(0, 191, 255, 0)' },
+            { x: 400, y: 300, r: 300, color1: 'rgba(255, 0, 128, 0.08)', color2: 'rgba(255, 0, 128, 0)' },
+            { x: 700, y: 100, r: 180, color1: 'rgba(0, 255, 200, 0.1)', color2: 'rgba(0, 255, 200, 0)' }
+        ];
+        
+        nebulas.forEach(neb => {
+            const nebGrad = ctx.createRadialGradient(neb.x, neb.y, 0, neb.x, neb.y, neb.r);
+            nebGrad.addColorStop(0, neb.color1);
+            nebGrad.addColorStop(1, neb.color2);
+            ctx.fillStyle = nebGrad;
+            ctx.fillRect(0, 0, 800, 600);
+        });
+        
+        // Estrelas de diferentes tamanhos e brilhos
+        for (let i = 0; i < 120; i++) {
             const x = Math.random() * 800;
             const y = Math.random() * 600;
+            const size = Math.random() * 2.5 + 0.5;
+            const brightness = Math.random();
+            
+            // Glow da estrela
+            const starGlow = ctx.createRadialGradient(x, y, 0, x, y, size * 3);
+            if (brightness > 0.7) {
+                starGlow.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+                starGlow.addColorStop(0.3, 'rgba(0, 255, 255, 0.4)');
+            } else if (brightness > 0.4) {
+                starGlow.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
+                starGlow.addColorStop(0.3, 'rgba(200, 180, 255, 0.3)');
+            } else {
+                starGlow.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
+                starGlow.addColorStop(0.3, 'rgba(255, 255, 255, 0.1)');
+            }
+            starGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            
+            ctx.fillStyle = starGlow;
             ctx.beginPath();
-            ctx.arc(x, y, Math.random() * 2, 0, Math.PI * 2);
+            ctx.arc(x, y, size * 3, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Core da estrela
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Partículas flutuantes (efeito poeira cósmica)
+        for (let i = 0; i < 30; i++) {
+            const x = Math.random() * 800;
+            const y = Math.random() * 600;
+            const size = Math.random() * 4 + 2;
+            const colors = ['rgba(0, 255, 255, 0.3)', 'rgba(255, 0, 255, 0.25)', 'rgba(255, 200, 0, 0.2)'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Linhas de grid futurístico (sutil)
+        ctx.strokeStyle = 'rgba(0, 255, 255, 0.03)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 800; i += 40) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i, 600);
+            ctx.stroke();
+        }
+        for (let i = 0; i < 600; i += 40) {
+            ctx.beginPath();
+            ctx.moveTo(0, i);
+            ctx.lineTo(800, i);
+            ctx.stroke();
         }
     } else {
         ctx.drawImage(backgroundImage, 0, 0, 800, 600);
@@ -594,18 +671,66 @@ async function generateBanner(member, text, isWelcome = true) {
             }
         }
 
-    // Make avatar larger and more central (moved down to center content)
+    // 🔷 AVATAR HEXAGONAL COM NEON GLOW
     const avatarCenterX = 400;
-    const avatarCenterY = 180; // moved down
-    const avatarRadius = 100; // larger avatar
+    const avatarCenterY = 170;
+    const avatarRadius = 90;
     const avatarSize = avatarRadius * 2;
 
+    // Função para desenhar hexágono
+    const drawHexagon = (cx, cy, size) => {
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI / 3) * i - Math.PI / 2;
+            const x = cx + size * Math.cos(angle);
+            const y = cy + size * Math.sin(angle);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+    };
+
+    // Múltiplas camadas de glow neon
+    const glowLayers = [
+        { size: avatarRadius + 25, color: 'rgba(0, 255, 255, 0.15)', blur: 30 },
+        { size: avatarRadius + 18, color: 'rgba(255, 0, 255, 0.2)', blur: 20 },
+        { size: avatarRadius + 12, color: 'rgba(0, 255, 255, 0.3)', blur: 15 },
+        { size: avatarRadius + 6, color: 'rgba(255, 255, 255, 0.4)', blur: 10 }
+    ];
+    
+    glowLayers.forEach(layer => {
+        ctx.save();
+        ctx.shadowColor = layer.color;
+        ctx.shadowBlur = layer.blur;
+        ctx.strokeStyle = layer.color;
+        ctx.lineWidth = 3;
+        drawHexagon(avatarCenterX, avatarCenterY, layer.size);
+        ctx.stroke();
+        ctx.restore();
+    });
+
+    // Borda hexagonal principal neon
     ctx.save();
-    ctx.beginPath();
-    ctx.arc(avatarCenterX, avatarCenterY, avatarRadius, 0, Math.PI * 2);
-    ctx.closePath();
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = 20;
+    ctx.strokeStyle = '#00ffff';
+    ctx.lineWidth = 4;
+    drawHexagon(avatarCenterX, avatarCenterY, avatarRadius + 5);
+    ctx.stroke();
+    
+    // Segunda borda interna
+    ctx.shadowColor = '#ff00ff';
+    ctx.shadowBlur = 15;
+    ctx.strokeStyle = '#ff00ff';
+    ctx.lineWidth = 2;
+    drawHexagon(avatarCenterX, avatarCenterY, avatarRadius + 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // Clip hexagonal para o avatar
+    ctx.save();
+    drawHexagon(avatarCenterX, avatarCenterY, avatarRadius);
     ctx.clip();
-    // drawImage expects top-left x,y
     ctx.drawImage(avatar, avatarCenterX - avatarRadius, avatarCenterY - avatarRadius, avatarSize, avatarSize);
     ctx.restore();
     } catch (error) {
@@ -658,42 +783,129 @@ async function generateBanner(member, text, isWelcome = true) {
         ctx.restore();
     }
 
-    // Substituir texto — centralizado, maior e com destaque
+    // 🎯 TEXTO PRINCIPAL COM EFEITO NEON PREMIUM
     const displayText = text.replace('[username]', username);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Use a larger font and apply shadow + gradient for emphasis
-    ctx.font = `bold 56px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
-    ctx.lineWidth = 6;
-    ctx.shadowColor = 'rgba(0,0,0,0.6)';
-    ctx.shadowBlur = 12;
-    ctx.shadowOffsetY = 4;
+    // Posição do texto principal
+    const mainY = 330;
+    
+    // Reset shadow para texto
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
 
-    // Create a vibrant gradient for the main text
-    const mainY = 360; // moved down to balance with avatar
-    const grad = ctx.createLinearGradient(200, mainY - 40, 600, mainY + 40);
-    grad.addColorStop(0, '#ffd54f');
-    grad.addColorStop(0.4, '#ff8a00');
-    grad.addColorStop(0.7, '#ff3d00');
-    grad.addColorStop(1, '#ffeaa7');
+    // Subtítulo "BEM-VINDO À GALÁXIA" com estilo cyberpunk
+    ctx.save();
+    ctx.font = `bold 18px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
+    ctx.letterSpacing = '4px';
+    
+    // Glow do subtítulo
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = 15;
+    ctx.fillStyle = '#00ffff';
+    ctx.fillText('★ BEM-VINDO À GALÁXIA ★', 400, mainY - 60);
+    ctx.restore();
 
-    // Stroke (contrast) then fill with gradient
-    // Use a subtle stroke under the fill so gradient remains visible
-    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-    ctx.lineWidth = 4;
-    ctx.fillStyle = grad;
-    // If text is long, use renderText for wrapping while keeping styling
-    try {
-    // Set a font size suitable for renderText's measurement
-    ctx.font = `bold 56px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
-    // Use centered wrapper to keep text centered
-    renderTextCentered(ctx, displayText, 400, mainY - 24, 700, 72, 3);
-    } catch (e) {
-        ctx.fillText(displayText, 400, mainY);
-    }
+    // Nome do usuário com neon glow multicamadas
+    ctx.save();
+    ctx.font = `bold 52px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
+    
+    // Camadas de glow para o texto
+    const textGlowLayers = [
+        { blur: 30, color: 'rgba(255, 0, 255, 0.4)' },
+        { blur: 20, color: 'rgba(0, 255, 255, 0.5)' },
+        { blur: 10, color: 'rgba(255, 255, 255, 0.6)' }
+    ];
+    
+    textGlowLayers.forEach(layer => {
+        ctx.shadowColor = layer.color;
+        ctx.shadowBlur = layer.blur;
+        ctx.fillStyle = 'transparent';
+        ctx.strokeStyle = layer.color;
+        ctx.lineWidth = 2;
+        ctx.strokeText(displayText.toUpperCase(), 400, mainY);
+    });
 
-    console.log('? Banner gerado com sucesso');
+    // Gradiente principal do texto
+    const textGrad = ctx.createLinearGradient(100, mainY - 30, 700, mainY + 30);
+    textGrad.addColorStop(0, '#00ffff');
+    textGrad.addColorStop(0.3, '#ffffff');
+    textGrad.addColorStop(0.5, '#ff00ff');
+    textGrad.addColorStop(0.7, '#ffffff');
+    textGrad.addColorStop(1, '#00ffff');
+    
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = textGrad;
+    ctx.fillText(displayText.toUpperCase(), 400, mainY);
+    
+    // Borda do texto
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.lineWidth = 1;
+    ctx.strokeText(displayText.toUpperCase(), 400, mainY);
+    ctx.restore();
+
+    // ⭐ CONTADOR DE MEMBROS
+    const memberCount = member.guild?.memberCount || '???';
+    ctx.save();
+    
+    // Background do contador
+    const counterY = mainY + 70;
+    const counterWidth = 260;
+    const counterHeight = 45;
+    
+    // Fundo com gradiente
+    const counterGrad = ctx.createLinearGradient(400 - counterWidth/2, counterY - counterHeight/2, 400 + counterWidth/2, counterY + counterHeight/2);
+    counterGrad.addColorStop(0, 'rgba(0, 255, 255, 0.15)');
+    counterGrad.addColorStop(0.5, 'rgba(255, 0, 255, 0.1)');
+    counterGrad.addColorStop(1, 'rgba(0, 255, 255, 0.15)');
+    
+    // Rounded rectangle
+    ctx.beginPath();
+    const rx = 400 - counterWidth/2;
+    const ry = counterY - counterHeight/2;
+    const radius = 22;
+    ctx.moveTo(rx + radius, ry);
+    ctx.lineTo(rx + counterWidth - radius, ry);
+    ctx.quadraticCurveTo(rx + counterWidth, ry, rx + counterWidth, ry + radius);
+    ctx.lineTo(rx + counterWidth, ry + counterHeight - radius);
+    ctx.quadraticCurveTo(rx + counterWidth, ry + counterHeight, rx + counterWidth - radius, ry + counterHeight);
+    ctx.lineTo(rx + radius, ry + counterHeight);
+    ctx.quadraticCurveTo(rx, ry + counterHeight, rx, ry + counterHeight - radius);
+    ctx.lineTo(rx, ry + radius);
+    ctx.quadraticCurveTo(rx, ry, rx + radius, ry);
+    ctx.closePath();
+    
+    ctx.fillStyle = counterGrad;
+    ctx.fill();
+    
+    // Borda neon do contador
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = 10;
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Texto do contador
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = 8;
+    ctx.font = `bold 20px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`⭐ MEMBRO #${memberCount} ⭐`, 400, counterY);
+    ctx.restore();
+
+    // Decoração inferior
+    ctx.save();
+    ctx.font = `16px ${PREFERRED_FONT}, Tahoma, Geneva, Verdana, sans-serif`;
+    ctx.shadowColor = 'rgba(255, 255, 255, 0.5)';
+    ctx.shadowBlur = 5;
+    ctx.fillStyle = 'rgba(200, 200, 255, 0.7)';
+    ctx.fillText('━━━━━━━━━━ ✦ NEXSTAR ✦ ━━━━━━━━━━', 400, 550);
+    ctx.restore();
+
+    console.log('✅ Banner premium gerado com sucesso');
     return canvas.toBuffer();
 }
 
