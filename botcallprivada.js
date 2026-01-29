@@ -1,12 +1,17 @@
 // Importa as classes necessárias da biblioteca discord.js
 const { Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionFlagsBits, MessageFlags, SlashCommandBuilder } = require('discord.js');
+require('dotenv').config();
 
+// --- CONFIGURAÇÕES VIA VARIÁVEIS DE AMBIENTE ---
+const TOKEN = process.env.DISCORD_TOKEN_CALLS;
+const ID_CARGO_VIP = process.env.CALLS_CARGO_VIP_ID;
+const ID_CATEGORIA_CALLS = process.env.CALLS_CATEGORIA_ID;
 
-const TOKEN = "MTQwNjE5MTAyMjI2NjEyMjM0Mw.GeHvoQ.Lep5m0qKE6pnDqG2ZqkeCSdCzU39xqXeculZ_M";
-
-
-const ID_CARGO_VIP = "1408499708455948459";
-const ID_CATEGORIA_CALLS = "1408499733970026516"; 
+// Validação das variáveis de ambiente
+if (!TOKEN) {
+    console.error("❌ DISCORD_TOKEN_CALLS não configurado no arquivo .env");
+    process.exit(1);
+} 
 
 const client = new Client({
     intents: [

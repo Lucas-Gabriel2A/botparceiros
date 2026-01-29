@@ -1,18 +1,19 @@
 // Importa as classes necessárias da biblioteca discord.js
 const { Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionFlagsBits, MessageFlags } = require('discord.js');
+require('dotenv').config();
 
-// --- CONFIGURAÇÕES ---
-// !! ALERTA DE SEGURANÇA !!
-// NUNCA exponha seu token. Se você expôs o anterior, RESETE-O no Portal de Desenvolvedores.
-// Cole seu NOVO token aqui APENAS para teste local.
-const TOKEN = "MTE4NzcwMzI0NTczMzM4MDE4Nw.G1qJIg.iQozNUyV2iRYLTukxAz4fUFmlgBzPv5CnP_1Ws";
+// --- CONFIGURAÇÕES VIA VARIÁVEIS DE AMBIENTE ---
+const TOKEN = process.env.DISCORD_TOKEN_VIP;
+const ID_CARGO_STAFF = process.env.VIP_STAFF_ROLE_ID;
+const ID_CARGO_VIP = process.env.VIP_CARGO_VIP_ID;
+const ID_CATEGORIA_TICKETS = process.env.VIP_CATEGORIA_TICKETS_ID;
+const ID_CANAL_COMPRAS = process.env.VIP_CANAL_COMPRAS_ID;
 
-// !! VERIFIQUE OS IDs !!
-// Certifique-se de que estes IDs estão corretos.
-const ID_CARGO_STAFF = "1408499692261609644";
-const ID_CARGO_VIP = "1408499708455948459";
-const ID_CATEGORIA_TICKETS = "1408499726390792447";
-const ID_CANAL_COMPRAS = "1408499775682252840"; // NOVO: ID do canal onde o painel pode ser criado
+// Validação das variáveis de ambiente
+if (!TOKEN) {
+    console.error("❌ DISCORD_TOKEN_VIP não configurado no arquivo .env");
+    process.exit(1);
+}
 
 const client = new Client({
     intents: [
@@ -41,11 +42,7 @@ client.once('ready', () => {
     client.application.commands.set(commands);
     console.log('Comando /painel-ticket registrado com sucesso!');
     
-    // Mantém o bot ativo no Replit
-    const express = require('express');
-    const app = express();
-    app.get('/', (req, res) => res.send('Bot está rodando!'));
-    app.listen(3000, () => console.log('Servidor web ativo na porta 3000'));
+    // Servidor web removido - healthcheck gerenciado por botcallprivada.js
 });
 
 // Listener principal para todas as interações
