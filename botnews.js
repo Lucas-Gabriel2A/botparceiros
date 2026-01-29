@@ -1,6 +1,7 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder, REST, Routes } = require('discord.js');
 const axios = require('axios');
 const cron = require('node-cron');
+const { translate } = require('google-translate-api-x');
 require('dotenv').config();
 
 // ═══════════════════════════════════════════════════════════════
@@ -55,9 +56,10 @@ const client = new Client({
 class SpaceNewsBot {
     constructor() {
         this.lastPosted = {};
+        this.translationCache = new Map(); // Cache de traduções
         this.spaceFacts = [
             "Um dia em Vênus é mais longo que um ano em Vênus! 🪐",
-            "Neutron stars podem girar 600 vezes por segundo! ⭐",
+            "Estrelas de nêutrons podem girar 600 vezes por segundo! ⭐",
             "Há mais estrelas no universo do que grãos de areia na Terra! 🌌",
             "O Sol representa 99.86% da massa do Sistema Solar! ☀️",
             "A Grande Mancha Vermelha de Júpiter existe há pelo menos 400 anos! 🔴",
@@ -69,6 +71,38 @@ class SpaceNewsBot {
             "Buracos negros podem distorcer o tempo! ⏰",
             "Existem mais de 200 bilhões de galáxias no universo observável! 🌀"
         ];
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // 🌐 TRADUÇÃO AUTOMÁTICA PARA PORTUGUÊS
+    // ════════════════════════════════════════════════════════════
+
+    async translateToPT(text) {
+        if (!text || text.length === 0) return text;
+        
+        // Verifica cache primeiro
+        const cacheKey = text.substring(0, 100);
+        if (this.translationCache.has(cacheKey)) {
+            return this.translationCache.get(cacheKey);
+        }
+
+        try {
+            const result = await translate(text, { to: 'pt' });
+            const translated = result.text;
+            
+            // Salva no cache (limita tamanho do cache)
+            if (this.translationCache.size > 100) {
+                const firstKey = this.translationCache.keys().next().value;
+                this.translationCache.delete(firstKey);
+            }
+            this.translationCache.set(cacheKey, translated);
+            
+            console.log('🌐 Texto traduzido para PT-BR');
+            return translated;
+        } catch (error) {
+            console.log('⚠️ Erro na tradução, usando original:', error.message);
+            return text; // Retorna original em caso de erro
+        }
     }
 
     // ════════════════════════════════════════════════════════════
@@ -113,9 +147,14 @@ class SpaceNewsBot {
             const response = await axios.get(`https://api.nasa.gov/planetary/apod?api_key=${NASA_API_KEY}`);
             const data = response.data;
 
+            // 🌐 Traduzir para português
+            const translatedTitle = await this.translateToPT(data.title);
+            const explanationText = data.explanation.length > 600 ? data.explanation.substring(0, 600) + '...' : data.explanation;
+            const translatedExplanation = await this.translateToPT(explanationText);
+
             const embed = this.createPremiumEmbed({
                 title: '🔭 DESCOBERTA ASTRONÔMICA DO DIA',
-                description: `### ${EMOJIS.star} ${data.title}\n\n${data.explanation.length > 600 ? data.explanation.substring(0, 600) + '...' : data.explanation}`,
+                description: `### ${EMOJIS.star} ${translatedTitle}\n\n${translatedExplanation}`,
                 color: COLORS.NASA,
                 image: data.media_type === 'image' ? data.url : null,
                 category: 'NASA GODDARD SPACE CENTER',
@@ -123,7 +162,7 @@ class SpaceNewsBot {
                     { name: `${EMOJIS.telescope} Data Cósmica`, value: `\`${data.date}\``, inline: true },
                     { name: `${EMOJIS.astronaut} Copyright`, value: `\`${data.copyright || 'NASA/Public Domain'}\``, inline: true }
                 ],
-                footer: '🛸 NASA Astronomy Picture of the Day'
+                footer: '🛸 NASA Astronomy Picture of the Day • Traduzido para PT-BR'
             });
 
             const buttons = new ActionRowBuilder().addComponents(
@@ -362,9 +401,14 @@ class SpaceNewsBot {
 
             const article = articles[Math.floor(Math.random() * articles.length)];
 
+            // 🌐 Traduzir para português
+            const translatedTitle = await this.translateToPT(article.title);
+            const summaryText = article.summary.length > 500 ? article.summary.substring(0, 500) + '...' : article.summary;
+            const translatedSummary = await this.translateToPT(summaryText);
+
             const embed = this.createPremiumEmbed({
                 title: '📰 NOTÍCIAS DO COSMOS',
-                description: `### ${EMOJIS.star} ${article.title}\n\n${article.summary.length > 500 ? article.summary.substring(0, 500) + '...' : article.summary}`,
+                description: `### ${EMOJIS.star} ${translatedTitle}\n\n${translatedSummary}`,
                 color: COLORS.NEWS,
                 category: article.news_site.toUpperCase(),
                 image: article.image_url,
