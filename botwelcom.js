@@ -1561,7 +1561,7 @@ client.on('interactionCreate', async (interaction) => {
             if (interaction.customId === 'welcome_text_modal') {
                 const config = getConfig(interaction.guild.id);
                 config.welcomeText = interaction.fields.getTextInputValue('welcome_text');
-                saveConfig(interaction.guild.id);
+                saveConfigToDB(interaction.guild.id, config);
                 await safeReply(interaction, {
                     content: '? Texto welcome atualizado!',
                     flags: MessageFlags.Ephemeral
@@ -1570,7 +1570,7 @@ client.on('interactionCreate', async (interaction) => {
             } else if (interaction.customId === 'leave_text_modal') {
                 const config = getConfig(interaction.guild.id);
                 config.leaveText = interaction.fields.getTextInputValue('leave_text');
-                saveConfig(interaction.guild.id);
+                saveConfigToDB(interaction.guild.id, config);
                 await safeReply(interaction, {
                     content: '? Texto leave atualizado!',
                     flags: MessageFlags.Ephemeral
@@ -1766,7 +1766,7 @@ client.on('messageCreate', async (message) => {
             // Atualizar config
             const config = getConfig(message.guild.id);
             config.background = filePath;
-            saveConfig(message.guild.id);
+            saveConfigToDB(message.guild.id, config);
             
             console.log(`?? Config atualizado para guild ${message.guild.id}`);
             
