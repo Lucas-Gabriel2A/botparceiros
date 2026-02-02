@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "main": "bottickets.js",
   "scripts": {
-    "start": "concurrently \"npm run start:welcome\" \"npm run start:calls\" \"npm run start:vip\" \"npm run start:news\" \"npm run start:automod\" ",
+    "start": "concurrently \"npm run start:welcome\" \"npm run start:calls\" \"npm run start:vip\" \"npm run start:news\" \"npm run start:automod\" \"npm run start:nexstar\" ",
     "start:calls": "node botcallprivada.js",
     "start:welcome": "node botwelcom.js",
     "start:vip": "node botticketvip.js",
     "start:news": "node botnews.js",
     "start:automod": "node botautomod.js",
+    "start:nexstar": "node botnexstartickets.js",
     "dev": "nodemon bottickets.js",
     "test": "echo \"No tests specified\" && exit 0"
   },
