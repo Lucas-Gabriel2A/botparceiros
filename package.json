@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "bottickets.js",
   "scripts": {
-    "start": "concurrently \"npm run start:welcome\" \"npm run start:calls\" \"npm run start:vip\" \"npm run start:news\" \"npm run start:automod\" \"npm run start:tickets\" \"npm run start:indica\"",
+    "start": "concurrently \"npm run start:welcome\" \"npm run start:calls\" \"npm run start:vip\" \"npm run start:news\" \"npm run start:automod\" \"npm run start:tickets\" \"npm run start:indica\" \"npm run start:ia\"",
     "start:calls": "node botcallprivada.js",
     "start:welcome": "node botwelcom.js",
     "start:vip": "node botticketvip.js",
@@ -11,6 +11,7 @@
     "start:automod": "node botautomod.js",
     "start:tickets": "node botnexstartickets.js",
     "start:indica": "node botindica.js",
+    "start:ia": "node botNexstarIA.js",
     "dev": "nodemon bottickets.js",
     "test": "echo \"No tests specified\" && exit 0"
   },
@@ -37,6 +38,7 @@
     "google-translate-api-x": "^10.7.2",
     "node-cron": "^4.2.1",
     "node-fetch": "^3.3.2",
+    "openai": "^6.17.0",
     "web-streams-polyfill": "^3.2.1"
   },
   "devDependencies": {
