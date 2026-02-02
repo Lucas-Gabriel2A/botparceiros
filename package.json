@@ -3,13 +3,14 @@
   "version": "1.0.0",
   "main": "bottickets.js",
   "scripts": {
-    "start": "concurrently \"npm run start:welcome\" \"npm run start:calls\" \"npm run start:vip\" \"npm run start:news\" \"npm run start:automod\" \"npm run start:tickets\" ",
+    "start": "concurrently \"npm run start:welcome\" \"npm run start:calls\" \"npm run start:vip\" \"npm run start:news\" \"npm run start:automod\" \"npm run start:tickets\" \"npm run start:indica\"",
     "start:calls": "node botcallprivada.js",
     "start:welcome": "node botwelcom.js",
     "start:vip": "node botticketvip.js",
     "start:news": "node botnews.js",
     "start:automod": "node botautomod.js",
     "start:tickets": "node botnexstartickets.js",
+    "start:indica": "node botindica.js",
     "dev": "nodemon bottickets.js",
     "test": "echo \"No tests specified\" && exit 0"
   },
@@ -25,6 +26,7 @@
   "license": "MIT",
   "description": "Sistema de tickets e calls privadas para Discord",
   "dependencies": {
+    "@vitalets/google-translate-api": "^9.2.1",
     "axios": "^1.12.2",
     "canvas": "^3.1.0",
     "concurrently": "^8.2.2",
