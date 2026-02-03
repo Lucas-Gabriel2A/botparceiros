@@ -1,6 +1,16 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // 🤖 NEXSTAR IA - ASSISTENTE INTELIGENTE
 // ═══════════════════════════════════════════════════════════════════════════
+// Polyfill para 'File' (Necessário no Railway/Node < 20 para OpenAI Uploads)
+try {
+    if (!global.File) {
+        const { File } = require('node:buffer');
+        global.File = File;
+    }
+} catch (e) {
+    console.warn("⚠️ Não foi possível carregar o polyfill de 'File' (necessário apenas para uploads no Node antigo).");
+}
+
 const { 
     Client, 
     GatewayIntentBits, 
