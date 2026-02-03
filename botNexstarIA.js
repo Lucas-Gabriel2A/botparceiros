@@ -47,6 +47,14 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const LLM_BASE_URL = process.env.LLM_BASE_URL || 'https://api.openai.com/v1'; // Pode mudar para Groq/HF
 const MODELO_IA = process.env.MODELO_IA || 'gpt-3.5-turbo';
 
+// IDs de Cargos para Autorização
+const OWNER_ROLE_ID = process.env.OWNER_ROLE_ID;
+const SEMI_OWNER_ROLE_ID = process.env.SEMI_OWNER_ROLE_ID;
+const STAFF_ROLE_ID = process.env.STAFF_ROLE_ID;
+
+// Tempo de inatividade para engajar (30 minutos)
+const TEMPO_OCIOSO_PARA_ENGAJAR = 30 * 60 * 1000; // 30 minutos em ms
+
 // CORES E EMOJIS
 const CORES = {
     IA: '#00d4ff',
@@ -151,6 +159,454 @@ class LLMService {
 const llmService = new LLMService();
 
 // ═══════════════════════════════════════════════════════════════════════════
+// 🔐 SISTEMA DE COMANDOS ADMIN VIA IA
+// ═══════════════════════════════════════════════════════════════════════════
+
+const ADMIN_PROMPT = `Você é um parser de comandos administrativos. Analise a mensagem do usuário e extraia a ação desejada.
+
+AÇÕES DISPONÍVEIS:
+- timeout: Colocar usuário de castigo (timeout). Params: targetUser, duration (minutos), reason
+- kick: Expulsar usuário. Params: targetUser, reason
+- ban: Banir usuário. Params: targetUser, reason
+- unban: Desbanir usuário. Params: targetUserId (ID numérico)
+- warn: Avisar usuário. Params: targetUser, reason
+- clear: Limpar mensagens. Params: count (número de mensagens)
+- create_category: Criar categoria sozinha. Params: categoryName
+- create_category_with_channels: Criar categoria com canais dentro. Params: categoryName, channels (array de nomes), staffOnly (boolean opcional)
+- create_channel: Criar canal. Params: channelName, categoryName (opcional), type (text/voice), staffOnly (boolean)
+- delete_channel: Deletar canal. Params: channelName
+- rename_channel: Renomear canal. Params: oldName, newName
+- slowmode: Ativar slowmode. Params: channelName, seconds
+- lock_channel: Trancar canal. Params: channelName
+- unlock_channel: Destrancar canal. Params: channelName
+- give_role: Dar cargo. Params: targetUser, roleName
+- remove_role: Remover cargo. Params: targetUser, roleName
+- create_role: Criar cargo. Params: roleName, color (hex opcional)
+- server_info: Info do servidor. Params: nenhum
+- user_info: Info do usuário. Params: targetUser
+- announce: Fazer anúncio com mensagem fixa. Params: channelName, message
+- send_message: Enviar mensagem gerada pela IA em um canal. Params: channelName, prompt (o que a IA deve dizer), mentionEveryone (boolean)
+- embed: Criar embed. Params: channelName, title, description, color (hex opcional)
+- reminder: Criar lembrete. Params: duration (minutos), message
+- none: Não é um comando admin
+
+REGRAS:
+1. Se mencionar @usuário, extraia como targetUser (apenas o ID ou menção)
+2. Duração pode ser "5 min", "10 minutos", "1 hora" etc. Converta para minutos.
+3. Se não for um comando admin, retorne action: "none"
+4. SEMPRE retorne JSON válido
+
+Responda APENAS com JSON no formato:
+{"action": "nome_acao", "params": {...}}`;
+
+// Função para verificar autorização
+function isAuthorized(member) {
+    if (!member || !member.roles) return false;
+    return member.roles.cache.has(OWNER_ROLE_ID) || 
+           member.roles.cache.has(SEMI_OWNER_ROLE_ID);
+}
+
+// Função para parsear comando admin via LLM
+async function parseAdminCommand(userMessage) {
+    try {
+        const response = await llmService.gerarResposta(
+            [{ role: 'user', content: userMessage }],
+            ADMIN_PROMPT
+        );
+        
+        // Tenta extrair JSON da resposta (pega apenas o primeiro objeto JSON válido)
+        const jsonMatch = response.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/);
+        if (jsonMatch) {
+            try {
+                return JSON.parse(jsonMatch[0]);
+            } catch (parseErr) {
+                // Se falhar, tenta limpar o JSON
+                const cleaned = jsonMatch[0].replace(/[\n\r]/g, '').replace(/,\s*}/g, '}');
+                return JSON.parse(cleaned);
+            }
+        }
+        return { action: 'none', params: {} };
+    } catch (error) {
+        console.error('Erro ao parsear comando admin:', error);
+        return { action: 'none', params: {} };
+    }
+}
+
+// Helper: Resolve canal por menção (<#ID>), ID ou nome
+function resolveChannel(guild, channelRef) {
+    if (!channelRef) return null;
+    
+    // Se for menção <#123456789>
+    const mentionMatch = channelRef.match(/<#(\d+)>/);
+    if (mentionMatch) {
+        return guild.channels.cache.get(mentionMatch[1]);
+    }
+    
+    // Se for ID numérico direto
+    if (/^\d+$/.test(channelRef)) {
+        return guild.channels.cache.get(channelRef);
+    }
+    
+    // Se for nome do canal
+    const cleanName = channelRef.toLowerCase().replace('#', '');
+    return guild.channels.cache.find(c => c.name.toLowerCase() === cleanName);
+}
+
+// Helper: Resolve cargo por menção (<@&ID>), ID ou nome
+function resolveRole(guild, roleRef) {
+    if (!roleRef) return null;
+    
+    // Se for menção <@&123456789>
+    const mentionMatch = roleRef.match(/<@&(\d+)>/);
+    if (mentionMatch) {
+        return guild.roles.cache.get(mentionMatch[1]);
+    }
+    
+    // Se for ID numérico direto
+    if (/^\d+$/.test(roleRef)) {
+        return guild.roles.cache.get(roleRef);
+    }
+    
+    // Se for nome do cargo
+    const cleanName = roleRef.toLowerCase().replace('@', '');
+    return guild.roles.cache.find(r => r.name.toLowerCase() === cleanName);
+}
+
+// Função principal para executar ações admin
+async function executeAdminAction(message, action, params) {
+    const guild = message.guild;
+    const results = [];
+    
+    try {
+        switch (action) {
+            // ═══════════ MODERAÇÃO ═══════════
+            case 'timeout': {
+                const member = message.mentions.members.first() || 
+                    await guild.members.fetch(params.targetUser).catch(() => null);
+                if (!member) return '❌ Não encontrei o usuário mencionado.';
+                
+                const duration = (parseInt(params.duration) || 5) * 60 * 1000; // minutos para ms
+                await member.timeout(duration, params.reason || 'Sem motivo especificado');
+                
+                // Envia DM para o usuário
+                try {
+                    await member.send(`⚠️ **Você foi colocado de castigo no servidor Nexstar!**\n📋 **Motivo:** ${params.reason || 'Não especificado'}\n⏱️ **Duração:** ${params.duration || 5} minutos`);
+                } catch (e) {
+                    results.push('(Não consegui enviar DM para o usuário)');
+                }
+                
+                return `✅ ${member.user.tag} foi colocado de castigo por ${params.duration || 5} minutos. Motivo: ${params.reason || 'Não especificado'}`;
+            }
+            
+            case 'kick': {
+                const member = message.mentions.members.first() ||
+                    await guild.members.fetch(params.targetUser).catch(() => null);
+                if (!member) return '❌ Não encontrei o usuário mencionado.';
+                
+                const reason = params.reason || 'Sem motivo especificado';
+                try {
+                    await member.send(`⚠️ **Você foi expulso do servidor Nexstar!**\n📋 **Motivo:** ${reason}`);
+                } catch (e) {}
+                
+                await member.kick(reason);
+                return `✅ ${member.user.tag} foi expulso do servidor. Motivo: ${reason}`;
+            }
+            
+            case 'ban': {
+                const member = message.mentions.members.first() ||
+                    await guild.members.fetch(params.targetUser).catch(() => null);
+                if (!member) return '❌ Não encontrei o usuário mencionado.';
+                
+                const reason = params.reason || 'Sem motivo especificado';
+                try {
+                    await member.send(`🔨 **Você foi BANIDO do servidor Nexstar!**\n📋 **Motivo:** ${reason}`);
+                } catch (e) {}
+                
+                await member.ban({ reason });
+                return `🔨 ${member.user.tag} foi BANIDO do servidor. Motivo: ${reason}`;
+            }
+            
+            case 'unban': {
+                const userId = params.targetUserId;
+                if (!userId) return '❌ Preciso do ID do usuário para desbanir.';
+                
+                await guild.bans.remove(userId);
+                return `✅ Usuário ${userId} foi desbanido.`;
+            }
+            
+            case 'warn': {
+                const member = message.mentions.members.first();
+                if (!member) return '❌ Não encontrei o usuário mencionado.';
+                
+                try {
+                    await member.send(`⚠️ **Você recebeu um AVISO no servidor Nexstar!**\n📋 **Motivo:** ${params.reason || 'Não especificado'}`);
+                } catch (e) {}
+                
+                return `⚠️ ${member.user.tag} foi avisado. Motivo: ${params.reason || 'Não especificado'}`;
+            }
+            
+            case 'clear': {
+                const count = Math.min(parseInt(params.count) || 10, 100);
+                const deleted = await message.channel.bulkDelete(count, true);
+                return `🧹 Apaguei ${deleted.size} mensagens.`;
+            }
+            
+            // ═══════════ CANAIS ═══════════
+            case 'create_category': {
+                const category = await guild.channels.create({
+                    name: params.categoryName,
+                    type: ChannelType.GuildCategory
+                });
+                return `📁 Categoria **${params.categoryName}** criada!`;
+            }
+            
+            case 'create_category_with_channels': {
+                // Cria a categoria
+                const category = await guild.channels.create({
+                    name: params.categoryName,
+                    type: ChannelType.GuildCategory
+                });
+                
+                // Cria os canais dentro da categoria
+                const channels = params.channels || [];
+                const createdChannels = [];
+                
+                for (const channelName of channels) {
+                    const options = {
+                        name: channelName,
+                        type: ChannelType.GuildText,
+                        parent: category.id
+                    };
+                    
+                    // Se só staff pode falar
+                    if (params.staffOnly && STAFF_ROLE_ID) {
+                        options.permissionOverwrites = [
+                            { id: guild.id, deny: [PermissionFlagsBits.SendMessages] },
+                            { id: STAFF_ROLE_ID, allow: [PermissionFlagsBits.SendMessages, PermissionFlagsBits.ViewChannel] }
+                        ];
+                    }
+                    
+                    await guild.channels.create(options);
+                    createdChannels.push(channelName);
+                }
+                
+                return `📁 Categoria **${params.categoryName}** criada com ${createdChannels.length} canais: ${createdChannels.map(c => '#' + c).join(', ')}`;
+            }
+            
+            case 'create_channel': {
+                const channelType = params.type === 'voice' ? ChannelType.GuildVoice : ChannelType.GuildText;
+                const options = {
+                    name: params.channelName,
+                    type: channelType
+                };
+                
+                // Se especificou categoria, busca ela
+                if (params.categoryName) {
+                    const category = guild.channels.cache.find(c => 
+                        c.type === ChannelType.GuildCategory && 
+                        c.name.toLowerCase() === params.categoryName.toLowerCase()
+                    );
+                    if (category) options.parent = category.id;
+                }
+                
+                // Se só staff pode falar
+                if (params.staffOnly && STAFF_ROLE_ID) {
+                    options.permissionOverwrites = [
+                        {
+                            id: guild.id,
+                            deny: [PermissionFlagsBits.SendMessages]
+                        },
+                        {
+                            id: STAFF_ROLE_ID,
+                            allow: [PermissionFlagsBits.SendMessages, PermissionFlagsBits.ViewChannel]
+                        }
+                    ];
+                }
+                
+                const channel = await guild.channels.create(options);
+                return `📢 Canal **#${params.channelName}** criado!${params.staffOnly ? ' (Apenas Staff pode falar)' : ''}`;
+            }
+            
+            case 'delete_channel': {
+                const channel = resolveChannel(guild, params.channelName);
+                if (!channel) return '❌ Canal não encontrado.';
+                
+                await channel.delete();
+                return `🗑️ Canal **${params.channelName}** deletado.`;
+            }
+            
+            case 'rename_channel': {
+                const channel = resolveChannel(guild, params.oldName);
+                if (!channel) return '❌ Canal não encontrado.';
+                
+                await channel.setName(params.newName);
+                return `✏️ Canal renomeado para **#${params.newName}**.`;
+            }
+            
+            case 'slowmode': {
+                const channel = params.channelName ? 
+                    resolveChannel(guild, params.channelName) :
+                    message.channel;
+                if (!channel) return '❌ Canal não encontrado.';
+                
+                await channel.setRateLimitPerUser(parseInt(params.seconds) || 10);
+                return `🐌 Slowmode de ${params.seconds || 10}s ativado em #${channel.name}.`;
+            }
+            
+            case 'lock_channel': {
+                const channel = params.channelName ?
+                    resolveChannel(guild, params.channelName) :
+                    message.channel;
+                if (!channel) return '❌ Canal não encontrado.';
+                
+                await channel.permissionOverwrites.edit(guild.id, { SendMessages: false });
+                return `🔒 Canal #${channel.name} trancado.`;
+            }
+            
+            case 'unlock_channel': {
+                const channel = params.channelName ?
+                    resolveChannel(guild, params.channelName) :
+                    message.channel;
+                if (!channel) return '❌ Canal não encontrado.';
+                
+                await channel.permissionOverwrites.edit(guild.id, { SendMessages: null });
+                return `🔓 Canal #${channel.name} destrancado.`;
+            }
+            
+            // ═══════════ CARGOS ═══════════
+            case 'give_role': {
+                const member = message.mentions.members.first();
+                if (!member) return '❌ Mencione o usuário para dar o cargo.';
+                
+                const role = resolveRole(guild, params.roleName);
+                if (!role) return `❌ Cargo "${params.roleName}" não encontrado.`;
+                
+                await member.roles.add(role);
+                return `✅ Cargo **${role.name}** dado para ${member.user.tag}.`;
+            }
+            
+            case 'remove_role': {
+                const member = message.mentions.members.first();
+                if (!member) return '❌ Mencione o usuário para remover o cargo.';
+                
+                const role = resolveRole(guild, params.roleName);
+                if (!role) return `❌ Cargo "${params.roleName}" não encontrado.`;
+                
+                await member.roles.remove(role);
+                return `✅ Cargo **${role.name}** removido de ${member.user.tag}.`;
+            }
+            
+            case 'create_role': {
+                const role = await guild.roles.create({
+                    name: params.roleName,
+                    color: params.color || '#99AAB5',
+                    reason: 'Criado via NexstarIA'
+                });
+                return `✅ Cargo **${role.name}** criado com cor ${params.color || 'padrão'}.`;
+            }
+            
+            // ═══════════ UTILIDADES ═══════════
+            case 'server_info': {
+                const memberCount = guild.memberCount;
+                const channelCount = guild.channels.cache.size;
+                const roleCount = guild.roles.cache.size;
+                const created = guild.createdAt.toLocaleDateString('pt-BR');
+                
+                return `📊 **Informações do Servidor ${guild.name}**\n👥 Membros: ${memberCount}\n📢 Canais: ${channelCount}\n🏷️ Cargos: ${roleCount}\n📅 Criado em: ${created}`;
+            }
+            
+            case 'user_info': {
+                const member = message.mentions.members.first();
+                if (!member) return '❌ Mencione o usuário.';
+                
+                const joinedAt = member.joinedAt.toLocaleDateString('pt-BR');
+                const roles = member.roles.cache.filter(r => r.id !== guild.id).map(r => r.name).join(', ') || 'Nenhum';
+                
+                return `👤 **${member.user.tag}**\n📅 Entrou em: ${joinedAt}\n🏷️ Cargos: ${roles}`;
+            }
+            
+            case 'announce': {
+                console.log(`📢 Announce - channelName recebido: "${params.channelName}"`);
+                const channel = resolveChannel(guild, params.channelName);
+                console.log(`📢 Announce - canal resolvido: ${channel ? channel.name + ' (ID: ' + channel.id + ')' : 'NULL'}`);
+                if (!channel) return '❌ Canal não encontrado.';
+                
+                const embed = new EmbedBuilder()
+                    .setTitle('📢 Anúncio')
+                    .setDescription(params.message)
+                    .setColor('#FFD700')
+                    .setTimestamp();
+                
+                await channel.send({ embeds: [embed] });
+                console.log(`✅ Anúncio enviado para #${channel.name}`);
+                return `✅ Anúncio enviado para #${channel.name}.`;
+            }
+            
+            case 'send_message': {
+                const channel = resolveChannel(guild, params.channelName);
+                if (!channel) return '❌ Canal não encontrado.';
+                
+                // Gera conteúdo via IA baseado no prompt
+                const aiPrompt = params.prompt || 'Se apresente e diga o que você pode fazer.';
+                const generatedContent = await llmService.gerarResposta(
+                    [{ role: 'user', content: `Gere uma mensagem para enviar no Discord (sem markdown excessivo, seja amigável): ${aiPrompt}` }],
+                    `Você é a NexstarIA, assistente do servidor Nexstar. Responda de forma amigável e direta. Não use blocos de código. Pode usar emojis.`
+                );
+                
+                // Adiciona menção @everyone se solicitado
+                let finalMessage = generatedContent;
+                if (params.mentionEveryone) {
+                    finalMessage = `@everyone\n\n${generatedContent}`;
+                }
+                
+                await channel.send(finalMessage);
+                return `✅ Mensagem enviada para #${channel.name}.`;
+            }
+            
+            case 'embed': {
+                const channel = params.channelName ?
+                    resolveChannel(guild, params.channelName) :
+                    message.channel;
+                if (!channel) return '❌ Canal não encontrado.';
+                
+                const embed = new EmbedBuilder()
+                    .setTitle(params.title || 'Embed')
+                    .setDescription(params.description || '')
+                    .setColor(params.color || '#00d4ff')
+                    .setTimestamp();
+                
+                await channel.send({ embeds: [embed] });
+                return `✅ Embed enviado para #${channel.name}.`;
+            }
+            
+            case 'reminder': {
+                const duration = (parseInt(params.duration) || 5) * 60 * 1000;
+                const reminderMsg = params.message || 'Lembrete!';
+                
+                setTimeout(async () => {
+                    try {
+                        await message.author.send(`⏰ **Lembrete:** ${reminderMsg}`);
+                    } catch (e) {
+                        await message.channel.send(`⏰ ${message.author}, **Lembrete:** ${reminderMsg}`);
+                    }
+                }, duration);
+                
+                return `✅ Lembrete agendado para daqui ${params.duration || 5} minutos.`;
+            }
+            
+            case 'none':
+                return null; // Não é comando admin
+                
+            default:
+                return null;
+        }
+    } catch (error) {
+        console.error('Erro ao executar ação admin:', error);
+        return `❌ Erro ao executar: ${error.message}`;
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // 🤖 CLIENTE DISCORD
 // ═══════════════════════════════════════════════════════════════════════════
 const client = new Client({
@@ -175,7 +631,52 @@ client.on('messageCreate', async (message) => {
 
     const conteudoLower = message.content.toLowerCase();
 
-    // 🔊 COMANDOS DE VOZ (!entrar / !sair)
+    // Atualiza timer de inatividade se for no canal chat-geral
+    if (message.channel.id === CANAL_CHAT_GERAL) {
+        ultimoTempoMensagemGeral = Date.now();
+    }
+
+    // 🔐 COMANDOS ADMIN VIA IA (Prefixo: "ia,", "ia ", ou menção ao bot)
+    const isAdminPrefix = conteudoLower.startsWith('ia,') || conteudoLower.startsWith('ia ');
+    const isMention = message.mentions.users.has(client.user?.id);
+    
+    if ((isAdminPrefix || isMention) && message.guild) {
+        // Verifica se é autorizado (Owner ou Semi-Owner)
+        if (isAuthorized(message.member)) {
+            console.log(`🔐 Comando admin detectado de ${message.author.tag}: ${message.content}`);
+            
+            // Extrai menções de canal da mensagem original (evita corrupção pelo LLM)
+            const channelMentions = message.content.match(/<#(\d+)>/g) || [];
+            const firstChannelMention = channelMentions[0] || null;
+            
+            const parsed = await parseAdminCommand(message.content);
+            console.log('📋 Comando parseado:', parsed);
+            
+            // Se o LLM corrompeu o channelName, usa a menção extraída diretamente
+            if (parsed.params && firstChannelMention) {
+                if (parsed.params.channelName && !parsed.params.channelName.match(/<#\d+>/)) {
+                    console.log(`🔧 Corrigindo channelName corrompido: "${parsed.params.channelName}" → "${firstChannelMention}"`);
+                    parsed.params.channelName = firstChannelMention;
+                }
+            }
+            
+            if (parsed.action && parsed.action !== 'none') {
+                const result = await executeAdminAction(message, parsed.action, parsed.params || {});
+                if (result) {
+                    // Try reply, fallback to channel.send (ex: se a mensagem foi deletada pelo bulkDelete)
+                    try {
+                        await message.reply(result);
+                    } catch (e) {
+                        await message.channel.send(result);
+                    }
+                    return; // Comando admin executado, não precisa continuar
+                }
+            }
+            // Se action === 'none', continua para resposta normal da IA
+        }
+    }
+
+    // �🔊 COMANDOS DE VOZ (!entrar / !sair)
     if (conteudoLower === '!entrar' || conteudoLower === '!join') {
         if (message.member.voice.channel) {
             const connection = joinVoiceChannel({
@@ -447,11 +948,17 @@ function verificarInatividade() {
                 "Você é uma IA sarcástica. Lance uma provocação ácida. NÃO use asteriscos para ações (*)."
             );
 
-            await canalGeral.send(`📢 **Revivendo o chat!** @here\n\n${topico}`);
+            await canalGeral.send(`📢 **Revivendo o chat!** @everyone\n\n${topico}`);
             // Reseta o timer para não mandar de novo imediatamente
             ultimoTempoMensagemGeral = Date.now(); 
         }
     }, 60000); // Checa a cada minuto
 }
+
+// Evento: Bot pronto
+client.once('ready', () => {
+    console.log(`✅ NexstarIA online como ${client.user.tag}`);
+    verificarInatividade();
+});
 
 client.login(TOKEN);
