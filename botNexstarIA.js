@@ -919,14 +919,21 @@ function responderVoz(connection, texto) {
 // ═══════════════════════════════════════════════════════════════════════════
 function verificarInatividade() {
     console.log(`⏳ Monitor de inatividade iniciado. Timeout: ${TEMPO_OCIOSO_PARA_ENGAJAR/60000} minutos.`);
+    console.log(`📍 Canal alvo: ${CANAL_CHAT_GERAL}`);
     
     setInterval(async () => {
         const tempoPassado = Date.now() - ultimoTempoMensagemGeral;
+        const minutosPassados = Math.floor(tempoPassado / 60000);
+        
+        console.log(`⏰ Verificando inatividade... ${minutosPassados} min desde última atividade`);
         
         if (tempoPassado > TEMPO_OCIOSO_PARA_ENGAJAR) {
+            console.log(`💤 Timeout atingido! Tentando enviar mensagem...`);
+            
             const canalGeral = client.channels.cache.get(CANAL_CHAT_GERAL);
             if (!canalGeral) {
-                console.log('Canal geral não encontrado para engajamento.');
+                console.log(`❌ Canal geral não encontrado! ID: ${CANAL_CHAT_GERAL}`);
+                console.log(`📋 Canais disponíveis: ${client.channels.cache.size}`);
                 return;
             }
 
@@ -934,7 +941,9 @@ function verificarInatividade() {
             try {
                 const ultimas = await canalGeral.messages.fetch({ limit: 1 });
                 if (ultimas.first() && ultimas.first().author.id === client.user.id) {
-                    // Já fui o último a falar, não vou falar de novo
+                    console.log(`🔄 Última mensagem já foi minha, pulando...`);
+                    // Reseta o timer mesmo assim para não ficar checando infinitamente
+                    ultimoTempoMensagemGeral = Date.now();
                     return;
                 }
             } catch (e) {
@@ -942,13 +951,19 @@ function verificarInatividade() {
             }
 
             // Gera um tópico
-            console.log('💤 Chat inativo. Gerando tópico de engajamento...');
-            const topico = await llmService.gerarResposta(
-                [{ role: 'user', content: 'O chat morreu. Gere uma frase sarcástica (SEM AÇÕES FÍSICAS) reclamando do silêncio e lance um tópico polêmico.' }], 
-                "Você é uma IA sarcástica. Lance uma provocação ácida. NÃO use asteriscos para ações (*)."
-            );
+            console.log('🎲 Gerando tópico de engajamento...');
+            try {
+                const topico = await llmService.gerarResposta(
+                    [{ role: 'user', content: 'O chat morreu. Gere uma frase sarcástica (SEM AÇÕES FÍSICAS) reclamando do silêncio e lance um tópico polêmico.' }], 
+                    "Você é uma IA sarcástica. Lance uma provocação ácida. NÃO use asteriscos para ações (*)."
+                );
 
-            await canalGeral.send(`📢 **Revivendo o chat!** @everyone\n\n${topico}`);
+                await canalGeral.send(`📢 **Revivendo o chat!** @everyone\n\n${topico}`);
+                console.log(`✅ Mensagem de engajamento enviada!`);
+            } catch (e) {
+                console.error('❌ Erro ao enviar mensagem de engajamento:', e);
+            }
+            
             // Reseta o timer para não mandar de novo imediatamente
             ultimoTempoMensagemGeral = Date.now(); 
         }
