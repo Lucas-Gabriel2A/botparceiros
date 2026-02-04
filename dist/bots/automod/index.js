@@ -137,14 +137,6 @@ async function logModerationAction(guildId, userId, channelId, messageContent, v
         services_1.logger.error('Erro ao registrar ação de moderação');
     }
 }
-function hasModerationPermission(member) {
-    if (!member)
-        return false;
-    if (member.id === member.guild.ownerId)
-        return true;
-    return member.permissions.has(discord_js_1.PermissionFlagsBits.ManageMessages) ||
-        member.permissions.has(discord_js_1.PermissionFlagsBits.Administrator);
-}
 // ═══════════════════════════════════════════════════════════════════════════
 // 🛡️ MODERAÇÃO DE MENSAGENS
 // ═══════════════════════════════════════════════════════════════════════════
@@ -249,7 +241,7 @@ client.on('interactionCreate', async (interaction) => {
         return;
     const commandInteraction = interaction;
     services_1.logger.info(`⚡ Comando AutoMod: ${commandInteraction.commandName} por ${commandInteraction.user.username}`);
-    if (!hasModerationPermission(commandInteraction.member)) {
+    if (!(0, services_1.hasModerationPermission)(commandInteraction.member)) {
         await commandInteraction.reply({
             content: '🚫 Você não tem permissão para usar comandos de moderação.',
             flags: discord_js_1.MessageFlags.Ephemeral

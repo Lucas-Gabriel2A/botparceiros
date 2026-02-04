@@ -2,13 +2,12 @@
 /**
  * ╔═══════════════════════════════════════════════════════════════════════════╗
  * ║                      NEXSTAR IA - ASSISTENTE INTELIGENTE                  ║
- * ║                        Chat IA + Voz + Admin Commands                     ║
+ * ║                        Chat IA + Admin Commands                           ║
  * ╚═══════════════════════════════════════════════════════════════════════════╝
  *
  * Features:
  * - LLM Service (OpenAI/Groq) para chat
  * - Comandos admin via linguagem natural
- * - Voice: Transcrição (Whisper) + TTS (Google)
  * - Monitor de inatividade
  */
 var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -18,13 +17,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.llmService = exports.LLMService = void 0;
 const discord_js_1 = require("discord.js");
 const openai_1 = __importDefault(require("openai"));
-const voice_1 = require("@discordjs/voice");
-const google_tts_api_1 = __importDefault(require("google-tts-api"));
-const fs_1 = __importDefault(require("fs"));
-const prism_media_1 = __importDefault(require("prism-media"));
-const stream_1 = require("stream");
-const child_process_1 = require("child_process");
-const ffmpeg_static_1 = __importDefault(require("ffmpeg-static"));
 const services_1 = require("../../shared/services");
 let dbConnected = false;
 // ═══════════════════════════════════════════════════════════════════════════
@@ -61,24 +53,6 @@ class LLMService {
         }
         else {
             services_1.logger.warn('⚠️ SEM CHAVE DE API. LLM Service em modo MOCK.');
-        }
-    }
-    async transcreverAudio(caminhoArquivo) {
-        if (this.mode === 'MOCK')
-            return "Isso é um teste de voz.";
-        try {
-            services_1.logger.info('🎤 Enviando áudio para transcrição (Whisper)...');
-            const transcription = await this.client.audio.transcriptions.create({
-                file: fs_1.default.createReadStream(caminhoArquivo),
-                model: "whisper-large-v3-turbo",
-                response_format: "json",
-                language: "pt"
-            });
-            return transcription.text;
-        }
-        catch (error) {
-            services_1.logger.error('Erro na transcrição STT');
-            return null;
         }
     }
     async gerarResposta(mensagens, systemPrompt = "Você é a IA da Nexstar.", imageUrl = null) {
@@ -461,28 +435,8 @@ const client = new discord_js_1.Client({
 });
 const conversasAtivas = new Map();
 let ultimoTempoMensagemGeral = Date.now();
-let globalPlayer = null;
 // ═══════════════════════════════════════════════════════════════════════════
-// 🔊 VOZ (TTS)
-// ═══════════════════════════════════════════════════════════════════════════
-function responderVoz(connection, texto) {
-    try {
-        const textoFala = texto.replace(/[*_#`]/g, '').slice(0, 200);
-        const url = google_tts_api_1.default.getAudioUrl(textoFala, { lang: 'pt', slow: false, host: 'https://translate.google.com' });
-        const resource = (0, voice_1.createAudioResource)(url);
-        globalPlayer = (0, voice_1.createAudioPlayer)();
-        globalPlayer.play(resource);
-        connection.subscribe(globalPlayer);
-        globalPlayer.on(voice_1.AudioPlayerStatus.Idle, () => {
-            services_1.logger.info('✅ TTS finalizado');
-        });
-    }
-    catch (err) {
-        services_1.logger.error("Erro no TTS");
-    }
-}
-// ═══════════════════════════════════════════════════════════════════════════
-// 💬 CHAT LOGIC
+//  CHAT LOGIC
 // ═══════════════════════════════════════════════════════════════════════════
 async function runChatGeralLogic(message) {
     if (!dbConnected)
@@ -547,9 +501,6 @@ async function runChatGeralLogic(message) {
             const promptSistema = config.ia_system_prompt || `Você é a IA da Nexstar. Personalidade ÁCIDA. Usuario: ${contextoUsuario}`;
             const resposta = await llmService.gerarResposta(historicoContexto, promptSistema, imageUrl);
             await message.reply(resposta);
-            const connection = (0, voice_1.getVoiceConnection)(message.guild.id);
-            if (connection)
-                responderVoz(connection, resposta);
         }
         catch (err) {
             services_1.logger.error('Erro no chat geral');
@@ -629,97 +580,6 @@ client.on('messageCreate', async (message) => {
             }
         }
     }
-    // Voice commands
-    if (conteudoLower === '!entrar' || conteudoLower === '!join') {
-        if (message.member?.voice.channel) {
-            const connection = (0, voice_1.joinVoiceChannel)({
-                channelId: message.member.voice.channel.id,
-                guildId: message.guild.id,
-                adapterCreator: message.guild.voiceAdapterCreator,
-                selfDeaf: false,
-                selfMute: false
-            });
-            await message.reply("🔊 Entrei no canal de voz!");
-            const receiver = connection.receiver;
-            receiver.speaking.removeAllListeners('start');
-            receiver.speaking.on('start', (userId) => {
-                if (userId === client.user?.id)
-                    return;
-                if (globalPlayer?.state.status === voice_1.AudioPlayerStatus.Playing)
-                    return;
-                services_1.logger.info(`🎤 Detectando fala de ${userId}...`);
-                const opusStream = receiver.subscribe(userId, {
-                    end: { behavior: voice_1.EndBehaviorType.AfterSilence, duration: 1500 },
-                });
-                const filename = `./temp_audio_${userId}_${Date.now()}.pcm`;
-                const outStream = fs_1.default.createWriteStream(filename);
-                const opusDecoder = new prism_media_1.default.opus.Decoder({ rate: 48000, channels: 1, frameSize: 960 });
-                (0, stream_1.pipeline)(opusStream, opusDecoder, outStream, async (err) => {
-                    if (err) {
-                        services_1.logger.error('Erro no pipeline de áudio');
-                        return;
-                    }
-                    await new Promise(r => setTimeout(r, 200));
-                    try {
-                        const stats = fs_1.default.statSync(filename);
-                        if (stats.size < 10000) {
-                            fs_1.default.unlink(filename, () => { });
-                            return;
-                        }
-                    }
-                    catch {
-                        return;
-                    }
-                    services_1.logger.info('✅ Áudio gravado. Transcrevendo...');
-                    const wavFilename = filename.replace('.pcm', '.wav');
-                    const ffmpeg = (0, child_process_1.spawn)(ffmpeg_static_1.default, [
-                        '-f', 's16le', '-ar', '48000', '-ac', '1',
-                        '-i', filename, wavFilename
-                    ]);
-                    ffmpeg.on('close', async (code) => {
-                        fs_1.default.unlink(filename, () => { });
-                        if (code === 0) {
-                            const textoUsuario = await llmService.transcreverAudio(wavFilename);
-                            fs_1.default.unlink(wavFilename, () => { });
-                            if (textoUsuario && textoUsuario.length > 2) {
-                                services_1.logger.info(`📝 Transcrição: "${textoUsuario}"`);
-                                const textoLimpo = textoUsuario.trim();
-                                if (textoLimpo.length < 4 || /^(Obrigado|Tchau|Aleluia|Amém|Pois é|Entendi)[.!?,]*$/i.test(textoLimpo)) {
-                                    return;
-                                }
-                                const historicoContexto = [{ role: 'user', content: textoUsuario }];
-                                const promptSistema = "Você é a IA da Nexstar. Personalidade ÁCIDA e CURTA. Responda em 1-2 frases.";
-                                const canalGeral = client.channels.cache.get(CANAL_CHAT_GERAL);
-                                if (canalGeral)
-                                    await canalGeral.sendTyping();
-                                const resposta = await llmService.gerarResposta(historicoContexto, promptSistema);
-                                responderVoz(connection, resposta);
-                            }
-                        }
-                        else {
-                            fs_1.default.unlink(wavFilename, () => { });
-                        }
-                    });
-                });
-            });
-            return;
-        }
-        else {
-            await message.reply("❌ Você precisa estar em um canal de voz.");
-            return;
-        }
-    }
-    if (conteudoLower === '!sair' || conteudoLower === '!leave') {
-        const connection = (0, voice_1.getVoiceConnection)(message.guild.id);
-        if (connection) {
-            connection.destroy();
-            await message.reply("🔇 Saindo da call.");
-        }
-        else {
-            await message.reply("❓ Não estou em nenhuma call.");
-        }
-        return;
-    }
     // Chat geral (SaaS - check inside function)
     await runChatGeralLogic(message);
     // Chat privado
@@ -782,15 +642,19 @@ client.on('interactionCreate', async (interaction) => {
         }
     }
     if (interaction.commandName === 'construir-servidor') {
-        const theme = interaction.options.getString('tema', true);
-        await interaction.reply({
-            content: `🏗️ Entendido! Projetando um servidor com o tema: **${theme}**...\nIsso pode levar cerca de 1 minuto.`,
-            ephemeral: false
-        });
-        const guild = interaction.guild;
-        if (!guild)
-            return;
+        services_1.logger.info('🏗️ Comando /construir-servidor recebido');
         try {
+            const theme = interaction.options.getString('tema', true);
+            services_1.logger.info(`🏗️ Tema: ${theme}`);
+            await interaction.deferReply({ ephemeral: false });
+            services_1.logger.info('🏗️ DeferReply enviado');
+            const guildId = interaction.guildId;
+            if (!guildId) {
+                await interaction.editReply('❌ Este comando só funciona em servidores.');
+                return;
+            }
+            const guild = interaction.guild || await client.guilds.fetch(guildId);
+            await interaction.editReply(`🏗️ Entendido! Projetando um servidor com o tema: **${theme}**...\nIsso pode levar cerca de 1 minuto.`);
             // 1. Gerar Arquitetura
             const schema = await services_1.serverBuilder.generateServerPlan(theme);
             if (!schema) {
@@ -799,28 +663,84 @@ client.on('interactionCreate', async (interaction) => {
             }
             await interaction.editReply(`📐 Plano gerado! Criando ${schema.roles.length} cargos e ${schema.categories.length} categorias...`);
             // 2. Construir
-            await services_1.serverBuilder.buildServer(guild, schema, async (_msg) => {
-                // Opcional: Atualizar mensagem com progresso (cuidado com rate limits)
-                // logger.info(msg);
+            await services_1.serverBuilder.buildServer(guild, schema, async (msg) => {
+                services_1.logger.info(msg);
             });
             await interaction.followUp({
-                content: `✅ **Servidor Construído com Sucesso!** 🚀\nTema: ${theme}\n\n*Nota: Ajuste as permissões de canais se necessário.*`,
+                content: `✅ **Servidor Construído com Sucesso!** 🚀\nTema: ${theme.substring(0, 100)}${theme.length > 100 ? '...' : ''}\n\n*Nota: Ajuste as permissões de canais se necessário.*`,
                 ephemeral: false
             });
         }
         catch (error) {
+            const errorMsg = String(error.message || 'Erro desconhecido').substring(0, 1800);
             services_1.logger.error('Erro ao construir servidor:', { error: error });
-            await interaction.followUp({ content: '❌ Ocorreu um erro crítico durante a construção.', ephemeral: true });
+            try {
+                // Tenta responder se ainda não tiver respondido, ou editar se já tiver diferido
+                if (interaction.deferred || interaction.replied) {
+                    await interaction.followUp({ content: `❌ Ocorreu um erro: ${errorMsg}`, ephemeral: true });
+                }
+                else {
+                    await interaction.reply({ content: `❌ Ocorreu um erro: ${errorMsg}`, ephemeral: true });
+                }
+            }
+            catch (err) {
+                // Se falhar até em reportar o erro (ex: Unknown Interaction), apenas loga
+                console.error('Erro crítico na interação (possível timeout/duplicação):', err);
+            }
         }
     }
-    if (interaction.commandName === 'ajuda-ia') {
+    else if (interaction.commandName === 'ajustar-servidor') {
+        services_1.logger.info('🔧 Comando /ajustar-servidor recebido');
+        try {
+            const acao = interaction.options.getString('acao', true);
+            await interaction.deferReply({ ephemeral: false });
+            const guildId = interaction.guildId;
+            if (!guildId) {
+                await interaction.editReply('❌ Este comando só funciona em servidores.');
+                return;
+            }
+            const guild = interaction.guild || await client.guilds.fetch(guildId);
+            await interaction.editReply(`🔧 Analisando pedido: **${acao.substring(0, 100)}${acao.length > 100 ? '...' : ''}**`);
+            // 1. Gerar Plano de Ajustes
+            const schema = await services_1.serverBuilder.generateAdjustmentPlan(acao);
+            if (!schema || !schema.actions || schema.actions.length === 0) {
+                await interaction.editReply('❌ Não consegui entender o pedido. Tente ser mais específico.');
+                return;
+            }
+            await interaction.editReply(`📋 Plano gerado: ${schema.actions.length} ações. Aplicando...`);
+            // 2. Aplicar Ajustes
+            await services_1.serverBuilder.applyAdjustments(guild, schema, async (msg) => {
+                services_1.logger.info(msg);
+            });
+            await interaction.followUp({
+                content: `✅ **Ajustes Concluídos!**\n${schema.message || 'Todas as modificações foram aplicadas.'}`,
+                ephemeral: false
+            });
+        }
+        catch (error) {
+            const errorMsg = String(error.message || 'Erro desconhecido').substring(0, 1800);
+            services_1.logger.error('Erro ao ajustar servidor:', { error: error });
+            try {
+                if (interaction.deferred || interaction.replied) {
+                    await interaction.followUp({ content: `❌ Ocorreu um erro: ${errorMsg}`, ephemeral: true });
+                }
+                else {
+                    await interaction.reply({ content: `❌ Ocorreu um erro: ${errorMsg}`, ephemeral: true });
+                }
+            }
+            catch (err) {
+                console.error('Erro crítico na interação:', err);
+            }
+        }
+    }
+    else if (interaction.commandName === 'ajuda-ia') {
         await interaction.reply({
-            content: 'Use `/config-ia` para configurar o bot!\n\n**Comandos Disponíveis:**\n`/config-ia canal` - Define onde eu falo\n`/config-ia personalidade` - Define quem eu sou\n`/config-ia cargos` - Define quem manda em mim',
+            content: 'Use `/config-ia` para configurar o bot!\n\n**Comandos Disponíveis:**\n`/config-ia canal` - Define onde eu falo\n`/config-ia personalidade` - Define quem eu sou\n`/config-ia cargos` - Define quem manda em mim\n`/construir-servidor` - Cria estrutura completa\n`/ajustar-servidor` - Modifica servidor existente',
             ephemeral: true
         });
     }
 });
-function verificationCheck(guildId) {
+function verificationCheck(_guildId) {
     if (!dbConnected) {
         try {
             return false;
@@ -830,7 +750,7 @@ function verificationCheck(guildId) {
     return true;
 }
 // ═══════════════════════════════════════════════════════════════════════════
-// ⏳ INACTIVITY MONITOR
+// ⏳ INACTIVITY MONITORrrr
 // ═══════════════════════════════════════════════════════════════════════════
 function verificarInatividade() {
     services_1.logger.info(`⏳ Monitor de inatividade iniciado (${TEMPO_OCIOSO_PARA_ENGAJAR / 60000} min)`);
@@ -902,6 +822,13 @@ const commands = [
         .setDefaultMemberPermissions(discord_js_1.PermissionFlagsBits.Administrator)
         .addStringOption(opt => opt.setName('tema')
         .setDescription('Ex: RPG Medieval com economia e 3 classes')
+        .setRequired(true)),
+    new discord_js_1.SlashCommandBuilder()
+        .setName('ajustar-servidor')
+        .setDescription('🔧 Modifica canais/cargos usando linguagem natural')
+        .setDefaultMemberPermissions(discord_js_1.PermissionFlagsBits.Administrator)
+        .addStringOption(opt => opt.setName('acao')
+        .setDescription('Ex: Adicionar canal de voz na categoria Gaming')
         .setRequired(true))
 ];
 const discord_js_2 = require("discord.js");
@@ -914,7 +841,7 @@ async function registerCommands(clientId) {
         services_1.logger.info('Slash commands registrados!');
     }
     catch (error) {
-        services_1.logger.error('Erro ao registrar comandos', error);
+        services_1.logger.error('Erro ao registrar comandos', { error });
     }
 }
 // ═══════════════════════════════════════════════════════════════════════════
@@ -924,16 +851,16 @@ client.once('ready', async () => {
     services_1.logger.info(`🤖 Bot NexstarIA ${client.user?.tag} está online!`);
     // Iniciar verificação de inatividade
     verificarInatividade();
+    // Registrar comandos SEMPRE (independente do database)
+    if (client.user) {
+        await registerCommands(client.user.id);
+    }
     try {
         const connected = await (0, services_1.testConnection)();
         if (connected) {
             await (0, services_1.initializeSchema)();
             dbConnected = true;
             services_1.logger.info('💾 Database PostgreSQL conectado!');
-            // Registrar comandos (SaaS)
-            if (client.user) {
-                await registerCommands(client.user.id);
-            }
         }
     }
     catch (error) {

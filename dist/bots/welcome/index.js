@@ -116,13 +116,7 @@ function getLeaveChannelId(guildId) {
     return guildConfig.leaveChannel || LEAVE_CHANNEL_ID || null;
 }
 function hasPermission(member) {
-    if (member.id === member.guild.ownerId)
-        return true;
-    if (OWNER_ROLE_ID && member.roles.cache.has(OWNER_ROLE_ID))
-        return true;
-    if (SEMI_OWNER_ROLE_ID && member.roles.cache.has(SEMI_OWNER_ROLE_ID))
-        return true;
-    return false;
+    return (0, services_1.hasAdminPermission)(member, OWNER_ROLE_ID, SEMI_OWNER_ROLE_ID);
 }
 // ═══════════════════════════════════════════════════════════════════════════
 // 🖼️ UTILITÁRIOS DE IMAGEM

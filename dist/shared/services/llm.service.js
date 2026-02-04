@@ -10,23 +10,26 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.llmService = exports.LLMService = void 0;
 const openai_1 = __importDefault(require("openai"));
+const config_service_1 = require("./config.service");
+const logger_service_1 = require("./logger.service");
 class LLMService {
     client = null;
     model;
     baseUrl;
     constructor() {
-        const apiKey = process.env.OPENAI_API_KEY;
-        this.baseUrl = process.env.LLM_BASE_URL || 'https://api.openai.com/v1';
-        this.model = process.env.MODELO_IA || 'gpt-3.5-turbo';
+        // Force config validation/loading if not already done
+        const apiKey = config_service_1.config.getOptional('OPENAI_API_KEY');
+        this.baseUrl = config_service_1.config.getOptional('LLM_BASE_URL') || 'https://api.openai.com/v1';
+        this.model = config_service_1.config.getOptional('MODELO_IA') || 'gpt-3.5-turbo';
         if (apiKey) {
             this.client = new openai_1.default({
                 apiKey,
                 baseURL: this.baseUrl
             });
-            console.log(`🧠 LLM Service iniciado (${this.baseUrl})`);
+            logger_service_1.logger.info(`🧠 LLM Service iniciado (${this.baseUrl})`);
         }
         else {
-            console.warn('⚠️ LLM Service: Sem API key, modo mock ativado');
+            logger_service_1.logger.warn('⚠️ LLM Service: Sem API key, modo mock ativado');
         }
     }
     /**
@@ -58,7 +61,7 @@ class LLMService {
             return response.choices[0]?.message?.content || '';
         }
         catch (error) {
-            console.error('❌ Erro LLM:', error);
+            logger_service_1.logger.error('❌ Erro LLM:', { error });
             throw error;
         }
     }
@@ -67,7 +70,7 @@ class LLMService {
      */
     async generateJson(systemPrompt, userMessage, retryCount = 0) {
         if (!this.client) {
-            console.warn('⚠️ Mock JSON response');
+            logger_service_1.logger.warn('⚠️ Mock JSON response');
             return null;
         }
         try {
@@ -84,9 +87,9 @@ class LLMService {
             return JSON.parse(content);
         }
         catch (error) {
-            console.error('❌ Erro ao gerar JSON:', error);
+            logger_service_1.logger.error('❌ Erro ao gerar JSON:', { error });
             if (retryCount < 2) {
-                console.log(`🔄 Tentando novamente (${retryCount + 1})...`);
+                logger_service_1.logger.info(`🔄 Tentando novamente (${retryCount + 1})...`);
                 return this.generateJson(systemPrompt, userMessage, retryCount + 1);
             }
             return null;
@@ -115,7 +118,7 @@ class LLMService {
             return { action: 'none', params: {} };
         }
         catch (error) {
-            console.error('❌ Erro ao parsear comando:', error);
+            logger_service_1.logger.error('❌ Erro ao parsear comando:', { error });
             return { action: 'none', params: {} };
         }
     }
@@ -129,12 +132,12 @@ class LLMService {
         try {
             // Nota: Implementação de upload de arquivo para Whisper
             // Requer FormData e File polyfill no Node
-            console.log('🎤 Transcrevendo áudio...');
+            logger_service_1.logger.info('🎤 Transcrevendo áudio...');
             // TODO: Implementar transcrição real
             return '';
         }
         catch (error) {
-            console.error('❌ Erro na transcrição:', error);
+            logger_service_1.logger.error('❌ Erro na transcrição:', { error });
             throw error;
         }
     }

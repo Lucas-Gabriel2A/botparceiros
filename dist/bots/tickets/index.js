@@ -132,17 +132,13 @@ function generateCategoryId() {
     return `cat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 // ═══════════════════════════════════════════════════════════════════════════
-// 🔐 VERIFICAÇÃO DE PERMISSÕES
+// 🔐 VERIFICAÇÃO DE PERMISSÕES (usa shared utils)
 // ═══════════════════════════════════════════════════════════════════════════
 function hasAdminPermission(member) {
-    if (member.roles.cache.has(OWNER_ROLE_ID))
-        return true;
-    if (SEMI_OWNER_ROLE_ID && member.roles.cache.has(SEMI_OWNER_ROLE_ID))
-        return true;
-    return false;
+    return (0, services_1.hasAdminPermission)(member, OWNER_ROLE_ID, SEMI_OWNER_ROLE_ID);
 }
 function hasStaffPermission(member) {
-    return member.roles.cache.has(STAFF_ROLE_ID) || hasAdminPermission(member);
+    return (0, services_1.hasStaffPermission)(member, STAFF_ROLE_ID, OWNER_ROLE_ID, SEMI_OWNER_ROLE_ID);
 }
 // ═══════════════════════════════════════════════════════════════════════════
 // 📜 SISTEMA DE LOGS/TRANSCRIPT
