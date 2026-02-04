@@ -872,7 +872,7 @@ function verificationCheck(_guildId: string | null): boolean {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ⏳ INACTIVITY MONITOR
+// ⏳ INACTIVITY MONITORrrr
 // ═══════════════════════════════════════════════════════════════════════════
 
 function verificarInatividade(): void {
