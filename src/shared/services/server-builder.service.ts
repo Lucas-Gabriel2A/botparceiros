@@ -245,41 +245,36 @@ export class ServerBuilderService {
 
         // Função para formatar nome de canal
         const formatChannelName = (name: string): string => {
-            // Se já tem o formato correto, retorna
-            if (name.includes('┃') && /^[\p{Emoji}]/u.test(name)) {
-                return name;
-            }
+            // Remove emojis existentes para garantir padrão
+            let cleanName = name.replace(/^[\p{Emoji}\p{Emoji_Component}\u200d]+[\s\-:┃|・]*/gu, '').trim();
             
-            // Remove emojis, -, : e espaços extras do início
-            let cleanName = name.replace(/^[\s\-:┃|・]+/, '').trim();
+            // Remove caracteres especiais iniciais como - ou |
+            cleanName = cleanName.replace(/^[\s\-:┃|・]+/, '').trim();
             
-            // Remove emojis do início para reprocessar
-            cleanName = cleanName.replace(/^[\p{Emoji}\p{Emoji_Component}\u200d]+[\s\-:┃|・]*/gu, '').trim();
+            // Se ficou vazio, usa fallback
+            if (!cleanName) cleanName = 'canal';
             
-            // Se ainda está vazio, usa o nome original limpo
-            if (!cleanName) {
-                cleanName = name.replace(/[^\w\-]/g, '').toLowerCase() || 'canal';
-            }
-            
-            // Encontra emoji apropriado
+            // Encontra emoji apropriado (se não tiver)
             const emoji = findEmoji(cleanName);
             
-            // Formata: emoji┃nome-em-minusculo
-            return `${emoji}┃${cleanName.toLowerCase().replace(/\s+/g, '-')}`;
+            // Formata forçando a barra vertical: emoji┃nome-com-hifens
+            // Substitui espaços por hifens no nome
+            const finalName = cleanName.toLowerCase().replace(/\s+/g, '-');
+            
+            return `${emoji}┃${finalName}`;
         };
 
         // Função para formatar nome de categoria
         const formatCategoryName = (name: string, index: number): string => {
-            // Se já tem decoração nos dois lados, retorna
-            if (/^[━✦╔》──]/.test(name) && /[━✦╗《──]$/.test(name)) {
+            // Verifica se JÁ ESTÁ PERFEITO (exatamente como queremos)
+            if (/^━━━ .* ━━━$/.test(name) || /^✦ .* ✦$/.test(name) || /^╔═══ .* ═══╗$/.test(name)) {
                 return name;
             }
             
-            // Remove decorações existentes e limpa
+            // Limpa decorações parciais ou erradas
             let cleanName = name
-                .replace(/^[━✦╔》──\s]+/g, '')
-                .replace(/[━✦╗《──\s]+$/g, '')
-                .replace(/^[\p{Emoji}\p{Emoji_Component}\u200d]+\s*/gu, '')
+                .replace(/^[━✦╔》──\s\p{Emoji}]+/gu, '') // Remove prefixos
+                .replace(/[━✦╗《──\s\p{Emoji}]+$/gu, '') // Remove sufixos
                 .trim()
                 .toUpperCase();
             
@@ -306,11 +301,12 @@ export class ServerBuilderService {
         if (schema.roles && Array.isArray(schema.roles)) {
             const roleEmojis = ['👑', '⚔️', '💎', '🌟', '🔰', '🎭'];
             schema.roles = schema.roles.map((role, index) => {
+                let roleName = role.name;
                 if (!/^[\p{Emoji}]/u.test(role.name)) {
                     const emoji = roleEmojis[index % roleEmojis.length];
-                    return { ...role, name: `${emoji} ${role.name}` };
+                    roleName = `${emoji} ${role.name}`;
                 }
-                return role;
+                return { ...role, name: roleName };
             });
         }
 
@@ -385,6 +381,7 @@ Inclua canais de voz com limites apropriados.
                         mentionable: roleDef.mentionable || false,
                         reason: 'Server Builder AI Premium'
                     });
+
                     
                     roleMap.set(roleDef.name, role);
                     notify(`✅ Cargo criado: ${role.name}`);
