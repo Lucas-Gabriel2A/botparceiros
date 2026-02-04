@@ -805,7 +805,7 @@ client.on('interactionCreate', async (interaction) => {
         }
     }
 
-    if (interaction.commandName === 'ajustar-servidor') {
+    else if (interaction.commandName === 'ajustar-servidor') {
         logger.info('🔧 Comando /ajustar-servidor recebido');
         try {
             const acao = interaction.options.getString('acao', true);
@@ -856,7 +856,7 @@ client.on('interactionCreate', async (interaction) => {
         }
     }
 
-    if (interaction.commandName === 'ajuda-ia') {
+    else if (interaction.commandName === 'ajuda-ia') {
         await interaction.reply({ 
             content: 'Use `/config-ia` para configurar o bot!\n\n**Comandos Disponíveis:**\n`/config-ia canal` - Define onde eu falo\n`/config-ia personalidade` - Define quem eu sou\n`/config-ia cargos` - Define quem manda em mim\n`/construir-servidor` - Cria estrutura completa\n`/ajustar-servidor` - Modifica servidor existente', 
             ephemeral: true 
