@@ -981,11 +981,15 @@ import { Routes } from 'discord.js';
 async function registerCommands(clientId: string) {
     const rest = new REST({ version: '10' }).setToken(TOKEN);
     try {
-        logger.info('Registrando slash commands...');
+        const commandNames = commands.map(c => c.name).join(', ');
+        logger.info(`Registrando ${commands.length} slash commands: [${commandNames}]...`);
+        
         await rest.put(Routes.applicationCommands(clientId), { body: commands });
-        logger.info('Slash commands registrados!');
+        
+        logger.info('✅ Slash commands registrados com sucesso no Discord!');
+        logger.info('⚠️ Nota: Comandos globais podem levar até 1 hora para atualizar em todos os servidores. Se precisar urgente, reinicie o cliente Discord (Ctrl+R).');
     } catch (error) {
-        logger.error('Erro ao registrar comandos', { error });
+        logger.error('❌ Erro ao registrar comandos:', { error });
     }
 }
 
