@@ -1,0 +1,901 @@
+/**
+ * ╔═══════════════════════════════════════════════════════════════════════════╗
+ * ║                      NEXSTAR IA - ASSISTENTE INTELIGENTE                  ║
+ * ║                        Chat IA + Voz + Admin Commands                     ║
+ * ╚═══════════════════════════════════════════════════════════════════════════╝
+ * 
+ * Features:
+ * - LLM Service (OpenAI/Groq) para chat
+ * - Comandos admin via linguagem natural
+ * - Voice: Transcrição (Whisper) + TTS (Google)
+ * - Monitor de inatividade
+ */
+
+import { 
+    Client, 
+    GatewayIntentBits, 
+    Partials, 
+    EmbedBuilder, 
+    ChannelType, 
+    PermissionFlagsBits,
+    Message,
+    GuildMember,
+    Guild,
+    TextChannel,
+    Role,
+    GuildChannel
+} from 'discord.js';
+
+import OpenAI from 'openai';
+import { 
+    joinVoiceChannel, 
+    createAudioPlayer, 
+    createAudioResource, 
+    AudioPlayerStatus, 
+    getVoiceConnection,
+    EndBehaviorType,
+    VoiceConnection
+} from '@discordjs/voice';
+import googleTTS from 'google-tts-api';
+import fs from 'fs';
+import prism from 'prism-media';
+import { pipeline } from 'stream';
+import { spawn } from 'child_process';
+import ffmpegPath from 'ffmpeg-static';
+
+import { 
+    config, 
+    logger,
+    testConnection,
+    initializeSchema,
+    logAudit,
+    closePool
+} from '../../shared/services';
+
+let dbConnected = false;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 VALIDAÇÃO
+// ═══════════════════════════════════════════════════════════════════════════
+
+config.validate(['DISCORD_TOKEN_AGENTE_IA', 'OPENAI_API_KEY', 'OWNER_ROLE_ID', 'CANAL_CHAT_GERAL']);
+
+const TOKEN = config.get('DISCORD_TOKEN_AGENTE_IA');
+const OPENAI_API_KEY = config.get('OPENAI_API_KEY');
+const LLM_BASE_URL = config.getOptional('LLM_BASE_URL') || 'https://api.openai.com/v1';
+const MODELO_IA = config.getOptional('MODELO_IA') || 'gpt-3.5-turbo';
+
+const CATEGORIA_ASSISTENTE = config.getOptional('CATEGORIA_ASSISTENTE');
+const CANAL_CHAT_GERAL = config.get('CANAL_CHAT_GERAL');
+const OWNER_ROLE_ID = config.get('OWNER_ROLE_ID');
+const SEMI_OWNER_ROLE_ID = config.getOptional('SEMI_OWNER_ROLE_ID');
+const STAFF_ROLE_ID = config.getOptional('STAFF_ROLE_ID');
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 📊 TIPOS
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface ChatMessage {
+    role: 'system' | 'user' | 'assistant';
+    content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
+}
+
+interface ParsedCommand {
+    action: string;
+    params: Record<string, any>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🎨 CONSTANTES
+// ═══════════════════════════════════════════════════════════════════════════
+
+const TEMPO_OCIOSO_PARA_ENGAJAR = 30 * 60 * 1000; // 30 min
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🧠 SERVIÇO DE IA
+// ═══════════════════════════════════════════════════════════════════════════
+
+class LLMService {
+    private client: OpenAI | null = null;
+    private mode: 'API' | 'MOCK' = 'MOCK';
+
+    constructor() {
+        if (OPENAI_API_KEY) {
+            this.client = new OpenAI({
+                apiKey: OPENAI_API_KEY,
+                baseURL: LLM_BASE_URL
+            });
+            this.mode = 'API';
+            logger.info(`🧠 LLM Service iniciado em modo API (${LLM_BASE_URL})`);
+        } else {
+            logger.warn('⚠️ SEM CHAVE DE API. LLM Service em modo MOCK.');
+        }
+    }
+
+    async transcreverAudio(caminhoArquivo: string): Promise<string | null> {
+        if (this.mode === 'MOCK') return "Isso é um teste de voz.";
+        try {
+            logger.info('🎤 Enviando áudio para transcrição (Whisper)...');
+            const transcription = await this.client!.audio.transcriptions.create({
+                file: fs.createReadStream(caminhoArquivo),
+                model: "whisper-large-v3-turbo",
+                response_format: "json",
+                language: "pt"
+            });
+            return transcription.text;
+        } catch (error) {
+            logger.error('Erro na transcrição STT');
+            return null;
+        }
+    }
+
+    async gerarResposta(mensagens: ChatMessage[], systemPrompt = "Você é a IA da Nexstar.", imageUrl: string | null = null): Promise<string> {
+        if (this.mode === 'MOCK') {
+            await new Promise(r => setTimeout(r, 1000));
+            return `[MOCK] Recebi texto e ${imageUrl ? 'uma imagem' : 'nenhuma imagem'}. Configure a API Key!`;
+        }
+
+        try {
+            const mensagensPayload: ChatMessage[] = [
+                { role: "system", content: systemPrompt },
+                ...mensagens
+            ];
+
+            let modelToUse = MODELO_IA;
+
+            if (imageUrl) {
+                logger.info("👁️ Imagem detectada! Alternando para modelo Vision.");
+                modelToUse = "meta-llama/llama-4-scout-17b-16e-instruct";
+
+                const lastMsgIndex = mensagensPayload.length - 1;
+                const lastMsg = mensagensPayload[lastMsgIndex];
+                
+                if (lastMsg.role === 'user' && typeof lastMsg.content === 'string') {
+                    mensagensPayload[lastMsgIndex] = {
+                        role: 'user',
+                        content: [
+                            { type: "text", text: lastMsg.content || "Analise esta imagem." },
+                            { type: "image_url", image_url: { url: imageUrl } }
+                        ]
+                    };
+                }
+            }
+
+            const completion = await this.client!.chat.completions.create({
+                messages: mensagensPayload as any,
+                model: modelToUse,
+            });
+            return completion.choices[0].message.content || '';
+        } catch (error: any) {
+            logger.error('Erro na API IA');
+            if (error.status === 429) return "⏳ Rate limit atingido. Tente daqui a pouco.";
+            if (error.status === 402) return "💸 Cota de IA esgotada!";
+            if (error.status === 400 && imageUrl) return "❌ Erro ao analisar imagem.";
+            return "😵‍💫 Erro na API de IA.";
+        }
+    }
+}
+
+const llmService = new LLMService();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 ADMIN COMMANDS VIA IA
+// ═══════════════════════════════════════════════════════════════════════════
+
+const ADMIN_PROMPT = `Você é um parser de comandos administrativos. Analise a mensagem e extraia a ação.
+
+AÇÕES DISPONÍVEIS:
+- timeout: Colocar usuário de castigo. Params: targetUser, duration (minutos), reason
+- kick: Expulsar usuário. Params: targetUser, reason
+- ban: Banir usuário. Params: targetUser, reason
+- unban: Desbanir usuário. Params: targetUserId
+- warn: Avisar usuário. Params: targetUser, reason
+- clear: Limpar mensagens. Params: count
+- create_category: Criar categoria. Params: categoryName
+- create_channel: Criar canal. Params: channelName, categoryName?, type (text/voice), staffOnly?
+- delete_channel: Deletar canal. Params: channelName
+- rename_channel: Renomear canal. Params: oldName, newName
+- slowmode: Ativar slowmode. Params: channelName, seconds
+- lock_channel: Trancar canal. Params: channelName
+- unlock_channel: Destrancar canal. Params: channelName
+- give_role: Dar cargo. Params: targetUser, roleName
+- remove_role: Remover cargo. Params: targetUser, roleName
+- create_role: Criar cargo. Params: roleName, color?
+- server_info: Info do servidor
+- user_info: Info do usuário. Params: targetUser
+- announce: Fazer anúncio. Params: channelName, message
+- send_message: Enviar mensagem IA. Params: channelName, prompt, mentionEveryone?
+- embed: Criar embed. Params: channelName, title, description, color?
+- reminder: Criar lembrete. Params: duration (min), message
+- none: Não é comando admin
+
+REGRAS:
+1. Converta duração para minutos (5 min, 1 hora, etc.)
+2. Se não for comando admin, action: "none"
+3. SEMPRE retorne JSON válido
+
+Responda APENAS com JSON: {"action": "nome_acao", "params": {...}}`;
+
+function isAuthorized(member: GuildMember | null): boolean {
+    if (!member?.roles) return false;
+    return member.roles.cache.has(OWNER_ROLE_ID) || 
+           (SEMI_OWNER_ROLE_ID ? member.roles.cache.has(SEMI_OWNER_ROLE_ID) : false);
+}
+
+async function parseAdminCommand(userMessage: string): Promise<ParsedCommand> {
+    try {
+        const response = await llmService.gerarResposta(
+            [{ role: 'user', content: userMessage }],
+            ADMIN_PROMPT
+        );
+        
+        const jsonMatch = response.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/);
+        if (jsonMatch) {
+            try {
+                return JSON.parse(jsonMatch[0]);
+            } catch {
+                const cleaned = jsonMatch[0].replace(/[\n\r]/g, '').replace(/,\s*}/g, '}');
+                return JSON.parse(cleaned);
+            }
+        }
+        return { action: 'none', params: {} };
+    } catch (error) {
+        logger.error('Erro ao parsear comando admin');
+        return { action: 'none', params: {} };
+    }
+}
+
+function resolveChannel(guild: Guild, channelRef: string): GuildChannel | null {
+    if (!channelRef) return null;
+    
+    const mentionMatch = channelRef.match(/<#(\d+)>/);
+    if (mentionMatch) {
+        return guild.channels.cache.get(mentionMatch[1]) as GuildChannel || null;
+    }
+    
+    if (/^\d+$/.test(channelRef)) {
+        return guild.channels.cache.get(channelRef) as GuildChannel || null;
+    }
+    
+    const cleanName = channelRef.toLowerCase().replace('#', '');
+    return guild.channels.cache.find(c => c.name.toLowerCase() === cleanName) as GuildChannel || null;
+}
+
+function resolveRole(guild: Guild, roleRef: string): Role | null {
+    if (!roleRef) return null;
+    
+    const mentionMatch = roleRef.match(/<@&(\d+)>/);
+    if (mentionMatch) {
+        return guild.roles.cache.get(mentionMatch[1]) || null;
+    }
+    
+    if (/^\d+$/.test(roleRef)) {
+        return guild.roles.cache.get(roleRef) || null;
+    }
+    
+    const cleanName = roleRef.toLowerCase().replace('@', '');
+    return guild.roles.cache.find(r => r.name.toLowerCase() === cleanName) || null;
+}
+
+async function executeAdminAction(message: Message, action: string, params: Record<string, any>): Promise<string | null> {
+    const guild = message.guild!;
+    
+    // Logar ação administrativa no banco
+    if (dbConnected && action !== 'none' && action !== 'server_info' && action !== 'user_info') {
+        try {
+            await logAudit(guild.id, message.author.id, `AI_ADMIN_${action.toUpperCase()}`, undefined, params);
+        } catch (error) {
+            logger.warn('Erro ao logar ação admin no DB');
+        }
+    }
+
+    try {
+        switch (action) {
+            case 'timeout': {
+                const member = message.mentions.members?.first() || 
+                    await guild.members.fetch(params.targetUser).catch(() => null);
+                if (!member) return '❌ Usuário não encontrado.';
+                
+                const duration = (parseInt(params.duration) || 5) * 60 * 1000;
+                await member.timeout(duration, params.reason || 'Sem motivo');
+                
+                try {
+                    await member.send(`⚠️ **Timeout no Nexstar!**\nMotivo: ${params.reason || 'Não especificado'}\nDuração: ${params.duration || 5} min`);
+                } catch {}
+                
+                return `✅ ${member.user.tag} em timeout por ${params.duration || 5} min.`;
+            }
+            
+            case 'kick': {
+                const member = message.mentions.members?.first() ||
+                    await guild.members.fetch(params.targetUser).catch(() => null);
+                if (!member) return '❌ Usuário não encontrado.';
+                
+                try { await member.send(`⚠️ **Expulso do Nexstar!**\nMotivo: ${params.reason || 'Não especificado'}`); } catch {}
+                await member.kick(params.reason);
+                return `✅ ${member.user.tag} foi expulso.`;
+            }
+            
+            case 'ban': {
+                const member = message.mentions.members?.first() ||
+                    await guild.members.fetch(params.targetUser).catch(() => null);
+                if (!member) return '❌ Usuário não encontrado.';
+                
+                try { await member.send(`🔨 **Banido do Nexstar!**\nMotivo: ${params.reason || 'Não especificado'}`); } catch {}
+                await member.ban({ reason: params.reason });
+                return `🔨 ${member.user.tag} foi BANIDO.`;
+            }
+            
+            case 'unban': {
+                if (!params.targetUserId) return '❌ Preciso do ID do usuário.';
+                await guild.bans.remove(params.targetUserId);
+                return `✅ Usuário ${params.targetUserId} desbanido.`;
+            }
+            
+            case 'warn': {
+                const member = message.mentions.members?.first();
+                if (!member) return '❌ Mencione o usuário.';
+                try { await member.send(`⚠️ **Aviso no Nexstar!**\nMotivo: ${params.reason || 'Não especificado'}`); } catch {}
+                return `⚠️ ${member.user.tag} foi avisado.`;
+            }
+            
+            case 'clear': {
+                const count = Math.min(parseInt(params.count) || 10, 100);
+                const deleted = await (message.channel as TextChannel).bulkDelete(count, true);
+                return `🧹 Apaguei ${deleted.size} mensagens.`;
+            }
+            
+            case 'create_category': {
+                await guild.channels.create({
+                    name: params.categoryName,
+                    type: ChannelType.GuildCategory
+                });
+                return `📁 Categoria **${params.categoryName}** criada!`;
+            }
+            
+            case 'create_channel': {
+                const channelType = params.type === 'voice' ? ChannelType.GuildVoice : ChannelType.GuildText;
+                const options: any = {
+                    name: params.channelName,
+                    type: channelType
+                };
+                
+                if (params.categoryName) {
+                    const category = guild.channels.cache.find(c => 
+                        c.type === ChannelType.GuildCategory && 
+                        c.name.toLowerCase() === params.categoryName.toLowerCase()
+                    );
+                    if (category) options.parent = category.id;
+                }
+                
+                if (params.staffOnly && STAFF_ROLE_ID) {
+                    options.permissionOverwrites = [
+                        { id: guild.id, deny: [PermissionFlagsBits.SendMessages] },
+                        { id: STAFF_ROLE_ID, allow: [PermissionFlagsBits.SendMessages, PermissionFlagsBits.ViewChannel] }
+                    ];
+                }
+                
+                await guild.channels.create(options);
+                return `📢 Canal **#${params.channelName}** criado!`;
+            }
+            
+            case 'delete_channel': {
+                const channel = resolveChannel(guild, params.channelName);
+                if (!channel) return '❌ Canal não encontrado.';
+                await channel.delete();
+                return `🗑️ Canal deletado.`;
+            }
+            
+            case 'rename_channel': {
+                const channel = resolveChannel(guild, params.oldName) as TextChannel;
+                if (!channel) return '❌ Canal não encontrado.';
+                await channel.setName(params.newName);
+                return `✏️ Canal renomeado para **#${params.newName}**.`;
+            }
+            
+            case 'slowmode': {
+                const channel = (params.channelName ? resolveChannel(guild, params.channelName) : message.channel) as TextChannel;
+                if (!channel) return '❌ Canal não encontrado.';
+                await channel.setRateLimitPerUser(parseInt(params.seconds) || 10);
+                return `🐌 Slowmode de ${params.seconds || 10}s ativado.`;
+            }
+            
+            case 'lock_channel': {
+                const channel = (params.channelName ? resolveChannel(guild, params.channelName) : message.channel) as TextChannel;
+                if (!channel) return '❌ Canal não encontrado.';
+                await channel.permissionOverwrites.edit(guild.id, { SendMessages: false });
+                return `🔒 Canal trancado.`;
+            }
+            
+            case 'unlock_channel': {
+                const channel = (params.channelName ? resolveChannel(guild, params.channelName) : message.channel) as TextChannel;
+                if (!channel) return '❌ Canal não encontrado.';
+                await channel.permissionOverwrites.edit(guild.id, { SendMessages: null });
+                return `🔓 Canal destrancado.`;
+            }
+            
+            case 'give_role': {
+                const member = message.mentions.members?.first();
+                if (!member) return '❌ Mencione o usuário.';
+                const role = resolveRole(guild, params.roleName);
+                if (!role) return `❌ Cargo "${params.roleName}" não encontrado.`;
+                await member.roles.add(role);
+                return `✅ Cargo **${role.name}** dado para ${member.user.tag}.`;
+            }
+            
+            case 'remove_role': {
+                const member = message.mentions.members?.first();
+                if (!member) return '❌ Mencione o usuário.';
+                const role = resolveRole(guild, params.roleName);
+                if (!role) return `❌ Cargo "${params.roleName}" não encontrado.`;
+                await member.roles.remove(role);
+                return `✅ Cargo **${role.name}** removido de ${member.user.tag}.`;
+            }
+            
+            case 'create_role': {
+                const role = await guild.roles.create({
+                    name: params.roleName,
+                    color: params.color || '#99AAB5',
+                    reason: 'Criado via NexstarIA'
+                });
+                return `✅ Cargo **${role.name}** criado.`;
+            }
+            
+            case 'server_info': {
+                return `📊 **${guild.name}**\n👥 Membros: ${guild.memberCount}\n📢 Canais: ${guild.channels.cache.size}\n🏷️ Cargos: ${guild.roles.cache.size}`;
+            }
+            
+            case 'user_info': {
+                const member = message.mentions.members?.first();
+                if (!member) return '❌ Mencione o usuário.';
+                const roles = member.roles.cache.filter(r => r.id !== guild.id).map(r => r.name).join(', ') || 'Nenhum';
+                return `👤 **${member.user.tag}**\n🏷️ Cargos: ${roles}`;
+            }
+            
+            case 'announce': {
+                const channel = resolveChannel(guild, params.channelName) as TextChannel;
+                if (!channel) return '❌ Canal não encontrado.';
+                
+                const embed = new EmbedBuilder()
+                    .setTitle('📢 Anúncio')
+                    .setDescription(params.message)
+                    .setColor('#FFD700' as any)
+                    .setTimestamp();
+                
+                await channel.send({ embeds: [embed] });
+                return `✅ Anúncio enviado para #${channel.name}.`;
+            }
+            
+            case 'send_message': {
+                const channel = resolveChannel(guild, params.channelName) as TextChannel;
+                if (!channel) return '❌ Canal não encontrado.';
+                
+                const content = await llmService.gerarResposta(
+                    [{ role: 'user', content: `Gere uma mensagem: ${params.prompt || 'Se apresente'}` }],
+                    'Você é a NexstarIA. Responda de forma amigável. Pode usar emojis.'
+                );
+                
+                let finalMessage = content;
+                if (params.mentionEveryone) finalMessage = `@everyone\n\n${content}`;
+                
+                await channel.send(finalMessage);
+                return `✅ Mensagem enviada para #${channel.name}.`;
+            }
+            
+            case 'embed': {
+                const channel = (params.channelName ? resolveChannel(guild, params.channelName) : message.channel) as TextChannel;
+                if (!channel) return '❌ Canal não encontrado.';
+                
+                const embed = new EmbedBuilder()
+                    .setTitle(params.title || 'Embed')
+                    .setDescription(params.description || '')
+                    .setColor((params.color || '#00d4ff') as any)
+                    .setTimestamp();
+                
+                await channel.send({ embeds: [embed] });
+                return `✅ Embed enviado.`;
+            }
+            
+            case 'reminder': {
+                const duration = (parseInt(params.duration) || 5) * 60 * 1000;
+                setTimeout(async () => {
+                    try {
+                        await message.author.send(`⏰ **Lembrete:** ${params.message || 'Lembrete!'}`);
+                    } catch {
+                        await (message.channel as TextChannel).send(`⏰ ${message.author}, **Lembrete:** ${params.message || 'Lembrete!'}`);
+                    }
+                }, duration);
+                return `✅ Lembrete agendado para ${params.duration || 5} min.`;
+            }
+            
+            case 'none':
+                return null;
+                
+            default:
+                return null;
+        }
+    } catch (error: any) {
+        logger.error('Erro ao executar ação admin');
+        return `❌ Erro: ${error.message}`;
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🤖 CLIENTE DISCORD
+// ═══════════════════════════════════════════════════════════════════════════
+
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildVoiceStates
+    ],
+    partials: [Partials.Channel, Partials.Message]
+});
+
+const conversasAtivas = new Map<string, number>();
+let ultimoTempoMensagemGeral = Date.now();
+let globalPlayer: ReturnType<typeof createAudioPlayer> | null = null;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔊 VOZ (TTS)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function responderVoz(connection: VoiceConnection, texto: string): void {
+    try {
+        const textoFala = texto.replace(/[*_#`]/g, '').slice(0, 200);
+        const url = googleTTS.getAudioUrl(textoFala, { lang: 'pt', slow: false, host: 'https://translate.google.com' });
+        const resource = createAudioResource(url);
+        
+        globalPlayer = createAudioPlayer();
+        globalPlayer.play(resource);
+        connection.subscribe(globalPlayer);
+        
+        globalPlayer.on(AudioPlayerStatus.Idle, () => {
+            logger.info('✅ TTS finalizado');
+        });
+    } catch (err) {
+        logger.error("Erro no TTS");
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 💬 CHAT LOGIC
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function runChatGeralLogic(message: Message): Promise<void> {
+    ultimoTempoMensagemGeral = Date.now();
+    let deveResponder = false;
+    let imageUrl: string | null = null;
+
+    if (message.attachments.size > 0) {
+        const attachment = message.attachments.first();
+        if (attachment?.contentType?.startsWith('image/')) {
+            imageUrl = attachment.url;
+            if (conversasAtivas.has(message.author.id)) deveResponder = true;
+        }
+    }
+
+    if (message.mentions.has(client.user!) || 
+        /\b(nexstar|ia|bot)\b/i.test(message.content.toLowerCase()) || 
+        (message.reference && (await message.channel.messages.fetch(message.reference.messageId!).catch(() => null))?.author.id === client.user?.id) ||
+        (conversasAtivas.has(message.author.id) && Date.now() - conversasAtivas.get(message.author.id)! < 60000)) {
+        deveResponder = true;
+    }
+
+    if (deveResponder) {
+        try {
+            await (message.channel as TextChannel).sendTyping();
+            conversasAtivas.set(message.author.id, Date.now());
+
+            const mensagensRecentes = await message.channel.messages.fetch({ limit: 5 });
+            const historicoContexto: ChatMessage[] = [];
+
+            mensagensRecentes.reverse().forEach(msg => {
+                if (!msg.content && msg.attachments.size === 0) return;
+                if (msg.author.id === client.user?.id) {
+                    historicoContexto.push({ role: 'assistant', content: msg.content });
+                } else if (msg.author.id === message.author.id) {
+                    historicoContexto.push({ role: 'user', content: msg.content.replace(/<@!?[0-9]+>/g, '').trim() });
+                }
+            });
+
+            if (historicoContexto.length === 0 || (historicoContexto.length > 0 && historicoContexto[historicoContexto.length - 1].content !== message.content && !imageUrl)) {
+                historicoContexto.push({ role: 'user', content: message.content.replace(/<@!?[0-9]+>/g, '').trim() });
+            }
+
+            const member = message.member as GuildMember;
+            let contextoUsuario = "Membro Comum";
+            if (member?.roles.cache.has(OWNER_ROLE_ID)) contextoUsuario = "DONO DO SERVIDOR";
+
+            const promptSistema = `Você é a IA da Nexstar. Personalidade ÁCIDA. Usuario: ${contextoUsuario}`;
+            const resposta = await llmService.gerarResposta(historicoContexto, promptSistema, imageUrl);
+            await message.reply(resposta);
+
+            const connection = getVoiceConnection(message.guild!.id);
+            if (connection) responderVoz(connection, resposta);
+        } catch (err) {
+            logger.error('Erro no chat geral');
+        }
+    }
+}
+
+async function runChatPrivadoLogic(message: Message): Promise<void> {
+    await (message.channel as TextChannel).sendTyping();
+    try {
+        const mensagensAnteriores = await message.channel.messages.fetch({ limit: 10 });
+        const historicoBuild: ChatMessage[] = [];
+
+        mensagensAnteriores.reverse().forEach(msg => {
+            if (msg.content && !msg.author.bot) {
+                historicoBuild.push({ role: 'user', content: msg.content });
+            } else if (msg.content && msg.author.id === client.user?.id) {
+                historicoBuild.push({ role: 'assistant', content: msg.content });
+            }
+        });
+
+        if (historicoBuild.length === 0) {
+            historicoBuild.push({ role: 'user', content: message.content });
+        }
+
+        let imgUrl: string | null = null;
+        if (message.attachments.size > 0 && message.attachments.first()?.contentType?.startsWith('image/')) {
+            imgUrl = message.attachments.first()!.url;
+        }
+
+        const resposta = await llmService.gerarResposta(historicoBuild, "Você é a IA da Nexstar.", imgUrl);
+
+        if (resposta.length > 2000) {
+            const partes = resposta.match(/[\s\S]{1,1900}/g) || [];
+            for (const parte of partes) await (message.channel as TextChannel).send(parte);
+        } else {
+            await (message.channel as TextChannel).send(resposta);
+        }
+    } catch (error) {
+        logger.error('Erro no chat privado');
+        await message.reply('Erro interno.');
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 📨 MESSAGE HANDLER
+// ═══════════════════════════════════════════════════════════════════════════
+
+client.on('messageCreate', async (message: Message) => {
+    if (message.author.bot) return;
+
+    const conteudoLower = message.content.toLowerCase();
+
+    if (message.channel.id === CANAL_CHAT_GERAL) {
+        ultimoTempoMensagemGeral = Date.now();
+    }
+
+    // Admin commands
+    const isAdminPrefix = conteudoLower.startsWith('ia,') || conteudoLower.startsWith('ia ');
+    const isMention = message.mentions.users.has(client.user!.id);
+    
+    if ((isAdminPrefix || isMention) && message.guild) {
+        if (isAuthorized(message.member)) {
+            logger.info(`🔐 Comando admin: ${message.content}`);
+            
+            const channelMentions = message.content.match(/<#(\d+)>/g) || [];
+            const firstChannelMention = channelMentions[0] || null;
+            
+            const parsed = await parseAdminCommand(message.content);
+            
+            if (parsed.params && firstChannelMention) {
+                if (parsed.params.channelName && !parsed.params.channelName.match(/<#\d+>/)) {
+                    parsed.params.channelName = firstChannelMention;
+                }
+            }
+            
+            if (parsed.action && parsed.action !== 'none') {
+                const result = await executeAdminAction(message, parsed.action, parsed.params || {});
+                if (result) {
+                    try {
+                        await message.reply(result);
+                    } catch {
+                        await (message.channel as TextChannel).send(result);
+                    }
+                    return;
+                }
+            }
+        }
+    }
+
+    // Voice commands
+    if (conteudoLower === '!entrar' || conteudoLower === '!join') {
+        if (message.member?.voice.channel) {
+            const connection = joinVoiceChannel({
+                channelId: message.member.voice.channel.id,
+                guildId: message.guild!.id,
+                adapterCreator: message.guild!.voiceAdapterCreator,
+                selfDeaf: false,
+                selfMute: false
+            });
+            
+            await message.reply("🔊 Entrei no canal de voz!");
+
+            const receiver = connection.receiver;
+            receiver.speaking.removeAllListeners('start');
+
+            receiver.speaking.on('start', (userId) => {
+                if (userId === client.user?.id) return;
+                if (globalPlayer?.state.status === AudioPlayerStatus.Playing) return;
+
+                logger.info(`🎤 Detectando fala de ${userId}...`);
+                
+                const opusStream = receiver.subscribe(userId, {
+                    end: { behavior: EndBehaviorType.AfterSilence, duration: 1500 },
+                });
+
+                const filename = `./temp_audio_${userId}_${Date.now()}.pcm`;
+                const outStream = fs.createWriteStream(filename);
+                const opusDecoder = new prism.opus.Decoder({ rate: 48000, channels: 1, frameSize: 960 });
+
+                pipeline(opusStream, opusDecoder, outStream, async (err) => {
+                    if (err) {
+                        logger.error('Erro no pipeline de áudio');
+                        return;
+                    }
+                    
+                    await new Promise(r => setTimeout(r, 200));
+
+                    try {
+                        const stats = fs.statSync(filename);
+                        if (stats.size < 10000) {
+                            fs.unlink(filename, () => {});
+                            return;
+                        }
+                    } catch { return; }
+
+                    logger.info('✅ Áudio gravado. Transcrevendo...');
+                    
+                    const wavFilename = filename.replace('.pcm', '.wav');
+                    const ffmpeg = spawn(ffmpegPath!, [
+                        '-f', 's16le', '-ar', '48000', '-ac', '1',
+                        '-i', filename, wavFilename
+                    ]);
+
+                    ffmpeg.on('close', async (code: number | null) => {
+                        fs.unlink(filename, () => {});
+
+                        if (code === 0) {
+                            const textoUsuario = await llmService.transcreverAudio(wavFilename);
+                            fs.unlink(wavFilename, () => {});
+
+                            if (textoUsuario && textoUsuario.length > 2) {
+                                logger.info(`📝 Transcrição: "${textoUsuario}"`);
+                                
+                                const textoLimpo = textoUsuario.trim();
+                                if (textoLimpo.length < 4 || /^(Obrigado|Tchau|Aleluia|Amém|Pois é|Entendi)[.!?,]*$/i.test(textoLimpo)) {
+                                    return;
+                                }
+
+                                const historicoContexto: ChatMessage[] = [{ role: 'user', content: textoUsuario }];
+                                const promptSistema = "Você é a IA da Nexstar. Personalidade ÁCIDA e CURTA. Responda em 1-2 frases.";
+
+                                const canalGeral = client.channels.cache.get(CANAL_CHAT_GERAL) as TextChannel;
+                                if (canalGeral) await canalGeral.sendTyping();
+
+                                const resposta = await llmService.gerarResposta(historicoContexto, promptSistema);
+                                responderVoz(connection, resposta);
+                            }
+                        } else {
+                            fs.unlink(wavFilename, () => {});
+                        }
+                    });
+                });
+            });
+            return;
+        } else {
+            await message.reply("❌ Você precisa estar em um canal de voz.");
+            return;
+        }
+    }
+    
+    if (conteudoLower === '!sair' || conteudoLower === '!leave') {
+        const connection = getVoiceConnection(message.guild!.id);
+        if (connection) {
+            connection.destroy();
+            await message.reply("🔇 Saindo da call.");
+        } else {
+            await message.reply("❓ Não estou em nenhuma call.");
+        }
+        return;
+    }
+
+    // Chat geral
+    if (message.channel.id === CANAL_CHAT_GERAL) {
+        await runChatGeralLogic(message);
+    }
+    
+    // Chat privado
+    if (CATEGORIA_ASSISTENTE && message.channel.isTextBased() && 'parentId' in message.channel && 
+        message.channel.parentId === CATEGORIA_ASSISTENTE && message.channel.name.startsWith('chat-ia-')) {
+        await runChatPrivadoLogic(message);
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ⏳ INACTIVITY MONITOR
+// ═══════════════════════════════════════════════════════════════════════════
+
+function verificarInatividade(): void {
+    logger.info(`⏳ Monitor de inatividade iniciado (${TEMPO_OCIOSO_PARA_ENGAJAR / 60000} min)`);
+    
+    setInterval(async () => {
+        const tempoPassado = Date.now() - ultimoTempoMensagemGeral;
+        
+        if (tempoPassado > TEMPO_OCIOSO_PARA_ENGAJAR) {
+            const canalGeral = client.channels.cache.get(CANAL_CHAT_GERAL) as TextChannel;
+            if (!canalGeral) return;
+
+            try {
+                const ultimas = await canalGeral.messages.fetch({ limit: 1 });
+                if (ultimas.first()?.author.id === client.user?.id) {
+                    ultimoTempoMensagemGeral = Date.now();
+                    return;
+                }
+            } catch {}
+
+            try {
+                const topico = await llmService.gerarResposta(
+                    [{ role: 'user', content: 'O chat morreu. Gere uma frase sarcástica reclamando do silêncio e lance um tópico polêmico.' }],
+                    "Você é uma IA sarcástica. Lance uma provocação ácida."
+                );
+
+                await canalGeral.send(`📢 **Revivendo o chat!** @everyone\n\n${topico}`);
+                logger.info('✅ Mensagem de engajamento enviada!');
+            } catch (e) {
+                logger.error('Erro ao enviar engajamento');
+            }
+            
+            ultimoTempoMensagemGeral = Date.now();
+        }
+    }, 60000);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🚀 START
+// ═══════════════════════════════════════════════════════════════════════════
+// 🚀 INICIALIZAÇÃO
+// ═══════════════════════════════════════════════════════════════════════════
+
+client.once('ready', async () => {
+    logger.info(`🤖 Bot NexstarIA ${client.user?.tag} está online!`);
+    
+    // Iniciar verificação de inatividade
+    verificarInatividade();
+    
+    try {
+        const connected = await testConnection();
+        if (connected) {
+            await initializeSchema();
+            dbConnected = true;
+            logger.info('💾 Database PostgreSQL conectado!');
+        }
+    } catch (error) {
+        logger.warn('⚠️ Database não disponível, usando apenas memória');
+    }
+});
+
+client.login(TOKEN).catch(error => {
+    logger.error('Falha no login:', error);
+    process.exit(1);
+});
+
+process.on('SIGINT', async () => {
+    logger.info('Encerrando NexstarIA...');
+    await closePool();
+    client.destroy();
+    process.exit(0);
+});
+
+process.on('unhandledRejection', (error) => {
+    logger.error('Erro não tratado:', { error });
+});
+
+export { LLMService, llmService };

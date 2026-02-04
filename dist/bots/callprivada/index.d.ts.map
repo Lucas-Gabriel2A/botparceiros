@@ -1,0 +1,1 @@
+{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../../src/bots/callprivada/index.ts"],"names":[],"mappings":"AAAA;;;;;;;;;;;;GAYG;AAkDH,UAAU,QAAQ;IACd,OAAO,EAAE,MAAM,CAAC;IAChB,SAAS,EAAE,IAAI,CAAC;IAChB,MAAM,EAAE,OAAO,CAAC;IAChB,WAAW,EAAE,MAAM,GAAG,IAAI,CAAC;CAC9B;AAyED,QAAA,MAAM,iBAAiB,uBAA8B,CAAC;AAitCtD,OAAO,EAAE,iBAAiB,EAAE,QAAQ,EAAE,CAAC"}

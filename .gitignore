@@ -1,5 +1,7 @@
 # Arquivos de configuração
 .env
+.env.*
+!.env.example
 node_modules/
 package-lock.json
 
@@ -27,3 +29,9 @@ Thumbs.db
 # Arquivos temporários
 *.tmp
 *.temp
+*.pcm
+temp_audio_*
+
+# Backups
+*.backup
+*.bak
