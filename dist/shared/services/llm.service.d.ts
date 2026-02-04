@@ -14,6 +14,10 @@ export declare class LLMService {
      */
     generateResponse(messages: LLMMessage[], systemPrompt?: string): Promise<string>;
     /**
+     * Gera e valida JSON estruturado
+     */
+    generateJson<T>(systemPrompt: string, userMessage: string, retryCount?: number): Promise<T | null>;
+    /**
      * Parseia comando admin usando LLM
      */
     parseAdminCommand(userMessage: string, adminPrompt: string): Promise<{

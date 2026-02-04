@@ -5,6 +5,15 @@
 export { llmService, LLMService } from './llm.service';
 export { logger, Logger } from './logger.service';
 export { config, ConfigService } from './config.service';
+export { serverBuilder, ServerBuilderService } from './server-builder.service';
+
+// Utils exports
+export { 
+    hasAdminPermission, 
+    hasStaffPermission, 
+    hasModerationPermission,
+    hasIAAdminPermission 
+} from '../utils/permissions';
 
 // Database exports
 export { 

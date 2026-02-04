@@ -46,7 +46,8 @@ import {
     testConnection, 
     initializeSchema, 
     upsertGuildConfig,
-    closePool
+    closePool,
+    hasAdminPermission
 } from '../../shared/services';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -167,10 +168,7 @@ function getLeaveChannelId(guildId: string): string | null {
 }
 
 function hasPermission(member: GuildMember): boolean {
-    if (member.id === member.guild.ownerId) return true;
-    if (OWNER_ROLE_ID && member.roles.cache.has(OWNER_ROLE_ID)) return true;
-    if (SEMI_OWNER_ROLE_ID && member.roles.cache.has(SEMI_OWNER_ROLE_ID)) return true;
-    return false;
+    return hasAdminPermission(member, OWNER_ROLE_ID, SEMI_OWNER_ROLE_ID);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

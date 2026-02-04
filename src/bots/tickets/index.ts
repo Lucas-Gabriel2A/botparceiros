@@ -37,7 +37,9 @@ import {
     createTicket as createDbTicket,
     closeTicket as closeDbTicket,
     logAudit,
-    closePool
+    closePool,
+    hasAdminPermission as sharedHasAdminPermission,
+    hasStaffPermission as sharedHasStaffPermission
 } from '../../shared/services';
 
 let dbConnected = false;
@@ -162,17 +164,15 @@ function generateCategoryId(): string {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 🔐 VERIFICAÇÃO DE PERMISSÕES
+// 🔐 VERIFICAÇÃO DE PERMISSÕES (usa shared utils)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function hasAdminPermission(member: GuildMember): boolean {
-    if (member.roles.cache.has(OWNER_ROLE_ID)) return true;
-    if (SEMI_OWNER_ROLE_ID && member.roles.cache.has(SEMI_OWNER_ROLE_ID)) return true;
-    return false;
+    return sharedHasAdminPermission(member, OWNER_ROLE_ID, SEMI_OWNER_ROLE_ID);
 }
 
 function hasStaffPermission(member: GuildMember): boolean {
-    return member.roles.cache.has(STAFF_ROLE_ID) || hasAdminPermission(member);
+    return sharedHasStaffPermission(member, STAFF_ROLE_ID, OWNER_ROLE_ID, SEMI_OWNER_ROLE_ID);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

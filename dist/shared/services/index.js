@@ -3,7 +3,7 @@
  * 📦 Barrel file for shared services
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.closePool = exports.getOpenTickets = exports.deleteTicket = exports.closeTicket = exports.getTicketsByUser = exports.getTicket = exports.createTicket = exports.getAllPrivateCalls = exports.deletePrivateCall = exports.updatePrivateCall = exports.getPrivateCallByOwner = exports.getPrivateCall = exports.createPrivateCall = exports.getAuditLogs = exports.logAudit = exports.upsertGuildConfig = exports.getGuildConfig = exports.initializeSchema = exports.testConnection = exports.query = exports.getPool = exports.database = exports.ConfigService = exports.config = exports.Logger = exports.logger = exports.LLMService = exports.llmService = void 0;
+exports.closePool = exports.getOpenTickets = exports.deleteTicket = exports.closeTicket = exports.getTicketsByUser = exports.getTicket = exports.createTicket = exports.getAllPrivateCalls = exports.deletePrivateCall = exports.updatePrivateCall = exports.getPrivateCallByOwner = exports.getPrivateCall = exports.createPrivateCall = exports.getAuditLogs = exports.logAudit = exports.upsertGuildConfig = exports.getGuildConfig = exports.initializeSchema = exports.testConnection = exports.query = exports.getPool = exports.database = exports.ServerBuilderService = exports.serverBuilder = exports.ConfigService = exports.config = exports.Logger = exports.logger = exports.LLMService = exports.llmService = void 0;
 var llm_service_1 = require("./llm.service");
 Object.defineProperty(exports, "llmService", { enumerable: true, get: function () { return llm_service_1.llmService; } });
 Object.defineProperty(exports, "LLMService", { enumerable: true, get: function () { return llm_service_1.LLMService; } });
@@ -13,6 +13,9 @@ Object.defineProperty(exports, "Logger", { enumerable: true, get: function () { 
 var config_service_1 = require("./config.service");
 Object.defineProperty(exports, "config", { enumerable: true, get: function () { return config_service_1.config; } });
 Object.defineProperty(exports, "ConfigService", { enumerable: true, get: function () { return config_service_1.ConfigService; } });
+var server_builder_service_1 = require("./server-builder.service");
+Object.defineProperty(exports, "serverBuilder", { enumerable: true, get: function () { return server_builder_service_1.serverBuilder; } });
+Object.defineProperty(exports, "ServerBuilderService", { enumerable: true, get: function () { return server_builder_service_1.ServerBuilderService; } });
 // Database exports
 var database_1 = require("./database");
 Object.defineProperty(exports, "database", { enumerable: true, get: function () { return database_1.database; } });

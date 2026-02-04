@@ -5,6 +5,8 @@
  */
 
 import OpenAI from 'openai';
+import { config } from './config.service';
+import { logger } from './logger.service';
 import type { LLMMessage } from '../../types';
 
 export class LLMService {
@@ -13,18 +15,19 @@ export class LLMService {
     private baseUrl: string;
 
     constructor() {
-        const apiKey = process.env.OPENAI_API_KEY;
-        this.baseUrl = process.env.LLM_BASE_URL || 'https://api.openai.com/v1';
-        this.model = process.env.MODELO_IA || 'gpt-3.5-turbo';
+        // Force config validation/loading if not already done
+        const apiKey = config.getOptional('OPENAI_API_KEY');
+        this.baseUrl = config.getOptional('LLM_BASE_URL') || 'https://api.openai.com/v1';
+        this.model = config.getOptional('MODELO_IA') || 'gpt-3.5-turbo';
 
         if (apiKey) {
             this.client = new OpenAI({
                 apiKey,
                 baseURL: this.baseUrl
             });
-            console.log(`🧠 LLM Service iniciado (${this.baseUrl})`);
+            logger.info(`🧠 LLM Service iniciado (${this.baseUrl})`);
         } else {
-            console.warn('⚠️ LLM Service: Sem API key, modo mock ativado');
+            logger.warn('⚠️ LLM Service: Sem API key, modo mock ativado');
         }
     }
 
@@ -64,8 +67,44 @@ export class LLMService {
 
             return response.choices[0]?.message?.content || '';
         } catch (error) {
-            console.error('❌ Erro LLM:', error);
+            logger.error('❌ Erro LLM:', { error });
             throw error;
+        }
+    }
+
+    /**
+     * Gera e valida JSON estruturado
+     */
+    async generateJson<T>(
+        systemPrompt: string,
+        userMessage: string,
+        retryCount = 0
+    ): Promise<T | null> {
+        if (!this.client) {
+            logger.warn('⚠️ Mock JSON response');
+            return null;
+        }
+
+        try {
+            const response = await this.client.chat.completions.create({
+                model: this.model,
+                messages: [
+                    { role: 'system', content: systemPrompt + "\n\nRESPONDA APENAS COM JSON VÁLIDO. SEM MARKDOWN." },
+                    { role: 'user', content: userMessage }
+                ],
+                temperature: 0.5,
+                response_format: { type: 'json_object' }
+            });
+
+            const content = response.choices[0]?.message?.content || '{}';
+            return JSON.parse(content) as T;
+        } catch (error) {
+            logger.error('❌ Erro ao gerar JSON:', { error });
+            if (retryCount < 2) {
+                logger.info(`🔄 Tentando novamente (${retryCount + 1})...`);
+                return this.generateJson(systemPrompt, userMessage, retryCount + 1);
+            }
+            return null;
         }
     }
 
@@ -98,7 +137,7 @@ export class LLMService {
 
             return { action: 'none', params: {} };
         } catch (error) {
-            console.error('❌ Erro ao parsear comando:', error);
+            logger.error('❌ Erro ao parsear comando:', { error });
             return { action: 'none', params: {} };
         }
     }
@@ -114,11 +153,11 @@ export class LLMService {
         try {
             // Nota: Implementação de upload de arquivo para Whisper
             // Requer FormData e File polyfill no Node
-            console.log('🎤 Transcrevendo áudio...');
+            logger.info('🎤 Transcrevendo áudio...');
             // TODO: Implementar transcrição real
             return '';
         } catch (error) {
-            console.error('❌ Erro na transcrição:', error);
+            logger.error('❌ Erro na transcrição:', { error });
             throw error;
         }
     }

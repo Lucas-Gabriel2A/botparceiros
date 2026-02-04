@@ -63,6 +63,36 @@ class LLMService {
         }
     }
     /**
+     * Gera e valida JSON estruturado
+     */
+    async generateJson(systemPrompt, userMessage, retryCount = 0) {
+        if (!this.client) {
+            console.warn('⚠️ Mock JSON response');
+            return null;
+        }
+        try {
+            const response = await this.client.chat.completions.create({
+                model: this.model,
+                messages: [
+                    { role: 'system', content: systemPrompt + "\n\nRESPONDA APENAS COM JSON VÁLIDO. SEM MARKDOWN." },
+                    { role: 'user', content: userMessage }
+                ],
+                temperature: 0.5,
+                response_format: { type: 'json_object' }
+            });
+            const content = response.choices[0]?.message?.content || '{}';
+            return JSON.parse(content);
+        }
+        catch (error) {
+            console.error('❌ Erro ao gerar JSON:', error);
+            if (retryCount < 2) {
+                console.log(`🔄 Tentando novamente (${retryCount + 1})...`);
+                return this.generateJson(systemPrompt, userMessage, retryCount + 1);
+            }
+            return null;
+        }
+    }
+    /**
      * Parseia comando admin usando LLM
      */
     async parseAdminCommand(userMessage, adminPrompt) {

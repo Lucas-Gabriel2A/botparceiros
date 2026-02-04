@@ -22,6 +22,14 @@ export interface GuildConfig extends QueryResultRow {
     leave_channel_id: string | null;
     logs_channel_id: string | null;
     staff_role_id: string | null;
+    
+    // Configurações NexstarIA (SaaS)
+    ia_enabled?: boolean;
+    ia_channel_id?: string | null;
+    ia_system_prompt?: string | null;
+    ia_admin_roles?: string[];
+    ia_voice_enabled?: boolean;
+    
     updated_at: Date;
 }
 
@@ -129,6 +137,14 @@ CREATE TABLE IF NOT EXISTS guild_configs (
     vip_category_id VARCHAR(20),
     vip_role_id VARCHAR(20),
     welcome_channel_id VARCHAR(20),
+    leave_channel_id VARCHAR(20),
+    logs_channel_id VARCHAR(20),
+    staff_role_id VARCHAR(20),
+    ia_enabled BOOLEAN DEFAULT true,
+    ia_channel_id VARCHAR(20),
+    ia_system_prompt TEXT DEFAULT 'Você é a IA da Nexstar. Personalidade Única.',
+    ia_admin_roles TEXT[] DEFAULT '{}',
+    ia_voice_enabled BOOLEAN DEFAULT true,
     updated_at TIMESTAMP DEFAULT NOW()
 );
 

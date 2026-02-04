@@ -15,6 +15,11 @@ export interface GuildConfig extends QueryResultRow {
     leave_channel_id: string | null;
     logs_channel_id: string | null;
     staff_role_id: string | null;
+    ia_enabled?: boolean;
+    ia_channel_id?: string | null;
+    ia_system_prompt?: string | null;
+    ia_admin_roles?: string[];
+    ia_voice_enabled?: boolean;
     updated_at: Date;
 }
 export interface AuditLog {

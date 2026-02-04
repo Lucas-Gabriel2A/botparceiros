@@ -36,7 +36,8 @@ import {
     upsertGuildConfig, 
     logAudit,
     closePool,
-    GuildConfig
+    GuildConfig,
+    hasModerationPermission
 } from '../../shared/services';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -186,16 +187,10 @@ async function logModerationAction(
     }
 }
 
-function hasModerationPermission(member: GuildMember | null): boolean {
-    if (!member) return false;
-    if (member.id === member.guild.ownerId) return true;
-    return member.permissions.has(PermissionFlagsBits.ManageMessages) ||
-           member.permissions.has(PermissionFlagsBits.Administrator);
-}
-
 // ═══════════════════════════════════════════════════════════════════════════
 // 🛡️ MODERAÇÃO DE MENSAGENS
 // ═══════════════════════════════════════════════════════════════════════════
+
 
 async function moderateMessage(message: Message): Promise<void> {
     if (message.author.bot) return;

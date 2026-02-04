@@ -485,6 +485,22 @@ function responderVoz(connection, texto) {
 // 💬 CHAT LOGIC
 // ═══════════════════════════════════════════════════════════════════════════
 async function runChatGeralLogic(message) {
+    if (!dbConnected)
+        return;
+    // SaaS: Carregar configuração do servidor
+    const guildId = message.guild.id;
+    const config = await (0, services_1.getGuildConfig)(guildId);
+    // Se não tiver canal configurado, ignora
+    if (!config?.ia_channel_id)
+        return;
+    // Verifica se é o canal correto
+    if (message.channel.id !== config.ia_channel_id) {
+        // Se mencionou o bot fora do canal oficial, avisa
+        if (message.mentions.has(client.user)) {
+            await message.reply(`Please talk to me in <#${config.ia_channel_id}>`);
+        }
+        return;
+    }
     ultimoTempoMensagemGeral = Date.now();
     let deveResponder = false;
     let imageUrl = null;
@@ -523,9 +539,12 @@ async function runChatGeralLogic(message) {
             }
             const member = message.member;
             let contextoUsuario = "Membro Comum";
-            if (member?.roles.cache.has(OWNER_ROLE_ID))
-                contextoUsuario = "DONO DO SERVIDOR";
-            const promptSistema = `Você é a IA da Nexstar. Personalidade ÁCIDA. Usuario: ${contextoUsuario}`;
+            // Check roles dynamically if needed, for now keep logic simple
+            if (config.ia_admin_roles && config.ia_admin_roles.some(roleId => member.roles.cache.has(roleId))) {
+                contextoUsuario = "ADMINISTRADOR";
+            }
+            // SaaS: Personalidade Dinâmica
+            const promptSistema = config.ia_system_prompt || `Você é a IA da Nexstar. Personalidade ÁCIDA. Usuario: ${contextoUsuario}`;
             const resposta = await llmService.gerarResposta(historicoContexto, promptSistema, imageUrl);
             await message.reply(resposta);
             const connection = (0, voice_1.getVoiceConnection)(message.guild.id);
@@ -701,16 +720,115 @@ client.on('messageCreate', async (message) => {
         }
         return;
     }
-    // Chat geral
-    if (message.channel.id === CANAL_CHAT_GERAL) {
-        await runChatGeralLogic(message);
-    }
+    // Chat geral (SaaS - check inside function)
+    await runChatGeralLogic(message);
     // Chat privado
     if (CATEGORIA_ASSISTENTE && message.channel.isTextBased() && 'parentId' in message.channel &&
         message.channel.parentId === CATEGORIA_ASSISTENTE && message.channel.name.startsWith('chat-ia-')) {
         await runChatPrivadoLogic(message);
     }
 });
+// Handler de Interações (Slash Commands)
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isChatInputCommand())
+        return;
+    if (interaction.commandName === 'config-ia') {
+        if (!verificationCheck(interaction.guildId))
+            return;
+        await interaction.deferReply({ ephemeral: true });
+        const sub = interaction.options.getSubcommand();
+        const guildId = interaction.guildId;
+        try {
+            if (sub === 'canal') {
+                const channel = interaction.options.getChannel('canal', true);
+                if (channel.type !== discord_js_1.ChannelType.GuildText) {
+                    await interaction.editReply('❌ O canal deve ser de texto.');
+                    return;
+                }
+                await (0, services_1.upsertGuildConfig)(guildId, { ia_channel_id: channel.id });
+                await interaction.editReply(`✅ Canal da IA definido para ${channel}`);
+                services_1.logger.info(`Config IA (Canal) atualizada para guild ${guildId}`);
+            }
+            else if (sub === 'personalidade') {
+                const prompt = interaction.options.getString('prompt', true);
+                await (0, services_1.upsertGuildConfig)(guildId, { ia_system_prompt: prompt });
+                await interaction.editReply(`✅ Personalidade atualizada!\nPrompt: **"${prompt}"**`);
+                services_1.logger.info(`Config IA (Personalidade) atualizada para guild ${guildId}`);
+            }
+            else if (sub === 'cargos') {
+                const role1 = interaction.options.getRole('cargo1', true);
+                const role2 = interaction.options.getRole('cargo2');
+                const roles = [role1.id];
+                if (role2)
+                    roles.push(role2.id);
+                // Convert array to string format that PG expects if needed, or update DB type handler
+                // Assuming upsertGuildConfig handles string[] for ia_admin_roles
+                // Note: The schema defines text[], so passing string[] is fine in node-postgres
+                await (0, services_1.upsertGuildConfig)(guildId, { ia_admin_roles: roles });
+                await interaction.editReply(`✅ Cargos de Admin da IA definidos: ${roles.map(r => `<@&${r}>`).join(', ')}`);
+            }
+            else if (sub === 'status') {
+                const config = await (0, services_1.getGuildConfig)(guildId);
+                const statusEmbed = new discord_js_1.EmbedBuilder()
+                    .setTitle('⚙️ Configurações da IA')
+                    .setColor('#0099ff')
+                    .addFields({ name: 'Canal', value: config?.ia_channel_id ? `<#${config.ia_channel_id}>` : 'Não definido', inline: true }, { name: 'Personalidade', value: config?.ia_system_prompt ? `"${config.ia_system_prompt.substring(0, 50)}..."` : 'Padrão', inline: true }, { name: 'Cargos Admin', value: config?.ia_admin_roles && config.ia_admin_roles.length > 0 ? config.ia_admin_roles.map(r => `<@&${r}>`).join(', ') : 'Nenhum', inline: false });
+                await interaction.editReply({ embeds: [statusEmbed] });
+            }
+        }
+        catch (error) {
+            services_1.logger.error('Erro ao salvar config IA', { error: error });
+            await interaction.editReply('❌ Erro ao salvar configuração no banco de dados.');
+        }
+    }
+    if (interaction.commandName === 'construir-servidor') {
+        const theme = interaction.options.getString('tema', true);
+        await interaction.reply({
+            content: `🏗️ Entendido! Projetando um servidor com o tema: **${theme}**...\nIsso pode levar cerca de 1 minuto.`,
+            ephemeral: false
+        });
+        const guild = interaction.guild;
+        if (!guild)
+            return;
+        try {
+            // 1. Gerar Arquitetura
+            const schema = await services_1.serverBuilder.generateServerPlan(theme);
+            if (!schema) {
+                await interaction.editReply('❌ Falha ao projetar o servidor. A IA não retornou um plano válido. Tente novamente.');
+                return;
+            }
+            await interaction.editReply(`📐 Plano gerado! Criando ${schema.roles.length} cargos e ${schema.categories.length} categorias...`);
+            // 2. Construir
+            await services_1.serverBuilder.buildServer(guild, schema, async (_msg) => {
+                // Opcional: Atualizar mensagem com progresso (cuidado com rate limits)
+                // logger.info(msg);
+            });
+            await interaction.followUp({
+                content: `✅ **Servidor Construído com Sucesso!** 🚀\nTema: ${theme}\n\n*Nota: Ajuste as permissões de canais se necessário.*`,
+                ephemeral: false
+            });
+        }
+        catch (error) {
+            services_1.logger.error('Erro ao construir servidor:', { error: error });
+            await interaction.followUp({ content: '❌ Ocorreu um erro crítico durante a construção.', ephemeral: true });
+        }
+    }
+    if (interaction.commandName === 'ajuda-ia') {
+        await interaction.reply({
+            content: 'Use `/config-ia` para configurar o bot!\n\n**Comandos Disponíveis:**\n`/config-ia canal` - Define onde eu falo\n`/config-ia personalidade` - Define quem eu sou\n`/config-ia cargos` - Define quem manda em mim',
+            ephemeral: true
+        });
+    }
+});
+function verificationCheck(guildId) {
+    if (!dbConnected) {
+        try {
+            return false;
+        }
+        catch { }
+    }
+    return true;
+}
 // ═══════════════════════════════════════════════════════════════════════════
 // ⏳ INACTIVITY MONITOR
 // ═══════════════════════════════════════════════════════════════════════════
@@ -719,31 +837,86 @@ function verificarInatividade() {
     setInterval(async () => {
         const tempoPassado = Date.now() - ultimoTempoMensagemGeral;
         if (tempoPassado > TEMPO_OCIOSO_PARA_ENGAJAR) {
-            const canalGeral = client.channels.cache.get(CANAL_CHAT_GERAL);
-            if (!canalGeral)
-                return;
+            /*
+            // SaaS: Inactivity monitor needs to be per-guild.
+            // Disabling global check to prevent errors.
+            const canalGeral = client.channels.cache.get(CANAL_CHAT_GERAL) as TextChannel;
+            if (!canalGeral) return;
+
             try {
                 const ultimas = await canalGeral.messages.fetch({ limit: 1 });
                 if (ultimas.first()?.author.id === client.user?.id) {
                     ultimoTempoMensagemGeral = Date.now();
                     return;
                 }
-            }
-            catch { }
+            } catch {}
+
             try {
-                const topico = await llmService.gerarResposta([{ role: 'user', content: 'O chat morreu. Gere uma frase sarcástica reclamando do silêncio e lance um tópico polêmico.' }], "Você é uma IA sarcástica. Lance uma provocação ácida.");
+                const topico = await llmService.gerarResposta(
+                    [{ role: 'user', content: 'O chat morreu. Gere uma frase sarcástica reclamando do silêncio e lance um tópico polêmico.' }],
+                    "Você é uma IA sarcástica. Lance uma provocação ácida."
+                );
+
                 await canalGeral.send(`📢 **Revivendo o chat!** @everyone\n\n${topico}`);
-                services_1.logger.info('✅ Mensagem de engajamento enviada!');
+                logger.info('✅ Mensagem de engajamento enviada!');
+            } catch (e) {
+                logger.error('Erro ao enviar engajamento');
             }
-            catch (e) {
-                services_1.logger.error('Erro ao enviar engajamento');
-            }
+            
             ultimoTempoMensagemGeral = Date.now();
+            */
         }
     }, 60000);
 }
 // ═══════════════════════════════════════════════════════════════════════════
 // 🚀 START
+// ═══════════════════════════════════════════════════════════════════════════
+// 📋 SLASH COMMANDS
+// ═══════════════════════════════════════════════════════════════════════════
+const commands = [
+    new discord_js_1.SlashCommandBuilder()
+        .setName('config-ia')
+        .setDescription('⚙️ Configura a IA no seu servidor')
+        .setDefaultMemberPermissions(discord_js_1.PermissionFlagsBits.Administrator)
+        .addSubcommand(sub => sub.setName('canal')
+        .setDescription('Define o canal onde a IA irá conversar')
+        .addChannelOption(opt => opt.setName('canal')
+        .setDescription('Canal de texto')
+        .addChannelTypes(discord_js_1.ChannelType.GuildText)
+        .setRequired(true)))
+        .addSubcommand(sub => sub.setName('personalidade')
+        .setDescription('Define a personalidade da IA')
+        .addStringOption(opt => opt.setName('prompt')
+        .setDescription('Ex: Você é um pirata espacial bravo')
+        .setRequired(true)))
+        .addSubcommand(sub => sub.setName('cargos')
+        .setDescription('Define cargos que podem usar comandos admin da IA')
+        .addRoleOption(opt => opt.setName('cargo1').setDescription('Cargo Admin 1').setRequired(true))
+        .addRoleOption(opt => opt.setName('cargo2').setDescription('Cargo Admin 2')))
+        .addSubcommand(sub => sub.setName('status')
+        .setDescription('Verifica as configurações atuais')),
+    new discord_js_1.SlashCommandBuilder().setName('ajuda-ia').setDescription('💡 Mostra comandos da IA'),
+    new discord_js_1.SlashCommandBuilder()
+        .setName('construir-servidor')
+        .setDescription('🏗️ Cria canais e cargos baseado na sua descrição')
+        .setDefaultMemberPermissions(discord_js_1.PermissionFlagsBits.Administrator)
+        .addStringOption(opt => opt.setName('tema')
+        .setDescription('Ex: RPG Medieval com economia e 3 classes')
+        .setRequired(true))
+];
+const discord_js_2 = require("discord.js");
+const discord_js_3 = require("discord.js");
+async function registerCommands(clientId) {
+    const rest = new discord_js_2.REST({ version: '10' }).setToken(TOKEN);
+    try {
+        services_1.logger.info('Registrando slash commands...');
+        await rest.put(discord_js_3.Routes.applicationCommands(clientId), { body: commands });
+        services_1.logger.info('Slash commands registrados!');
+    }
+    catch (error) {
+        services_1.logger.error('Erro ao registrar comandos', error);
+    }
+}
 // ═══════════════════════════════════════════════════════════════════════════
 // 🚀 INICIALIZAÇÃO
 // ═══════════════════════════════════════════════════════════════════════════
@@ -757,6 +930,10 @@ client.once('ready', async () => {
             await (0, services_1.initializeSchema)();
             dbConnected = true;
             services_1.logger.info('💾 Database PostgreSQL conectado!');
+            // Registrar comandos (SaaS)
+            if (client.user) {
+                await registerCommands(client.user.id);
+            }
         }
     }
     catch (error) {
