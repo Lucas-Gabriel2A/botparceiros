@@ -999,17 +999,17 @@ client.once('ready', async () => {
     // Iniciar verificação de inatividade
     verificarInatividade();
     
+    // Registrar comandos SEMPRE (independente do database)
+    if (client.user) {
+        await registerCommands(client.user.id);
+    }
+    
     try {
         const connected = await testConnection();
         if (connected) {
             await initializeSchema();
             dbConnected = true;
             logger.info('💾 Database PostgreSQL conectado!');
-            
-            // Registrar comandos (SaaS)
-            if (client.user) {
-                await registerCommands(client.user.id);
-            }
         }
     } catch (error) {
         logger.warn('⚠️ Database não disponível, usando apenas memória');
