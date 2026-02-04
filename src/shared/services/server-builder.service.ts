@@ -62,129 +62,118 @@ interface AdjustmentSchema {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const SERVER_BUILDER_PROMPT = `
-Você é um DESIGNER ELITE de Servidores Discord. Crie estruturas PREMIUM e PROFISSIONAIS.
+Você é um DESIGNER de Servidores Discord PREMIUM.
 
-═══════════════════════════════════════════════════════════════════════════════
-🎨 PADRÕES DE DESIGN OBRIGATÓRIOS
-═══════════════════════════════════════════════════════════════════════════════
+REGRAS OBRIGATÓRIAS DE NOMEAÇÃO:
 
-1. CATEGORIAS - Use decoração visual nos dois lados:
-   ✦ Centro de Ajuda Cósmica ✦ 💠
-   ━━━ 🛒 PRODUTOS ━━━
-   ・🌟・COMUNIDADE・🌟・
-   ╔═══ 📢 INFORMAÇÕES ═══╗
-   ── ✧ SOCIAL ✧ ──
-   》Lounge Estelar《
+1. CATEGORIAS devem ter decoração nos DOIS lados:
+   CORRETO: "━━━ 📌 INFORMAÇÕES ━━━"
+   CORRETO: "✦ Centro de Ajuda ✦"  
+   CORRETO: "╔═══ 🎭 SOCIAL ═══╗"
+   ERRADO: "Informações" (sem decoração)
+   ERRADO: "📌 Informações" (só um lado)
 
-2. CANAIS DE TEXTO - Emoji + separador + nome:
-   #┃📜┃regras-do-servidor
-   #┃🚀┃portal-de-entrada
-   #┃💎┃loja-premium
-   #┃📢┃avisos-importantes
-   #┃🎫┃abrir-ticket
-   #┃⭐┃reviews
-   #┃🐛┃bugs-e-sugestões
-   #┃💬┃chat-geral
-   #┃🎮┃gaming-zone
+2. CANAIS DE TEXTO devem ter: emoji + ┃ + nome
+   CORRETO: "📜┃regras"
+   CORRETO: "�┃chat-geral"
+   CORRETO: "🎫┃abrir-ticket"
+   ERRADO: "📜-regras" (hífen no lugar de ┃)
+   ERRADO: "regras" (sem emoji)
 
-3. CANAIS DE VOZ - Emoji + separador + nome + (limite):
-   🔊┃conversa-geral (limite: 0 = sem limite)
-   🎵┃sala-de-música (limite: 8)
-   🎮┃gaming-duo (limite: 2)
-   🌙┃conversa-noturna (limite: 8)
-   💎┃vip-lounge (limite: 5, privado)
-   🎤┃palco-estelar (tipo: stage)
+3. CANAIS DE VOZ devem ter: emoji + ┃ + nome
+   CORRETO: "🔊┃lounge-geral"
+   CORRETO: "🎵┃sala-de-musica"
+   ERRADO: "🔊-lounge" (hífen no lugar de ┃)
 
-4. CANAIS ESPECIAIS:
-   - "announcement" para avisos oficiais (📢)
-   - "stage" para eventos e apresentações (🎤)
-   - "forum" para discussões organizadas (💬)
+4. Use user_limit em canais de voz:
+   - 0 = sem limite
+   - 2 = duo
+   - 5-10 = grupos
+   - 99 = eventos
 
-═══════════════════════════════════════════════════════════════════════════════
-📋 ESTRUTURA MÍNIMA OBRIGATÓRIA
-═══════════════════════════════════════════════════════════════════════════════
-
-Crie PELO MENOS estas categorias (adapte ao tema):
-
-1. INFORMAÇÕES (3+ canais): regras, avisos, portal
-2. COMUNIDADE (4+ canais): chat-geral, off-topic, mídias, apresentações
-3. SUPORTE/TICKETS (2+ canais): abrir-ticket, faq
-4. VOZ/LOUNGE (3+ canais): conversa-geral, gaming, música
-
-TOTAL MÍNIMO: 4 categorias, 12 canais, 4 cargos
-
-═══════════════════════════════════════════════════════════════════════════════
-🎭 CARGOS OBRIGATÓRIOS
-═══════════════════════════════════════════════════════════════════════════════
-
-- Cargo de Fundador/Owner (#FFD700 dourado)
-- Cargo de Staff/Moderador (#00D4FF ciano)
-- Cargo VIP/Premium (#9B59B6 roxo)
-- Cargo de Membro (#2ECC71 verde)
-
-═══════════════════════════════════════════════════════════════════════════════
-⚙️ REGRAS TÉCNICAS JSON
-═══════════════════════════════════════════════════════════════════════════════
-
-- "type" DEVE ser: "text", "voice", "stage", "forum", ou "announcement"
-- "user_limit" apenas para voice/stage (0-99, onde 0 = sem limite)
-- "color" em formato Hex (#RRGGBB)
-- "permissions": Administrator, KickMembers, BanMembers, ManageChannels, ManageMessages, ViewChannel, SendMessages
-
-SCHEMA JSON:
+EXEMPLO DE JSON PERFEITO:
 {
   "roles": [
-    { "name": "👑 Fundador", "color": "#FFD700", "permissions": ["Administrator"], "hoist": true }
+    { "name": "👑 Fundador", "color": "#FFD700", "permissions": ["Administrator"], "hoist": true },
+    { "name": "⚔️ Staff", "color": "#00D4FF", "permissions": ["ManageMessages", "KickMembers"], "hoist": true },
+    { "name": "💎 VIP", "color": "#9B59B6", "permissions": ["SendMessages"], "hoist": true },
+    { "name": "🌟 Membro", "color": "#2ECC71", "permissions": ["SendMessages"] }
   ],
   "categories": [
     {
-      "name": "✦ Centro de Informações ✦",
+      "name": "━━━ 📌 INFORMAÇÕES ━━━",
       "channels": [
         { "name": "📜┃regras", "type": "text", "description": "Regras do servidor" },
         { "name": "📢┃avisos", "type": "announcement", "description": "Avisos oficiais" },
-        { "name": "🔊┃lounge-geral", "type": "voice", "user_limit": 0 },
+        { "name": "🚀┃portal", "type": "text", "description": "Bem-vindo ao servidor" }
+      ]
+    },
+    {
+      "name": "✦ COMUNIDADE ✦",
+      "channels": [
+        { "name": "💬┃chat-geral", "type": "text" },
+        { "name": "🎮┃gaming", "type": "text" },
+        { "name": "�┃midias", "type": "text" },
+        { "name": "🎭┃off-topic", "type": "text" }
+      ]
+    },
+    {
+      "name": "╔═══ 🎫 SUPORTE ═══╗",
+      "channels": [
+        { "name": "🎫┃abrir-ticket", "type": "text" },
+        { "name": "❓┃faq", "type": "text" },
+        { "name": "�┃sugestoes", "type": "text" }
+      ]
+    },
+    {
+      "name": "》🔊 LOUNGE《",
+      "channels": [
+        { "name": "🔊┃conversa-geral", "type": "voice", "user_limit": 0 },
+        { "name": "🎵┃musica", "type": "voice", "user_limit": 8 },
         { "name": "🎮┃gaming-duo", "type": "voice", "user_limit": 2 },
-        { "name": "🎤┃palco", "type": "stage", "user_limit": 50 }
+        { "name": "💎┃vip-lounge", "type": "voice", "user_limit": 5, "is_private": true }
       ]
     }
   ]
 }
 
-Responda APENAS com JSON válido.
+REGRAS TÉCNICAS:
+- Responda APENAS com JSON válido
+- "type": "text", "voice", "stage", "forum", ou "announcement"
+- "color": formato hex (#RRGGBB)
+- "permissions": Administrator, KickMembers, BanMembers, ManageMessages, SendMessages
+- Use o caractere ┃ (não | nem - nem :)
 `;
 
 const SERVER_ADJUSTER_PROMPT = `
-Você é um ADMINISTRADOR INTELIGENTE de Servidores Discord Premium.
-Analise o pedido e gere as AÇÕES necessárias.
+Você é um ADMINISTRADOR de Servidores Discord.
+Analise o pedido e gere AÇÕES para modificar o servidor.
+
+REGRAS DE NOMEAÇÃO:
+- Categorias: "━━━ 📌 NOME ━━━" ou "✦ NOME ✦"
+- Canais: "📢┃nome-do-canal" (emoji + ┃ + nome)
 
 AÇÕES DISPONÍVEIS:
-1. "create_category" - Criar categoria decorada
-2. "create_channel" - Criar canal com emoji e separador
-3. "rename_category" - Renomear categoria
-4. "rename_channel" - Renomear canal
-5. "delete_category" - Deletar categoria
-6. "delete_channel" - Deletar canal
-7. "create_role" - Criar cargo colorido
-8. "set_user_limit" - Definir limite de usuários em canal de voz
+- create_category: criar categoria decorada
+- create_channel: criar canal com emoji┃nome
+- rename_category/rename_channel: renomear
+- delete_category/delete_channel: deletar
+- create_role: criar cargo colorido
+- set_user_limit: definir limite de voz
 
-PADRÕES DE DESIGN:
-- Categorias: "✦ Nome ✦" ou "━━━ 🎯 NOME ━━━"
-- Canais: "📢┃nome-do-canal" ou "🔊┃sala-de-voz"
-- Cargos: "👑 Nome" com cor hex
-
-SCHEMA JSON:
+EXEMPLO JSON:
 {
   "actions": [
-    { "type": "create_category", "name": "✦ Nova Categoria ✦" },
-    { "type": "create_channel", "category_name": "Nome da Categoria", "name": "🚀┃novo-canal", "channel_type": "text" },
-    { "type": "create_channel", "category_name": "Voz", "name": "🎮┃gaming", "channel_type": "voice", "user_limit": 4 },
-    { "type": "set_user_limit", "name": "nome-do-canal-voz", "user_limit": 8 }
+    { "type": "create_category", "name": "━━━ 🎮 GAMING ━━━" },
+    { "type": "create_channel", "category_name": "GAMING", "name": "🎮┃valorant", "channel_type": "text" },
+    { "type": "create_channel", "category_name": "GAMING", "name": "🔊┃sala-valorant", "channel_type": "voice", "user_limit": 5 }
   ],
-  "message": "Descrição das mudanças"
+  "message": "Criada categoria Gaming com canais de texto e voz"
 }
 
 Responda APENAS com JSON válido.
 `;
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🏗️ SERVER BUILDER SERVICE
@@ -206,6 +195,129 @@ export class ServerBuilderService {
     }
 
     /**
+     * Pós-processador: Garante que todos os nomes sigam o padrão decorativo
+     */
+    private postProcessSchema(schema: ServerSchema): ServerSchema {
+        // Emojis para cada tipo de canal
+        const channelEmojis: Record<string, string[]> = {
+            'regra': ['📜', '📋', '⚖️'],
+            'aviso': ['📢', '🔔', '📣'],
+            'portal': ['🚀', '🌟', '✨'],
+            'chat': ['💬', '🗣️', '💭'],
+            'geral': ['💬', '🌐', '🏠'],
+            'off': ['🎭', '🎲', '🎪'],
+            'midia': ['📷', '🖼️', '📸'],
+            'gaming': ['🎮', '🕹️', '👾'],
+            'ticket': ['🎫', '📩', '✉️'],
+            'suporte': ['🛠️', '💡', '❓'],
+            'faq': ['❓', '💡', '📚'],
+            'sugestao': ['📝', '💡', '✍️'],
+            'voz': ['🔊', '🎙️', '🔉'],
+            'lounge': ['🔊', '☕', '🛋️'],
+            'musica': ['🎵', '🎶', '🎸'],
+            'duo': ['🎮', '👥', '🤝'],
+            'palco': ['🎤', '🎭', '🌟'],
+            'vip': ['💎', '👑', '⭐'],
+            'boas': ['👋', '🙌', '✋'],
+            'bem': ['👋', '🏠', '🌟'],
+            'default': ['📌', '💠', '🔹']
+        };
+
+        // Decorações para categorias
+        const categoryDecorations = [
+            (name: string) => `━━━ ${name} ━━━`,
+            (name: string) => `✦ ${name} ✦`,
+            (name: string) => `╔═══ ${name} ═══╗`,
+            (name: string) => `》${name}《`,
+            (name: string) => `── ✧ ${name} ✧ ──`
+        ];
+
+        // Função para encontrar emoji apropriado
+        const findEmoji = (name: string): string => {
+            const nameLower = name.toLowerCase();
+            for (const [key, emojis] of Object.entries(channelEmojis)) {
+                if (nameLower.includes(key)) {
+                    return emojis[0];
+                }
+            }
+            return channelEmojis['default'][0];
+        };
+
+        // Função para formatar nome de canal
+        const formatChannelName = (name: string): string => {
+            // Se já tem o formato correto, retorna
+            if (name.includes('┃') && /^[\p{Emoji}]/u.test(name)) {
+                return name;
+            }
+            
+            // Remove emojis, -, : e espaços extras do início
+            let cleanName = name.replace(/^[\s\-:┃|・]+/, '').trim();
+            
+            // Remove emojis do início para reprocessar
+            cleanName = cleanName.replace(/^[\p{Emoji}\p{Emoji_Component}\u200d]+[\s\-:┃|・]*/gu, '').trim();
+            
+            // Se ainda está vazio, usa o nome original limpo
+            if (!cleanName) {
+                cleanName = name.replace(/[^\w\-]/g, '').toLowerCase() || 'canal';
+            }
+            
+            // Encontra emoji apropriado
+            const emoji = findEmoji(cleanName);
+            
+            // Formata: emoji┃nome-em-minusculo
+            return `${emoji}┃${cleanName.toLowerCase().replace(/\s+/g, '-')}`;
+        };
+
+        // Função para formatar nome de categoria
+        const formatCategoryName = (name: string, index: number): string => {
+            // Se já tem decoração nos dois lados, retorna
+            if (/^[━✦╔》──]/.test(name) && /[━✦╗《──]$/.test(name)) {
+                return name;
+            }
+            
+            // Remove decorações existentes e limpa
+            let cleanName = name
+                .replace(/^[━✦╔》──\s]+/g, '')
+                .replace(/[━✦╗《──\s]+$/g, '')
+                .replace(/^[\p{Emoji}\p{Emoji_Component}\u200d]+\s*/gu, '')
+                .trim()
+                .toUpperCase();
+            
+            if (!cleanName) cleanName = name.toUpperCase();
+            
+            // Escolhe a decoração baseada no índice
+            const decoration = categoryDecorations[index % categoryDecorations.length];
+            return decoration(cleanName);
+        };
+
+        // Aplica formatação nas categorias e canais
+        if (schema.categories && Array.isArray(schema.categories)) {
+            schema.categories = schema.categories.map((cat, catIndex) => ({
+                ...cat,
+                name: formatCategoryName(cat.name, catIndex),
+                channels: cat.channels?.map(chan => ({
+                    ...chan,
+                    name: formatChannelName(chan.name)
+                })) || []
+            }));
+        }
+
+        // Garante que cargos tenham emojis
+        if (schema.roles && Array.isArray(schema.roles)) {
+            const roleEmojis = ['👑', '⚔️', '💎', '🌟', '🔰', '🎭'];
+            schema.roles = schema.roles.map((role, index) => {
+                if (!/^[\p{Emoji}]/u.test(role.name)) {
+                    const emoji = roleEmojis[index % roleEmojis.length];
+                    return { ...role, name: `${emoji} ${role.name}` };
+                }
+                return role;
+            });
+        }
+
+        return schema;
+    }
+
+    /**
      * Passo 1: Gerar o plano JSON com a LLM
      */
     async generateServerPlan(theme: string): Promise<ServerSchema | null> {
@@ -224,11 +336,20 @@ Crie nomes CRIATIVOS e DECORADOS.
 Inclua canais de voz com limites apropriados.
 `;
 
-        return await llmService.generateJson<ServerSchema>(
+        const rawSchema = await llmService.generateJson<ServerSchema>(
             enhancedPrompt,
             `Crie o servidor com tema: "${theme}". Seja criativo e profissional!`
         );
+
+        // Aplica pós-processamento para garantir formatação correta
+        if (rawSchema) {
+            logger.info('🔧 Aplicando pós-processamento de formatação...');
+            return this.postProcessSchema(rawSchema);
+        }
+
+        return null;
     }
+
 
     /**
      * Passo 2: Construir o servidor com todas as features
