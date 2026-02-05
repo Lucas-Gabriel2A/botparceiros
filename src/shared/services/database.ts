@@ -22,14 +22,14 @@ export interface GuildConfig extends QueryResultRow {
     leave_channel_id: string | null;
     logs_channel_id: string | null;
     staff_role_id: string | null;
-    
+
     // Configurações NexstarIA (SaaS)
     ia_enabled?: boolean;
     ia_channel_id?: string | null;
     ia_system_prompt?: string | null;
     ia_admin_roles?: string[];
     ia_voice_enabled?: boolean;
-    
+
     updated_at: Date;
 }
 
@@ -43,6 +43,24 @@ export interface AuditLog {
     created_at: Date;
 }
 
+export interface Subscription extends QueryResultRow {
+    id: string; // preapproval_id from Mercado Pago
+    user_id: string;
+    plan: 'starter' | 'pro' | 'ultimate';
+    status: 'pending' | 'authorized' | 'paused' | 'cancelled';
+    next_payment: Date;
+    created_at: Date;
+    updated_at: Date;
+}
+
+export interface Payment extends QueryResultRow {
+    id: number; // payment_id from Mercado Pago
+    subscription_id: string;
+    amount: number;
+    status: 'approved' | 'rejected' | 'pending' | 'refunded';
+    created_at: Date;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔗 CONNECTION POOL
 // ═══════════════════════════════════════════════════════════════════════════
@@ -52,7 +70,7 @@ let pool: Pool | null = null;
 export function getPool(): Pool {
     if (!pool) {
         const databaseUrl = config.getOptional('DATABASE_URL');
-        
+
         if (!databaseUrl) {
             throw new Error('DATABASE_URL não configurada. Database desabilitado.');
         }
@@ -63,7 +81,7 @@ export function getPool(): Pool {
             idleTimeoutMillis: 30000,
             connectionTimeoutMillis: 5000,
             ssl: {
-                rejectUnauthorized: false // Railway uses self-signed certs
+                rejectUnauthorized: false // Railway uses self-signed certs (Required for connecting to Railway's Postgres from external sources)
             }
         });
 
@@ -83,20 +101,20 @@ export function getPool(): Pool {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export async function query<T extends QueryResultRow = QueryResultRow>(
-    text: string, 
+    text: string,
     params?: unknown[]
 ): Promise<QueryResult<T>> {
     const pool = getPool();
     const start = Date.now();
-    
+
     try {
         const result = await pool.query<T>(text, params);
         const duration = Date.now() - start;
-        
+
         if (duration > 1000) {
             logger.warn(`Query lenta (${duration}ms): ${text.substring(0, 50)}...`);
         }
-        
+
         return result;
     } catch (error: any) {
         logger.error(`Erro na query: ${error.message}`);
@@ -162,6 +180,30 @@ CREATE TABLE IF NOT EXISTS audit_log (
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_audit_log_guild ON audit_log(guild_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
+
+-- Subscriptions Table
+CREATE TABLE IF NOT EXISTS subscriptions (
+    id VARCHAR(50) PRIMARY KEY,
+    user_id VARCHAR(20) NOT NULL,
+    plan VARCHAR(20) NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    next_payment TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id);
+
+-- Payments Table
+CREATE TABLE IF NOT EXISTS payments (
+    id BIGINT PRIMARY KEY,
+    subscription_id VARCHAR(50) REFERENCES subscriptions(id),
+    amount DECIMAL(10, 2) NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_payments_subscription ON payments(subscription_id);
 `;
 
 export async function initializeSchema(): Promise<void> {
@@ -187,12 +229,12 @@ export async function getGuildConfig(guildId: string): Promise<GuildConfig | nul
 }
 
 export async function upsertGuildConfig(
-    guildId: string, 
+    guildId: string,
     updates: Partial<Omit<GuildConfig, 'guild_id' | 'updated_at'>>
 ): Promise<GuildConfig> {
     const fields = Object.keys(updates);
     const values = Object.values(updates);
-    
+
     if (fields.length === 0) {
         throw new Error('No fields to update');
     }
@@ -200,7 +242,7 @@ export async function upsertGuildConfig(
     const setClause = fields.map((f, i) => `${f} = $${i + 2}`).join(', ');
     const insertFields = ['guild_id', ...fields].join(', ');
     const insertValues = ['$1', ...fields.map((_, i) => `$${i + 2}`)].join(', ');
-    
+
     const sql = `
         INSERT INTO guild_configs (${insertFields}, updated_at)
         VALUES (${insertValues}, NOW())
@@ -296,15 +338,15 @@ export async function getPrivateCallByOwner(guildId: string, ownerId: string): P
 }
 
 export async function updatePrivateCall(
-    channelId: string, 
+    channelId: string,
     updates: { is_open?: boolean; member_limit?: number | null; owner_id?: string }
 ): Promise<PrivateCall | null> {
     const fields = Object.keys(updates).filter(k => updates[k as keyof typeof updates] !== undefined);
     if (fields.length === 0) return null;
-    
+
     const setClause = fields.map((f, i) => `${f} = $${i + 2}`).join(', ');
     const values = fields.map(f => updates[f as keyof typeof updates]);
-    
+
     const result = await query<PrivateCall>(
         `UPDATE private_calls SET ${setClause} WHERE channel_id = $1 RETURNING *`,
         [channelId, ...values]
@@ -400,6 +442,82 @@ export async function getOpenTickets(guildId: string): Promise<Ticket[]> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// 💳 SUBSCRIPTION OPERATIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function createSubscription(
+    id: string,
+    userId: string,
+    plan: string,
+    status: string,
+    nextPayment?: Date
+): Promise<Subscription> {
+    const result = await query<Subscription>(
+        `INSERT INTO subscriptions (id, user_id, plan, status, next_payment)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING *`,
+        [id, userId, plan, status, nextPayment || null]
+    );
+    return result.rows[0];
+}
+
+export async function getSubscription(id: string): Promise<Subscription | null> {
+    const result = await query<Subscription>(
+        'SELECT * FROM subscriptions WHERE id = $1',
+        [id]
+    );
+    return result.rows[0] || null;
+}
+
+export async function getSubscriptionByUser(userId: string): Promise<Subscription | null> {
+    const result = await query<Subscription>(
+        `SELECT * FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+        [userId]
+    );
+    return result.rows[0] || null;
+}
+
+export async function updateSubscriptionStatus(
+    id: string,
+    status: string,
+    nextPayment?: Date
+): Promise<Subscription | null> {
+    const result = await query<Subscription>(
+        `UPDATE subscriptions SET status = $2, next_payment = COALESCE($3, next_payment), updated_at = NOW() 
+         WHERE id = $1 RETURNING *`,
+        [id, status, nextPayment || null]
+    );
+    return result.rows[0] || null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 💰 PAYMENT OPERATIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function createPayment(
+    id: number,
+    subscriptionId: string,
+    amount: number,
+    status: string
+): Promise<Payment> {
+    const result = await query<Payment>(
+        `INSERT INTO payments (id, subscription_id, amount, status)
+         VALUES ($1, $2, $3, $4)
+         RETURNING *`,
+        [id, subscriptionId, amount, status]
+    );
+    return result.rows[0];
+}
+
+export async function getPaymentsBySubscription(subscriptionId: string): Promise<Payment[]> {
+    const result = await query<Payment>(
+        `SELECT * FROM payments WHERE subscription_id = $1 ORDER BY created_at DESC`,
+        [subscriptionId]
+    );
+    return result.rows;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // 🧹 CLEANUP
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -437,7 +555,15 @@ export const database = {
     getOpenTickets,
     // Cleanup
     closePool,
-    getPool
+    getPool,
+    // Subscriptions
+    createSubscription,
+    getSubscription,
+    getSubscriptionByUser,
+    updateSubscriptionStatus,
+    // Payments
+    createPayment,
+    getPaymentsBySubscription
 };
 
 export default database;

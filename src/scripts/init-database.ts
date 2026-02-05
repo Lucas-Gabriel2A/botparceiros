@@ -58,6 +58,26 @@ CREATE TABLE IF NOT EXISTS tickets (
     closed_at TIMESTAMP
 );
 
+-- Subscriptions Table
+CREATE TABLE IF NOT EXISTS subscriptions (
+    id VARCHAR(50) PRIMARY KEY,
+    user_id VARCHAR(20) NOT NULL,
+    plan VARCHAR(20) NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    next_payment TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Payments Table
+CREATE TABLE IF NOT EXISTS payments (
+    id BIGINT PRIMARY KEY,
+    subscription_id VARCHAR(50) REFERENCES subscriptions(id),
+    amount DECIMAL(10, 2) NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_audit_log_guild ON audit_log(guild_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
@@ -67,6 +87,8 @@ CREATE INDEX IF NOT EXISTS idx_private_calls_owner ON private_calls(owner_id);
 CREATE INDEX IF NOT EXISTS idx_tickets_guild ON tickets(guild_id);
 CREATE INDEX IF NOT EXISTS idx_tickets_user ON tickets(user_id);
 CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_payments_subscription ON payments(subscription_id);
 `;
 
 async function main() {
@@ -100,7 +122,7 @@ async function main() {
         WHERE schemaname = 'public'
         ORDER BY tablename
     `);
-    
+
     console.log('\n📊 Tabelas no banco:');
     tablesResult.rows.forEach((row: any) => {
         console.log(`   ✅ ${row.tablename}`);

@@ -158,6 +158,31 @@ export class ConfigService {
         const parts = token.split('.');
         return parts.length === 3 && parts[0].length > 10;
     }
+
+    /**
+     * Constantes e IDs do Servidor
+     */
+    getConstants() {
+        return {
+            roles: {
+                owner: this.getOptional('OWNER_ROLE_ID'),
+                semiOwner: this.getOptional('SEMI_OWNER_ROLE_ID'),
+                staff: this.getOptional('STAFF_ROLE_ID'),
+                vip: this.getOptional('VIP_ROLE_ID'),
+                member: this.getOptional('MEMBER_ROLE_ID')
+            },
+            categories: {
+                tickets: this.getOptional('TICKET_CATEGORY_ID'),
+                privateCalls: this.getOptional('PRIVATE_CALL_CATEGORY_ID'),
+                voiceChannels: this.getOptional('VOICE_CATEGORY_ID')
+            },
+            channels: {
+                logs: this.getOptional('LOGS_CHANNEL_ID'),
+                welcome: this.getOptional('WELCOME_CHANNEL_ID'),
+                rules: this.getOptional('RULES_CHANNEL_ID')
+            }
+        };
+    }
 }
 
 // Singleton
