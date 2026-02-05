@@ -1,0 +1,80 @@
+{
+  "nav": {
+    "features": "Funcionalidades",
+    "pricing": "Planos",
+    "community": "Comunidade",
+    "login": "Entrar"
+  },
+  "hero": {
+    "badge": "ASSISTENTE IA PARA DISCORD",
+    "title": "Gerencie seu Servidor",
+    "subtitle": "com Inteligência.",
+    "desc": "Gerencie tickets, proteja seu servidor e crie estruturas complexas apenas com texto.<br><span class=\"text-white font-medium\">Basta enviar um comando.</span> O CoreBot faz o resto.",
+    "cta": "Começar agora",
+    "footer_text": "Funciona com Discord, Midjourney & OpenAI",
+    "trusted": "// Confiado por líderes de comunidades"
+  },
+  "features": {
+    "title": "Poder Ilimitado",
+    "subtitle": "para comunidades modernas.",
+    "desc": "Tudo o que você precisa para escalar sua comunidade.",
+    "items": {
+      "ai_builder": {
+        "title": "Construtor IA",
+        "desc": "Crie servidores inteiros com um prompt."
+      },
+      "automod": {
+        "title": "AutoMod",
+        "desc": "Proteção 24/7 contra raids e spam."
+      },
+      "tickets": {
+        "title": "Tickets 2.0",
+        "desc": "Suporte organizado com transcrições."
+      },
+      "dashboard": {
+        "title": "Dashboard",
+        "desc": "Controle total pelo navegador."
+      }
+    }
+  },
+  "pricing": {
+    "title": "Planos Flexíveis",
+    "subtitle": "Preço transparente. Sem taxas ocultas.",
+    "monthly": "/mês",
+    "starter": {
+      "name": "Iniciante",
+      "price": "R$ 0",
+      "desc": "Perfeito para começar com automação.",
+      "features": ["Boas-vindas básico", "Tickets Simples", "Proteção Anti-Spam"]
+    },
+    "premium": {
+      "name": "Premium Core",
+      "price": "R$ 29,90",
+      "desc": "Para comunidades que exigem o melhor.",
+      "features": ["IA Builder Ilimitado", "Tickets HTML", "Anti-Raid IA", "Call Privada"]
+    }
+  },
+  "community": {
+    "title": "Junte-se ao Futuro",
+    "desc": "A nova era da automação começa agora.\nSeja pioneiro e leve sua comunidade para o próximo nível.",
+    "cta": "Entrar no Discord"
+  },
+  "dashboard": {
+    "title": "Meus Servidores",
+    "subtitle": "Selecione um servidor para gerenciar",
+    "sidebar": {
+      "servers": "Servidores",
+      "billing": "Assinatura",
+      "settings": "Configurações",
+      "logout": "Sair"
+    },
+    "guild_card": {
+      "manage": "Gerenciar",
+      "setup": "Adicionar Bot",
+      "owner": "Dono"
+    },
+    "loading": "Carregando seus servidores...",
+    "error": "Erro ao carregar servidores. Tente novamente.",
+    "empty": "Nenhum servidor encontrado onde você tenha permissão de gerenciar."
+  }
+}

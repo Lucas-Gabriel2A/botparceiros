@@ -142,7 +142,7 @@ CREATE TABLE IF NOT EXISTS guild_configs (
     staff_role_id VARCHAR(20),
     ia_enabled BOOLEAN DEFAULT true,
     ia_channel_id VARCHAR(20),
-    ia_system_prompt TEXT DEFAULT 'Você é a IA da Nexstar. Personalidade Única.',
+    ia_system_prompt TEXT DEFAULT 'Você é a IA da CoreBot's. Personalidade Única.',
     ia_admin_roles TEXT[] DEFAULT '{}',
     ia_voice_enabled BOOLEAN DEFAULT true,
     updated_at TIMESTAMP DEFAULT NOW()

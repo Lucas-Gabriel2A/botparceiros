@@ -1,5 +1,5 @@
 /**
- * 📋 Type Definitions for Nexstar Discord Bots
+ * 📋 Type Definitions for CoreBot's Discord Bots
  */
 
 import { 

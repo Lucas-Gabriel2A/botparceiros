@@ -1,0 +1,80 @@
+{
+  "nav": {
+    "features": "Features",
+    "pricing": "Pricing",
+    "community": "Community",
+    "login": "Login"
+  },
+  "hero": {
+    "badge": "AI ASSISTANT FOR DISCORD",
+    "title": "Manage your Server",
+    "subtitle": "with Intelligence.",
+    "desc": "Manage tickets, protect your server, and create complex structures with just text.<br><span class=\"text-white font-medium\">Just send a command.</span> CoreBot does the rest.",
+    "cta": "Get started",
+    "footer_text": "Works with Discord, Midjourney & OpenAI",
+    "trusted": "// Trusted by community leaders"
+  },
+  "features": {
+    "title": "Unlimited Power",
+    "subtitle": "for modern communities.",
+    "desc": "Everything you need to scale your community.",
+    "items": {
+      "ai_builder": {
+        "title": "AI Builder",
+        "desc": "Create entire servers with one prompt."
+      },
+      "automod": {
+        "title": "AutoMod",
+        "desc": "24/7 protection against raids and spam."
+      },
+      "tickets": {
+        "title": "Tickets 2.0",
+        "desc": "Organized support with transcripts."
+      },
+      "dashboard": {
+        "title": "Dashboard",
+        "desc": "Full control via browser."
+      }
+    }
+  },
+  "pricing": {
+    "title": "Flexible Plans",
+    "subtitle": "Transparent pricing. No hidden fees.",
+    "monthly": "/month",
+    "starter": {
+      "name": "Starter",
+      "price": "$ 0",
+      "desc": "Perfect for getting started with automation.",
+      "features": ["Basic Welcome", "Simple Tickets", "Anti-Spam Protection"]
+    },
+    "premium": {
+      "name": "Premium Core",
+      "price": "$ 9.90",
+      "desc": "For communities that demand the best.",
+      "features": ["Unlimited AI Builder", "HTML Tickets", "AI Anti-Raid", "Private Calls"]
+    }
+  },
+  "community": {
+    "title": "Join the Future",
+    "desc": "The new era of automation starts now.\nBe a pioneer and take your community to the next level.",
+    "cta": "Join Discord"
+  },
+  "dashboard": {
+    "title": "My Servers",
+    "subtitle": "Select a server to manage",
+    "sidebar": {
+      "servers": "Servers",
+      "billing": "Billing",
+      "settings": "Settings",
+      "logout": "Logout"
+    },
+    "guild_card": {
+      "manage": "Manage",
+      "setup": "Add Bot",
+      "owner": "Owner"
+    },
+    "loading": "Loading your servers...",
+    "error": "Error loading servers. Please try again.",
+    "empty": "No servers found where you have management permissions."
+  }
+}
