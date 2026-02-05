@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
-import {NextIntlClientProvider} from 'next-intl';
-import {getMessages} from 'next-intl/server';
+import { NextIntlClientProvider } from 'next-intl';
+import { getMessages } from 'next-intl/server';
+import { Providers } from "@/components/Providers";
 import "../globals.css";
 
 const geistSans = Geist({
@@ -22,6 +23,11 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: "CoreBot's - Potencialize seu Servidor Discord",
   description: "A melhor suíte de bots para Discord com IA, Tickets, AutoMod e Call Privada.",
+  icons: {
+    icon: "/CoreBot.png",
+    shortcut: "/CoreBot.png",
+    apple: "/CoreBot.png",
+  },
 };
 
 export default async function LocaleLayout({
@@ -29,7 +35,7 @@ export default async function LocaleLayout({
   params
 }: {
   children: React.ReactNode;
-  params: Promise<{locale: string}>;
+  params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
   const messages = await getMessages();
@@ -39,9 +45,11 @@ export default async function LocaleLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} antialiased`}
       >
-        <NextIntlClientProvider messages={messages}>
-          {children}
-        </NextIntlClientProvider>
+        <Providers>
+          <NextIntlClientProvider messages={messages}>
+            {children}
+          </NextIntlClientProvider>
+        </Providers>
       </body>
     </html>
   );

@@ -39,19 +39,51 @@
   },
   "pricing": {
     "title": "Planos Flexíveis",
-    "subtitle": "Preço transparente. Sem taxas ocultas.",
+    "subtitle": "Escolha o plano ideal para escalar sua comunidade.",
     "monthly": "/mês",
+    "yearly": "/ano",
+    "billed_yearly": "Equivalente a {price}/mês",
+    "save_text": "Economize 20%",
     "starter": {
-      "name": "Iniciante",
-      "price": "R$ 0",
-      "desc": "Perfeito para começar com automação.",
-      "features": ["Boas-vindas básico", "Tickets Simples", "Proteção Anti-Spam"]
+      "name": "Starter",
+      "price": "R$ 19,90",
+      "price_yearly": "R$ 15,90",
+      "price_yearly_total": "R$ 190,80",
+      "desc": "Essencial para servidores em crescimento.",
+      "features": [
+        "10 Gerações de Servidor/mês",
+        "AutoMod Básico",
+        "Tickets Simples",
+        "Suporte via Comunidade"
+      ]
     },
-    "premium": {
-      "name": "Premium Core",
+    "pro": {
+      "name": "Pro",
       "price": "R$ 29,90",
-      "desc": "Para comunidades que exigem o melhor.",
-      "features": ["IA Builder Ilimitado", "Tickets HTML", "Anti-Raid IA", "Call Privada"]
+      "price_yearly": "R$ 23,90",
+      "price_yearly_total": "R$ 286,80",
+      "desc": "Poder total para comunidades ativas.",
+      "features": [
+        "Gerações Ilimitadas",
+        "AutoMod Avançado (IA)",
+        "Tickets com Transcrição",
+        "Call Privada",
+        "Sem marca d'água"
+      ]
+    },
+    "ultimate": {
+      "name": "Ultimate",
+      "price": "R$ 49,90",
+      "price_yearly": "R$ 39,90",
+      "price_yearly_total": "R$ 478,80",
+      "desc": "Para grandes redes e empresas.",
+      "features": [
+        "Tudo do Pro",
+        "Bot Whitelabel (Seu Nome/Foto)",
+        "Gestor de Parcerias",
+        "Prioridade no Suporte",
+        "Analytics Avançado"
+      ]
     }
   },
   "community": {
@@ -75,6 +107,26 @@
     },
     "loading": "Carregando seus servidores...",
     "error": "Erro ao carregar servidores. Tente novamente.",
-    "empty": "Nenhum servidor encontrado onde você tenha permissão de gerenciar."
+    "empty": "Nenhum servidor encontrado onde você tenha permissão de gerenciar.",
+    "billing": {
+      "title": "Gerenciar Assinatura",
+      "subtitle": "Visualize e melhore seu plano atual",
+      "current_plan": "PLANO ATUAL",
+      "upgrade": "Fazer Upgrade Agora",
+      "secure_payment": "Pagamento 100% Seguro via Mercado Pago",
+      "features_title": "O que está incluído:",
+      "starter": {
+        "name": "Starter",
+        "price": "R$ 19,90"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "R$ 29,90"
+      },
+      "ultimate": {
+        "name": "Ultimate",
+        "price": "R$ 49,90"
+      }
+    }
   }
 }

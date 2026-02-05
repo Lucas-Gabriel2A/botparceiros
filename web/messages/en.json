@@ -39,19 +39,51 @@
   },
   "pricing": {
     "title": "Flexible Plans",
-    "subtitle": "Transparent pricing. No hidden fees.",
-    "monthly": "/month",
+    "subtitle": "Choose plans that scale with your community.",
+    "monthly": "/mo",
+    "yearly": "/yr",
+    "billed_yearly": "Equivalent to {price}/mo",
+    "save_text": "Save 20%",
     "starter": {
       "name": "Starter",
-      "price": "$ 0",
-      "desc": "Perfect for getting started with automation.",
-      "features": ["Basic Welcome", "Simple Tickets", "Anti-Spam Protection"]
-    },
-    "premium": {
-      "name": "Premium Core",
       "price": "$ 9.90",
-      "desc": "For communities that demand the best.",
-      "features": ["Unlimited AI Builder", "HTML Tickets", "AI Anti-Raid", "Private Calls"]
+      "price_yearly": "$ 7.90",
+      "price_yearly_total": "$ 94.80",
+      "desc": "Essential for growing servers.",
+      "features": [
+        "10 Server Generations/mo",
+        "Basic AutoMod",
+        "Simple Tickets",
+        "Community Support"
+      ]
+    },
+    "pro": {
+      "name": "Pro",
+      "price": "$ 14.90",
+      "price_yearly": "$ 11.90",
+      "price_yearly_total": "$ 142.80",
+      "desc": "Full power for active communities.",
+      "features": [
+        "Unlimited Generations",
+        "Advanced AutoMod (AI)",
+        "Transcript Tickets",
+        "Private Calls",
+        "No Watermark"
+      ]
+    },
+    "ultimate": {
+      "name": "Ultimate",
+      "price": "$ 24.90",
+      "price_yearly": "$ 19.90",
+      "price_yearly_total": "$ 238.80",
+      "desc": "For large networks and businesses.",
+      "features": [
+        "Everything in Pro",
+        "Whitelabel Bot (Your Name/Icon)",
+        "Partnership Manager",
+        "Priority Support",
+        "Advanced Analytics"
+      ]
     }
   },
   "community": {
@@ -75,6 +107,26 @@
     },
     "loading": "Loading your servers...",
     "error": "Error loading servers. Please try again.",
-    "empty": "No servers found where you have management permissions."
+    "empty": "No servers found where you have management permissions.",
+    "billing": {
+      "title": "Manage Subscription",
+      "subtitle": "View and upgrade your current plan",
+      "current_plan": "CURRENT PLAN",
+      "upgrade": "Upgrade Now",
+      "secure_payment": "100% Secure Payment via Mercado Pago",
+      "features_title": "What's included:",
+      "starter": {
+        "name": "Starter",
+        "price": "$ 9.90"
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "$ 14.90"
+      },
+      "ultimate": {
+        "name": "Ultimate",
+        "price": "$ 24.90"
+      }
+    }
   }
 }
