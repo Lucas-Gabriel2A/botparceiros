@@ -178,6 +178,44 @@ export class LLMService {
             baseUrl: this.baseUrl
         };
     }
+
+    /**
+     * Gera schema de comando personalizado via IA
+     */
+    async generateCommandSchema(
+        prompt: string,
+        guildContext?: string
+    ): Promise<{ name: string; description: string; response?: string; actions: any[] } | null> {
+        const systemPrompt = `
+Você é um Arquiteto de Comandos para Discord. Sua função é converter descrições em linguagem natural em um esquema JSON de comando.
+
+CONTEXTO:
+${guildContext || 'Servidor genérico'}
+
+AÇÕES SUPORTADAS:
+- REPLY: Responder ao usuário (params: content, ephemeral)
+- ADD_ROLE: Adicionar cargo (params: role_id ou role_name)
+- REMOVE_ROLE: Remover cargo (params: role_id ou role_name)
+- SEND_DM: Enviar DM (params: content)
+- SEND_CHANNEL: Enviar msg em canal (params: channel_id, content)
+
+REGRAS:
+1. "name" deve ser kebab-case, sem espaços, max 32 chars.
+2. "description" deve ser curta e clara.
+3. "actions" é um array de objetos { type, ...params }.
+
+EXEMPLO DE SAÍDA:
+{
+  "name": "vip",
+  "description": "Dá cargo VIP e avisa",
+  "actions": [
+    { "type": "ADD_ROLE", "role_name": "VIP" },
+    { "type": "REPLY", "content": "Você agora é VIP!", "ephemeral": true }
+  ]
+}`;
+
+        return this.generateJson(systemPrompt, prompt);
+    }
 }
 
 // Singleton para uso global

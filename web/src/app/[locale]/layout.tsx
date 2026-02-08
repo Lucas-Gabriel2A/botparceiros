@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
+import { Geist, Geist_Mono, Playfair_Display, Hind } from "next/font/google";
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { Providers } from "@/components/Providers";
@@ -18,6 +18,12 @@ const geistMono = Geist_Mono({
 const playfair = Playfair_Display({
   variable: "--font-playfair",
   subsets: ["latin"],
+});
+
+const hind = Hind({
+  variable: "--font-hind",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -43,7 +49,7 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${hind.variable} antialiased`}
       >
         <Providers>
           <NextIntlClientProvider messages={messages}>

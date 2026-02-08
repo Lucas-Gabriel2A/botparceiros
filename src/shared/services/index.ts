@@ -5,29 +5,22 @@
 export { llmService, LLMService } from './llm.service';
 export { logger, Logger } from './logger.service';
 export { config, ConfigService } from './config.service';
-export { serverBuilder, ServerBuilderService } from './server-builder.service';
-
 // Utils exports
-export { 
-    hasAdminPermission, 
-    hasStaffPermission, 
-    hasModerationPermission,
-    hasIAAdminPermission 
-} from '../utils/permissions';
+// Permissions removed to avoid importing discord.js in frontend
 
 // Database exports
-export { 
-    database, 
-    getPool, 
-    query, 
-    testConnection, 
-    initializeSchema, 
+export {
+    database,
+    getPool,
+    query,
+    testConnection,
+    initializeSchema,
     // Guild Config
-    getGuildConfig, 
-    upsertGuildConfig, 
+    getGuildConfig,
+    upsertGuildConfig,
     // Audit Log
-    logAudit, 
-    getAuditLogs, 
+    logAudit,
+    getAuditLogs,
     // Private Calls
     createPrivateCall,
     getPrivateCall,
@@ -42,9 +35,22 @@ export {
     closeTicket,
     deleteTicket,
     getOpenTickets,
+    // Ticket Categories
+    createTicketCategory,
+    getTicketCategories,
+    updateTicketCategory,
+    deleteTicketCategory,
+    getTicketCategory,
+    claimTicket,
+    // Custom Commands
+    createCustomCommand,
+    getCustomCommands,
+    getCustomCommand,
+    deleteCustomCommand,
+    toggleCustomCommand,
     // Cleanup
-    closePool 
+    closePool
 } from './database';
 
-export type { GuildConfig, AuditLog, PrivateCall, Ticket } from './database';
+export type { GuildConfig, AuditLog, PrivateCall, Ticket, TicketCategory, CustomCommand } from './database';
 

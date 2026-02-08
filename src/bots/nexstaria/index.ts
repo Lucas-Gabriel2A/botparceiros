@@ -10,12 +10,12 @@
  * - Monitor de inatividade
  */
 
-import { 
-    Client, 
-    GatewayIntentBits, 
-    Partials, 
-    EmbedBuilder, 
-    ChannelType, 
+import {
+    Client,
+    GatewayIntentBits,
+    Partials,
+    EmbedBuilder,
+    ChannelType,
     PermissionFlagsBits,
     Message,
     GuildMember,
@@ -28,8 +28,8 @@ import {
 
 import OpenAI from 'openai';
 
-import { 
-    config, 
+import {
+    config,
     logger,
     testConnection,
     initializeSchema,
@@ -37,8 +37,16 @@ import {
     closePool,
     upsertGuildConfig,
     getGuildConfig,
-    serverBuilder
+
 } from '../../shared/services';
+import { serverBuilder } from '../../shared/services/server-builder.service';
+import { setupWelcomeEvents } from '../welcome/events';
+import { setupAutoModEvents } from '../automod/events';
+import { setupTicketEvents, TICKET_EVENTS } from '../tickets/events';
+import { commandEngine } from '../custom-commands/engine';
+import { customCommandService } from '../custom-commands/service';
+import { setupPrivateCallsEvents, PRIVATE_CALLS_EVENTS } from '../private-calls/events';
+
 
 let dbConnected = false;
 
@@ -122,7 +130,7 @@ class LLMService {
 
                 const lastMsgIndex = mensagensPayload.length - 1;
                 const lastMsg = mensagensPayload[lastMsgIndex];
-                
+
                 if (lastMsg.role === 'user' && typeof lastMsg.content === 'string') {
                     mensagensPayload[lastMsgIndex] = {
                         role: 'user',
@@ -191,8 +199,8 @@ Responda APENAS com JSON: {"action": "nome_acao", "params": {...}}`;
 
 function isAuthorized(member: GuildMember | null): boolean {
     if (!member?.roles) return false;
-    return member.roles.cache.has(OWNER_ROLE_ID) || 
-           (SEMI_OWNER_ROLE_ID ? member.roles.cache.has(SEMI_OWNER_ROLE_ID) : false);
+    return member.roles.cache.has(OWNER_ROLE_ID) ||
+        (SEMI_OWNER_ROLE_ID ? member.roles.cache.has(SEMI_OWNER_ROLE_ID) : false);
 }
 
 async function parseAdminCommand(userMessage: string): Promise<ParsedCommand> {
@@ -201,7 +209,7 @@ async function parseAdminCommand(userMessage: string): Promise<ParsedCommand> {
             [{ role: 'user', content: userMessage }],
             ADMIN_PROMPT
         );
-        
+
         const jsonMatch = response.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/);
         if (jsonMatch) {
             try {
@@ -220,39 +228,39 @@ async function parseAdminCommand(userMessage: string): Promise<ParsedCommand> {
 
 function resolveChannel(guild: Guild, channelRef: string): GuildChannel | null {
     if (!channelRef) return null;
-    
+
     const mentionMatch = channelRef.match(/<#(\d+)>/);
     if (mentionMatch) {
         return guild.channels.cache.get(mentionMatch[1]) as GuildChannel || null;
     }
-    
+
     if (/^\d+$/.test(channelRef)) {
         return guild.channels.cache.get(channelRef) as GuildChannel || null;
     }
-    
+
     const cleanName = channelRef.toLowerCase().replace('#', '');
     return guild.channels.cache.find(c => c.name.toLowerCase() === cleanName) as GuildChannel || null;
 }
 
 function resolveRole(guild: Guild, roleRef: string): Role | null {
     if (!roleRef) return null;
-    
+
     const mentionMatch = roleRef.match(/<@&(\d+)>/);
     if (mentionMatch) {
         return guild.roles.cache.get(mentionMatch[1]) || null;
     }
-    
+
     if (/^\d+$/.test(roleRef)) {
         return guild.roles.cache.get(roleRef) || null;
     }
-    
+
     const cleanName = roleRef.toLowerCase().replace('@', '');
     return guild.roles.cache.find(r => r.name.toLowerCase() === cleanName) || null;
 }
 
 async function executeAdminAction(message: Message, action: string, params: Record<string, any>): Promise<string | null> {
     const guild = message.guild!;
-    
+
     // Logar ação administrativa no banco
     if (dbConnected && action !== 'none' && action !== 'server_info' && action !== 'user_info') {
         try {
@@ -265,59 +273,59 @@ async function executeAdminAction(message: Message, action: string, params: Reco
     try {
         switch (action) {
             case 'timeout': {
-                const member = message.mentions.members?.first() || 
+                const member = message.mentions.members?.first() ||
                     await guild.members.fetch(params.targetUser).catch(() => null);
                 if (!member) return '❌ Usuário não encontrado.';
-                
+
                 const duration = (parseInt(params.duration) || 5) * 60 * 1000;
                 await member.timeout(duration, params.reason || 'Sem motivo');
-                
+
                 try {
                     await member.send(`⚠️ **Timeout no Nexstar!**\nMotivo: ${params.reason || 'Não especificado'}\nDuração: ${params.duration || 5} min`);
-                } catch {}
-                
+                } catch { }
+
                 return `✅ ${member.user.tag} em timeout por ${params.duration || 5} min.`;
             }
-            
+
             case 'kick': {
                 const member = message.mentions.members?.first() ||
                     await guild.members.fetch(params.targetUser).catch(() => null);
                 if (!member) return '❌ Usuário não encontrado.';
-                
-                try { await member.send(`⚠️ **Expulso do Nexstar!**\nMotivo: ${params.reason || 'Não especificado'}`); } catch {}
+
+                try { await member.send(`⚠️ **Expulso do Nexstar!**\nMotivo: ${params.reason || 'Não especificado'}`); } catch { }
                 await member.kick(params.reason);
                 return `✅ ${member.user.tag} foi expulso.`;
             }
-            
+
             case 'ban': {
                 const member = message.mentions.members?.first() ||
                     await guild.members.fetch(params.targetUser).catch(() => null);
                 if (!member) return '❌ Usuário não encontrado.';
-                
-                try { await member.send(`🔨 **Banido do Nexstar!**\nMotivo: ${params.reason || 'Não especificado'}`); } catch {}
+
+                try { await member.send(`🔨 **Banido do Nexstar!**\nMotivo: ${params.reason || 'Não especificado'}`); } catch { }
                 await member.ban({ reason: params.reason });
                 return `🔨 ${member.user.tag} foi BANIDO.`;
             }
-            
+
             case 'unban': {
                 if (!params.targetUserId) return '❌ Preciso do ID do usuário.';
                 await guild.bans.remove(params.targetUserId);
                 return `✅ Usuário ${params.targetUserId} desbanido.`;
             }
-            
+
             case 'warn': {
                 const member = message.mentions.members?.first();
                 if (!member) return '❌ Mencione o usuário.';
-                try { await member.send(`⚠️ **Aviso no Nexstar!**\nMotivo: ${params.reason || 'Não especificado'}`); } catch {}
+                try { await member.send(`⚠️ **Aviso no Nexstar!**\nMotivo: ${params.reason || 'Não especificado'}`); } catch { }
                 return `⚠️ ${member.user.tag} foi avisado.`;
             }
-            
+
             case 'clear': {
                 const count = Math.min(parseInt(params.count) || 10, 100);
                 const deleted = await (message.channel as TextChannel).bulkDelete(count, true);
                 return `🧹 Apaguei ${deleted.size} mensagens.`;
             }
-            
+
             case 'create_category': {
                 await guild.channels.create({
                     name: params.categoryName,
@@ -325,68 +333,68 @@ async function executeAdminAction(message: Message, action: string, params: Reco
                 });
                 return `📁 Categoria **${params.categoryName}** criada!`;
             }
-            
+
             case 'create_channel': {
                 const channelType = params.type === 'voice' ? ChannelType.GuildVoice : ChannelType.GuildText;
                 const options: any = {
                     name: params.channelName,
                     type: channelType
                 };
-                
+
                 if (params.categoryName) {
-                    const category = guild.channels.cache.find(c => 
-                        c.type === ChannelType.GuildCategory && 
+                    const category = guild.channels.cache.find(c =>
+                        c.type === ChannelType.GuildCategory &&
                         c.name.toLowerCase() === params.categoryName.toLowerCase()
                     );
                     if (category) options.parent = category.id;
                 }
-                
+
                 if (params.staffOnly && STAFF_ROLE_ID) {
                     options.permissionOverwrites = [
                         { id: guild.id, deny: [PermissionFlagsBits.SendMessages] },
                         { id: STAFF_ROLE_ID, allow: [PermissionFlagsBits.SendMessages, PermissionFlagsBits.ViewChannel] }
                     ];
                 }
-                
+
                 await guild.channels.create(options);
                 return `📢 Canal **#${params.channelName}** criado!`;
             }
-            
+
             case 'delete_channel': {
                 const channel = resolveChannel(guild, params.channelName);
                 if (!channel) return '❌ Canal não encontrado.';
                 await channel.delete();
                 return `🗑️ Canal deletado.`;
             }
-            
+
             case 'rename_channel': {
                 const channel = resolveChannel(guild, params.oldName) as TextChannel;
                 if (!channel) return '❌ Canal não encontrado.';
                 await channel.setName(params.newName);
                 return `✏️ Canal renomeado para **#${params.newName}**.`;
             }
-            
+
             case 'slowmode': {
                 const channel = (params.channelName ? resolveChannel(guild, params.channelName) : message.channel) as TextChannel;
                 if (!channel) return '❌ Canal não encontrado.';
                 await channel.setRateLimitPerUser(parseInt(params.seconds) || 10);
                 return `🐌 Slowmode de ${params.seconds || 10}s ativado.`;
             }
-            
+
             case 'lock_channel': {
                 const channel = (params.channelName ? resolveChannel(guild, params.channelName) : message.channel) as TextChannel;
                 if (!channel) return '❌ Canal não encontrado.';
                 await channel.permissionOverwrites.edit(guild.id, { SendMessages: false });
                 return `🔒 Canal trancado.`;
             }
-            
+
             case 'unlock_channel': {
                 const channel = (params.channelName ? resolveChannel(guild, params.channelName) : message.channel) as TextChannel;
                 if (!channel) return '❌ Canal não encontrado.';
                 await channel.permissionOverwrites.edit(guild.id, { SendMessages: null });
                 return `🔓 Canal destrancado.`;
             }
-            
+
             case 'give_role': {
                 const member = message.mentions.members?.first();
                 if (!member) return '❌ Mencione o usuário.';
@@ -395,7 +403,7 @@ async function executeAdminAction(message: Message, action: string, params: Reco
                 await member.roles.add(role);
                 return `✅ Cargo **${role.name}** dado para ${member.user.tag}.`;
             }
-            
+
             case 'remove_role': {
                 const member = message.mentions.members?.first();
                 if (!member) return '❌ Mencione o usuário.';
@@ -404,7 +412,7 @@ async function executeAdminAction(message: Message, action: string, params: Reco
                 await member.roles.remove(role);
                 return `✅ Cargo **${role.name}** removido de ${member.user.tag}.`;
             }
-            
+
             case 'create_role': {
                 const role = await guild.roles.create({
                     name: params.roleName,
@@ -413,62 +421,62 @@ async function executeAdminAction(message: Message, action: string, params: Reco
                 });
                 return `✅ Cargo **${role.name}** criado.`;
             }
-            
+
             case 'server_info': {
                 return `📊 **${guild.name}**\n👥 Membros: ${guild.memberCount}\n📢 Canais: ${guild.channels.cache.size}\n🏷️ Cargos: ${guild.roles.cache.size}`;
             }
-            
+
             case 'user_info': {
                 const member = message.mentions.members?.first();
                 if (!member) return '❌ Mencione o usuário.';
                 const roles = member.roles.cache.filter(r => r.id !== guild.id).map(r => r.name).join(', ') || 'Nenhum';
                 return `👤 **${member.user.tag}**\n🏷️ Cargos: ${roles}`;
             }
-            
+
             case 'announce': {
                 const channel = resolveChannel(guild, params.channelName) as TextChannel;
                 if (!channel) return '❌ Canal não encontrado.';
-                
+
                 const embed = new EmbedBuilder()
                     .setTitle('📢 Anúncio')
                     .setDescription(params.message)
                     .setColor('#FFD700' as any)
                     .setTimestamp();
-                
+
                 await channel.send({ embeds: [embed] });
                 return `✅ Anúncio enviado para #${channel.name}.`;
             }
-            
+
             case 'send_message': {
                 const channel = resolveChannel(guild, params.channelName) as TextChannel;
                 if (!channel) return '❌ Canal não encontrado.';
-                
+
                 const content = await llmService.gerarResposta(
                     [{ role: 'user', content: `Gere uma mensagem: ${params.prompt || 'Se apresente'}` }],
                     'Você é a NexstarIA. Responda de forma amigável. Pode usar emojis.'
                 );
-                
+
                 let finalMessage = content;
                 if (params.mentionEveryone) finalMessage = `@everyone\n\n${content}`;
-                
+
                 await channel.send(finalMessage);
                 return `✅ Mensagem enviada para #${channel.name}.`;
             }
-            
+
             case 'embed': {
                 const channel = (params.channelName ? resolveChannel(guild, params.channelName) : message.channel) as TextChannel;
                 if (!channel) return '❌ Canal não encontrado.';
-                
+
                 const embed = new EmbedBuilder()
                     .setTitle(params.title || 'Embed')
                     .setDescription(params.description || '')
                     .setColor((params.color || '#00d4ff') as any)
                     .setTimestamp();
-                
+
                 await channel.send({ embeds: [embed] });
                 return `✅ Embed enviado.`;
             }
-            
+
             case 'reminder': {
                 const duration = (parseInt(params.duration) || 5) * 60 * 1000;
                 setTimeout(async () => {
@@ -480,10 +488,10 @@ async function executeAdminAction(message: Message, action: string, params: Reco
                 }, duration);
                 return `✅ Lembrete agendado para ${params.duration || 5} min.`;
             }
-            
+
             case 'none':
                 return null;
-                
+
             default:
                 return null;
         }
@@ -521,10 +529,10 @@ async function runChatGeralLogic(message: Message): Promise<void> {
     // SaaS: Carregar configuração do servidor
     const guildId = message.guild!.id;
     const config = await getGuildConfig(guildId);
-    
+
     // Se não tiver canal configurado, ignora
     if (!config?.ia_channel_id) return;
-    
+
     // Verifica se é o canal correto
     if (message.channel.id !== config.ia_channel_id) {
         // Se mencionou o bot fora do canal oficial, avisa
@@ -546,8 +554,8 @@ async function runChatGeralLogic(message: Message): Promise<void> {
         }
     }
 
-    if (message.mentions.has(client.user!) || 
-        /\b(nexstar|ia|bot)\b/i.test(message.content.toLowerCase()) || 
+    if (message.mentions.has(client.user!) ||
+        /\b(nexstar|ia|bot)\b/i.test(message.content.toLowerCase()) ||
         (message.reference && (await message.channel.messages.fetch(message.reference.messageId!).catch(() => null))?.author.id === client.user?.id) ||
         (conversasAtivas.has(message.author.id) && Date.now() - conversasAtivas.get(message.author.id)! < 60000)) {
         deveResponder = true;
@@ -583,7 +591,7 @@ async function runChatGeralLogic(message: Message): Promise<void> {
 
             // SaaS: Personalidade Dinâmica
             const promptSistema = config.ia_system_prompt || `Você é a IA da Nexstar. Personalidade ÁCIDA. Usuario: ${contextoUsuario}`;
-            
+
             const resposta = await llmService.gerarResposta(historicoContexto, promptSistema, imageUrl);
             await message.reply(resposta);
         } catch (err) {
@@ -645,22 +653,22 @@ client.on('messageCreate', async (message: Message) => {
     // Admin commands
     const isAdminPrefix = conteudoLower.startsWith('ia,') || conteudoLower.startsWith('ia ');
     const isMention = message.mentions.users.has(client.user!.id);
-    
+
     if ((isAdminPrefix || isMention) && message.guild) {
         if (isAuthorized(message.member)) {
             logger.info(`🔐 Comando admin: ${message.content}`);
-            
+
             const channelMentions = message.content.match(/<#(\d+)>/g) || [];
             const firstChannelMention = channelMentions[0] || null;
-            
+
             const parsed = await parseAdminCommand(message.content);
-            
+
             if (parsed.params && firstChannelMention) {
                 if (parsed.params.channelName && !parsed.params.channelName.match(/<#\d+>/)) {
                     parsed.params.channelName = firstChannelMention;
                 }
             }
-            
+
             if (parsed.action && parsed.action !== 'none') {
                 const result = await executeAdminAction(message, parsed.action, parsed.params || {});
                 if (result) {
@@ -677,9 +685,9 @@ client.on('messageCreate', async (message: Message) => {
 
     // Chat geral (SaaS - check inside function)
     await runChatGeralLogic(message);
-    
+
     // Chat privado
-    if (CATEGORIA_ASSISTENTE && message.channel.isTextBased() && 'parentId' in message.channel && 
+    if (CATEGORIA_ASSISTENTE && message.channel.isTextBased() && 'parentId' in message.channel &&
         message.channel.parentId === CATEGORIA_ASSISTENTE && message.channel.name.startsWith('chat-ia-')) {
         await runChatPrivadoLogic(message);
     }
@@ -691,7 +699,7 @@ client.on('interactionCreate', async (interaction) => {
 
     if (interaction.commandName === 'config-ia') {
         if (!verificationCheck(interaction.guildId)) return;
-        
+
         await interaction.deferReply({ ephemeral: true });
         const sub = interaction.options.getSubcommand();
         const guildId = interaction.guildId!;
@@ -703,7 +711,7 @@ client.on('interactionCreate', async (interaction) => {
                     await interaction.editReply('❌ O canal deve ser de texto.');
                     return;
                 }
-                
+
                 await upsertGuildConfig(guildId, { ia_channel_id: channel.id });
                 await interaction.editReply(`✅ Canal da IA definido para ${channel}`);
                 logger.info(`Config IA (Canal) atualizada para guild ${guildId}`);
@@ -719,15 +727,15 @@ client.on('interactionCreate', async (interaction) => {
             else if (sub === 'cargos') {
                 const role1 = interaction.options.getRole('cargo1', true);
                 const role2 = interaction.options.getRole('cargo2');
-                
+
                 const roles = [role1.id];
                 if (role2) roles.push(role2.id);
-                
+
                 // Convert array to string format that PG expects if needed, or update DB type handler
                 // Assuming upsertGuildConfig handles string[] for ia_admin_roles
                 // Note: The schema defines text[], so passing string[] is fine in node-postgres
-                
-                await upsertGuildConfig(guildId, { ia_admin_roles: roles as any }); 
+
+                await upsertGuildConfig(guildId, { ia_admin_roles: roles as any });
                 await interaction.editReply(`✅ Cargos de Admin da IA definidos: ${roles.map(r => `<@&${r}>`).join(', ')}`);
             }
 
@@ -747,9 +755,9 @@ client.on('interactionCreate', async (interaction) => {
             logger.error('Erro ao salvar config IA', { error: error as any });
             await interaction.editReply('❌ Erro ao salvar configuração no banco de dados.');
         }
-    
+
     }
-    
+
     if (interaction.commandName === 'construir-servidor') {
         logger.info('🏗️ Comando /construir-servidor recebido');
         try {
@@ -770,7 +778,7 @@ client.on('interactionCreate', async (interaction) => {
 
             // 1. Gerar Arquitetura
             const schema = await serverBuilder.generateServerPlan(theme);
-            
+
             if (!schema) {
                 await interaction.editReply('❌ Falha ao projetar o servidor. A IA não retornou um plano válido. Tente novamente.');
                 return;
@@ -780,12 +788,12 @@ client.on('interactionCreate', async (interaction) => {
 
             // 2. Construir
             await serverBuilder.buildServer(guild, schema, async (msg) => {
-                 logger.info(msg);
+                logger.info(msg);
             });
 
-            await interaction.followUp({ 
-                content: `✅ **Servidor Construído com Sucesso!** 🚀\nTema: ${theme.substring(0, 100)}${theme.length > 100 ? '...' : ''}\n\n*Nota: Ajuste as permissões de canais se necessário.*`, 
-                ephemeral: false 
+            await interaction.followUp({
+                content: `✅ **Servidor Construído com Sucesso!** 🚀\nTema: ${theme.substring(0, 100)}${theme.length > 100 ? '...' : ''}\n\n*Nota: Ajuste as permissões de canais se necessário.*`,
+                ephemeral: false
             });
 
         } catch (error) {
@@ -794,9 +802,9 @@ client.on('interactionCreate', async (interaction) => {
             try {
                 // Tenta responder se ainda não tiver respondido, ou editar se já tiver diferido
                 if (interaction.deferred || interaction.replied) {
-                     await interaction.followUp({ content: `❌ Ocorreu um erro: ${errorMsg}`, ephemeral: true });
+                    await interaction.followUp({ content: `❌ Ocorreu um erro: ${errorMsg}`, ephemeral: true });
                 } else {
-                     await interaction.reply({ content: `❌ Ocorreu um erro: ${errorMsg}`, ephemeral: true });
+                    await interaction.reply({ content: `❌ Ocorreu um erro: ${errorMsg}`, ephemeral: true });
                 }
             } catch (err) {
                 // Se falhar até em reportar o erro (ex: Unknown Interaction), apenas loga
@@ -823,7 +831,7 @@ client.on('interactionCreate', async (interaction) => {
 
             // 1. Gerar Plano de Ajustes
             const schema = await serverBuilder.generateAdjustmentPlan(acao);
-            
+
             if (!schema || !schema.actions || schema.actions.length === 0) {
                 await interaction.editReply('❌ Não consegui entender o pedido. Tente ser mais específico.');
                 return;
@@ -836,9 +844,9 @@ client.on('interactionCreate', async (interaction) => {
                 logger.info(msg);
             });
 
-            await interaction.followUp({ 
-                content: `✅ **Ajustes Concluídos!**\n${schema.message || 'Todas as modificações foram aplicadas.'}`, 
-                ephemeral: false 
+            await interaction.followUp({
+                content: `✅ **Ajustes Concluídos!**\n${schema.message || 'Todas as modificações foram aplicadas.'}`,
+                ephemeral: false
             });
 
         } catch (error) {
@@ -846,9 +854,9 @@ client.on('interactionCreate', async (interaction) => {
             logger.error('Erro ao ajustar servidor:', { error: error as any });
             try {
                 if (interaction.deferred || interaction.replied) {
-                     await interaction.followUp({ content: `❌ Ocorreu um erro: ${errorMsg}`, ephemeral: true });
+                    await interaction.followUp({ content: `❌ Ocorreu um erro: ${errorMsg}`, ephemeral: true });
                 } else {
-                     await interaction.reply({ content: `❌ Ocorreu um erro: ${errorMsg}`, ephemeral: true });
+                    await interaction.reply({ content: `❌ Ocorreu um erro: ${errorMsg}`, ephemeral: true });
                 }
             } catch (err) {
                 console.error('Erro crítico na interação:', err);
@@ -857,18 +865,35 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     else if (interaction.commandName === 'ajuda-ia') {
-        await interaction.reply({ 
-            content: 'Use `/config-ia` para configurar o bot!\n\n**Comandos Disponíveis:**\n`/config-ia canal` - Define onde eu falo\n`/config-ia personalidade` - Define quem eu sou\n`/config-ia cargos` - Define quem manda em mim\n`/construir-servidor` - Cria estrutura completa\n`/ajustar-servidor` - Modifica servidor existente', 
-            ephemeral: true 
+        await interaction.reply({
+            content: 'Use `/config-ia` para configurar o bot!\n\n**Comandos Disponíveis:**\n`/config-ia canal` - Define onde eu falo\n`/config-ia personalidade` - Define quem eu sou\n`/config-ia cargos` - Define quem manda em mim\n`/construir-servidor` - Cria estrutura completa\n`/ajustar-servidor` - Modifica servidor existente',
+            ephemeral: true
         });
     }
-}); 
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 🤖 EXECUÇÃO DE COMANDOS PERSONALIZADOS
+    // ═══════════════════════════════════════════════════════════════════════════
+    else {
+        try {
+            const guildId = interaction.guildId;
+            if (guildId) {
+                const customCommand = await customCommandService.get(guildId, interaction.commandName);
+                if (customCommand && customCommand.enabled) {
+                    await commandEngine.execute(interaction, customCommand.actions);
+                }
+            }
+        } catch (error) {
+            // Silently fail to avoid spam
+        }
+    }
+});
 
 function verificationCheck(_guildId: string | null): boolean {
     if (!dbConnected) {
-         try { return false; } catch {}
+        try { return false; } catch { }
     }
-    return true; 
+    return true;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -877,10 +902,10 @@ function verificationCheck(_guildId: string | null): boolean {
 
 function verificarInatividade(): void {
     logger.info(`⏳ Monitor de inatividade iniciado (${TEMPO_OCIOSO_PARA_ENGAJAR / 60000} min)`);
-    
+
     setInterval(async () => {
         const tempoPassado = Date.now() - ultimoTempoMensagemGeral;
-        
+
         if (tempoPassado > TEMPO_OCIOSO_PARA_ENGAJAR) {
             /* 
             // SaaS: Inactivity monitor needs to be per-guild. 
@@ -925,54 +950,56 @@ const commands = [
         .setName('config-ia')
         .setDescription('⚙️ Configura a IA no seu servidor')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-        .addSubcommand(sub => 
+        .addSubcommand(sub =>
             sub.setName('canal')
-               .setDescription('Define o canal onde a IA irá conversar')
-               .addChannelOption(opt => 
-                   opt.setName('canal')
-                      .setDescription('Canal de texto')
-                      .addChannelTypes(ChannelType.GuildText)
-                      .setRequired(true)
-               )
+                .setDescription('Define o canal onde a IA irá conversar')
+                .addChannelOption(opt =>
+                    opt.setName('canal')
+                        .setDescription('Canal de texto')
+                        .addChannelTypes(ChannelType.GuildText)
+                        .setRequired(true)
+                )
         )
-        .addSubcommand(sub => 
+        .addSubcommand(sub =>
             sub.setName('personalidade')
-               .setDescription('Define a personalidade da IA')
-               .addStringOption(opt => 
-                   opt.setName('prompt')
-                      .setDescription('Ex: Você é um pirata espacial bravo')
-                      .setRequired(true)
-               )
+                .setDescription('Define a personalidade da IA')
+                .addStringOption(opt =>
+                    opt.setName('prompt')
+                        .setDescription('Ex: Você é um pirata espacial bravo')
+                        .setRequired(true)
+                )
         )
-        .addSubcommand(sub => 
+        .addSubcommand(sub =>
             sub.setName('cargos')
-               .setDescription('Define cargos que podem usar comandos admin da IA')
-               .addRoleOption(opt => opt.setName('cargo1').setDescription('Cargo Admin 1').setRequired(true))
-               .addRoleOption(opt => opt.setName('cargo2').setDescription('Cargo Admin 2'))
+                .setDescription('Define cargos que podem usar comandos admin da IA')
+                .addRoleOption(opt => opt.setName('cargo1').setDescription('Cargo Admin 1').setRequired(true))
+                .addRoleOption(opt => opt.setName('cargo2').setDescription('Cargo Admin 2'))
         )
-        .addSubcommand(sub => 
+        .addSubcommand(sub =>
             sub.setName('status')
-               .setDescription('Verifica as configurações atuais')
+                .setDescription('Verifica as configurações atuais')
         ),
     new SlashCommandBuilder().setName('ajuda-ia').setDescription('💡 Mostra comandos da IA'),
     new SlashCommandBuilder()
         .setName('construir-servidor')
         .setDescription('🏗️ Cria canais e cargos baseado na sua descrição')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-        .addStringOption(opt => 
+        .addStringOption(opt =>
             opt.setName('tema')
-               .setDescription('Ex: RPG Medieval com economia e 3 classes')
-               .setRequired(true)
+                .setDescription('Ex: RPG Medieval com economia e 3 classes')
+                .setRequired(true)
         ),
     new SlashCommandBuilder()
         .setName('ajustar-servidor')
         .setDescription('🔧 Modifica canais/cargos usando linguagem natural')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-        .addStringOption(opt => 
+        .addStringOption(opt =>
             opt.setName('acao')
-               .setDescription('Ex: Adicionar canal de voz na categoria Gaming')
-               .setRequired(true)
-        )
+                .setDescription('Ex: Adicionar canal de voz na categoria Gaming')
+                .setRequired(true)
+        ),
+    ...PRIVATE_CALLS_EVENTS.commands,
+    ...TICKET_EVENTS.commands
 ];
 
 import { REST } from 'discord.js';
@@ -983,9 +1010,9 @@ async function registerCommands(clientId: string) {
     try {
         const commandNames = commands.map(c => c.name).join(', ');
         logger.info(`Registrando ${commands.length} slash commands: [${commandNames}]...`);
-        
+
         await rest.put(Routes.applicationCommands(clientId), { body: commands });
-        
+
         logger.info('✅ Slash commands registrados com sucesso no Discord!');
         logger.info('⚠️ Nota: Comandos globais podem levar até 1 hora para atualizar em todos os servidores. Se precisar urgente, reinicie o cliente Discord (Ctrl+R).');
     } catch (error) {
@@ -999,15 +1026,15 @@ async function registerCommands(clientId: string) {
 
 client.once('ready', async () => {
     logger.info(`🤖 Bot NexstarIA ${client.user?.tag} está online!`);
-    
+
     // Iniciar verificação de inatividade
     verificarInatividade();
-    
+
     // Registrar comandos SEMPRE (independente do database)
     if (client.user) {
         await registerCommands(client.user.id);
     }
-    
+
     try {
         const connected = await testConnection();
         if (connected) {
@@ -1019,6 +1046,14 @@ client.once('ready', async () => {
         logger.warn('⚠️ Database não disponível, usando apenas memória');
     }
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🌌 MÓDULOS INTEGRADOS
+// ═══════════════════════════════════════════════════════════════════════════
+setupWelcomeEvents(client);
+setupAutoModEvents(client);
+setupTicketEvents(client);
+setupPrivateCallsEvents(client);
 
 client.login(TOKEN).catch(error => {
     logger.error('Falha no login:', error);

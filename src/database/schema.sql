@@ -14,6 +14,16 @@ CREATE TABLE IF NOT EXISTS guild_configs (
     leave_channel_id VARCHAR(20),
     logs_channel_id VARCHAR(20),
     staff_role_id VARCHAR(20),
+
+    -- Configurações Welcome/Leave
+    welcome_message TEXT DEFAULT 'Bem-vindo ao servidor {user}!',
+    leave_message TEXT DEFAULT '{user} saiu do servidor.',
+    autorole_id VARCHAR(20),
+
+    -- Configurações AutoMod
+    automod_links_enabled BOOLEAN DEFAULT false,
+    automod_caps_enabled BOOLEAN DEFAULT false,
+    automod_spam_enabled BOOLEAN DEFAULT false,
     
     -- Configurações NexstarIA (SaaS)
     ia_enabled BOOLEAN DEFAULT true,
