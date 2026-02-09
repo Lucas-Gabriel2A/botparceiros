@@ -14,12 +14,45 @@ export async function refreshGuildCommands(guildId: string) {
 
         const discordCommands = customCommands
             .filter(cmd => cmd.enabled)
-            .map(cmd =>
-                new SlashCommandBuilder()
+            .map(cmd => {
+                const builder = new SlashCommandBuilder()
                     .setName(cmd.name)
-                    .setDescription(cmd.description)
-                    .toJSON()
-            );
+                    .setDescription(cmd.description);
+
+                if (cmd.options && Array.isArray(cmd.options)) {
+                    cmd.options.forEach((opt: any) => {
+                        const required = opt.required || false;
+                        switch (opt.type) {
+                            case 'STRING':
+                                builder.addStringOption(o => o.setName(opt.name).setDescription(opt.description).setRequired(required));
+                                break;
+                            case 'USER':
+                                builder.addUserOption(o => o.setName(opt.name).setDescription(opt.description).setRequired(required));
+                                break;
+                            case 'CHANNEL':
+                                builder.addChannelOption(o => o.setName(opt.name).setDescription(opt.description).setRequired(required));
+                                break;
+                            case 'ROLE':
+                                builder.addRoleOption(o => o.setName(opt.name).setDescription(opt.description).setRequired(required));
+                                break;
+                            case 'INTEGER':
+                                builder.addIntegerOption(o => o.setName(opt.name).setDescription(opt.description).setRequired(required));
+                                break;
+                            case 'BOOLEAN':
+                                builder.addBooleanOption(o => o.setName(opt.name).setDescription(opt.description).setRequired(required));
+                                break;
+                            case 'NUMBER':
+                                builder.addNumberOption(o => o.setName(opt.name).setDescription(opt.description).setRequired(required));
+                                break;
+                            case 'ATTACHMENT':
+                                builder.addAttachmentOption(o => o.setName(opt.name).setDescription(opt.description).setRequired(required));
+                                break;
+                        }
+                    });
+                }
+
+                return builder.toJSON();
+            });
 
         // Always put, even if empty, to clear commands if all were deleted/disabled
         const rest = new REST({ version: '10' }).setToken(TOKEN);

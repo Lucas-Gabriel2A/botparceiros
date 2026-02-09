@@ -103,7 +103,7 @@ export function getPool(): Pool {
             connectionString: databaseUrl,
             max: 10,
             idleTimeoutMillis: 30000,
-            connectionTimeoutMillis: 5000,
+            connectionTimeoutMillis: 20000,
             ssl: {
                 rejectUnauthorized: false // Railway uses self-signed certs (Required for connecting to Railway's Postgres from external sources)
             }
@@ -266,13 +266,15 @@ CREATE TABLE IF NOT EXISTS custom_commands (
     description TEXT,
     response TEXT,
     actions JSONB DEFAULT '[]',
+    options JSONB DEFAULT '[]',
     enabled BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT NOW(),
     created_by VARCHAR(20),
+    created_at TIMESTAMP DEFAULT NOW(),
     UNIQUE(guild_id, name)
 );
 
 CREATE INDEX IF NOT EXISTS idx_custom_commands_guild ON custom_commands(guild_id);
+
 `;
 
 export async function initializeSchema(): Promise<void> {
@@ -312,6 +314,12 @@ export async function initializeSchema(): Promise<void> {
                 ADD COLUMN IF NOT EXISTS support_role_id VARCHAR(20),
                 ADD COLUMN IF NOT EXISTS welcome_title VARCHAR(255),
                 ADD COLUMN IF NOT EXISTS welcome_description TEXT;
+            `);
+
+            // Custom Commands Migration
+            await query(`
+                ALTER TABLE custom_commands
+                ADD COLUMN IF NOT EXISTS options JSONB DEFAULT '[]';
             `);
 
             logger.info('✅ Schema migrado: colunas verificadas.');
@@ -795,6 +803,7 @@ export interface CustomCommand extends QueryResultRow {
     description: string;
     response: string | null;
     actions: any; // JSONB
+    options?: any; // JSONB
     enabled: boolean;
     created_by: string;
     created_at: Date;
@@ -807,13 +816,14 @@ export async function createCustomCommand(
     description: string,
     response: string | null,
     actions: any[],
-    createdBy: string
+    createdBy: string,
+    options: any[] = []
 ): Promise<CustomCommand> {
     const result = await query<CustomCommand>(
-        `INSERT INTO custom_commands (id, guild_id, name, description, response, actions, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO custom_commands (id, guild_id, name, description, response, actions, created_by, options)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING *`,
-        [id, guildId, name, description, response, JSON.stringify(actions), createdBy]
+        [id, guildId, name, description, response, JSON.stringify(actions), createdBy, JSON.stringify(options)]
     );
     return result.rows[0];
 }

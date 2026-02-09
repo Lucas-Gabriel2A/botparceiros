@@ -20,7 +20,7 @@
     "start:indica": "node dist/bots/indica/index.js",
     "start:indica:ts": "ts-node src/bots/indica/index.ts",
     "start:ia": "node dist/bots/nexstaria/index.js",
-    "start:ia:ts": "ts-node src/bots/nexstaria/index.ts",
+    "start:ia:ts": "ts-node src/bots/CoreIA/index.ts",
     "build": "tsc",
     "build:watch": "tsc --watch",
     "cleanup": "node src/utils/cleanup.js",

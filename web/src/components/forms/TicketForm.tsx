@@ -21,13 +21,13 @@ import {
 interface TicketCategory {
     id: string;
     name: string;
-    description: string | null;
-    color: string | null;
-    emoji: string | null;
-    ticket_channel_category_id: string | null;
-    support_role_id: string | null;
-    welcome_title: string | null;
-    welcome_description: string | null;
+    description?: string | null;
+    color?: string | null;
+    emoji?: string | null;
+    ticket_channel_category_id?: string | null;
+    support_role_id?: string | null;
+    welcome_title?: string | null;
+    welcome_description?: string | null;
 }
 
 interface TicketFormProps {

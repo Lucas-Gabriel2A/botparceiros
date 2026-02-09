@@ -878,13 +878,40 @@ client.on('interactionCreate', async (interaction) => {
         try {
             const guildId = interaction.guildId;
             if (guildId) {
+                // ⚡ DEFER IMMEDIATELLY to prevent timeout (DB query can take >3s)
+                // We assume public visibility (ephemeral: false) by default for custom commands.
+                // Ideally we would check the command config first, but we can't wait for DB.
+                if (!interaction.deferred && !interaction.replied) {
+                    await interaction.deferReply({ ephemeral: false });
+                }
+
+                logger.info(`🔍 Buscando comando personalizado: ${interaction.commandName} para guild ${guildId}`);
                 const customCommand = await customCommandService.get(guildId, interaction.commandName);
+
                 if (customCommand && customCommand.enabled) {
+                    logger.info(`✅ Comando encontrado: ${customCommand.name}. Executando...`);
                     await commandEngine.execute(interaction, customCommand.actions);
+                } else {
+                    logger.warn(`⚠️ Comando personalizado não encontrado ou desativado: ${interaction.commandName}`);
+
+                    // Cleanup the deferred reply if command not found
+                    if (interaction.deferred) {
+                        await interaction.deleteReply().catch(() => { });
+                        if (!interaction.replied) { // Double check
+                            await interaction.followUp({ content: '❌ Comando desconhecido ou indisponível.', ephemeral: true }).catch(() => { });
+                        }
+                    } else if (!interaction.replied) {
+                        await interaction.reply({ content: '❌ Este comando não está mais disponível ou foi desativado.', ephemeral: true });
+                    }
                 }
             }
         } catch (error) {
-            // Silently fail to avoid spam
+            logger.error(`❌ Erro crítico ao processar comando personalizado ${interaction.commandName}:`, { error });
+            if (interaction.deferred) {
+                await interaction.followUp({ content: '❌ Erro interno ao processar comando.', ephemeral: true }).catch(() => { });
+            } else if (!interaction.replied) {
+                await interaction.reply({ content: '❌ Erro interno ao processar comando.', ephemeral: true });
+            }
         }
     }
 });

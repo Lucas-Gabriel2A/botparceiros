@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Wand2, Save, Play, Loader2, Code2, Trash2, Power, Bot, Sparkles, MessageSquare, Terminal } from 'lucide-react';
 import { toast } from 'sonner';
-import { generateCommandAction, saveCommandAction, deleteCommandAction, toggleCommandAction } from '@/app/actions/custom-commands-actions';
+import { createCustomCommandAction, deleteCustomCommandAction, toggleCustomCommandAction, generateCommandAction } from '@/actions/command-actions';
 import { useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -48,7 +48,16 @@ export function CommandGenerator({ guildId, userId, existingCommands }: CommandG
         if (!generatedCommand) return;
         setIsSaving(true);
         try {
-            const result = await saveCommandAction(guildId, generatedCommand, userId);
+            const formData = new FormData();
+            formData.append('guildId', guildId);
+            formData.append('name', generatedCommand.name);
+            formData.append('description', generatedCommand.description);
+            formData.append('response', generatedCommand.response || '');
+            formData.append('actions', JSON.stringify(generatedCommand.actions));
+            formData.append('options', JSON.stringify(generatedCommand.options || []));
+            formData.append('userId', userId);
+
+            const result = await createCustomCommandAction({}, formData);
             if (result.success) {
                 toast.success('Comando salvo e registrado no Discord!');
                 setGeneratedCommand(null);
@@ -66,7 +75,7 @@ export function CommandGenerator({ guildId, userId, existingCommands }: CommandG
 
     async function handleDelete(id: string) {
         if (!confirm('Tem certeza que deseja excluir este comando?')) return;
-        const result = await deleteCommandAction(guildId, id);
+        const result = await deleteCustomCommandAction(id, guildId);
         if (result.success) {
             toast.success('Comando excluído.');
             router.refresh();
@@ -76,7 +85,7 @@ export function CommandGenerator({ guildId, userId, existingCommands }: CommandG
     }
 
     async function handleToggle(id: string, currentStatus: boolean) {
-        const result = await toggleCommandAction(guildId, id, !currentStatus);
+        const result = await toggleCustomCommandAction(id, !currentStatus, guildId);
         if (result.success) {
             toast.success('Status atualizado.');
             router.refresh();
