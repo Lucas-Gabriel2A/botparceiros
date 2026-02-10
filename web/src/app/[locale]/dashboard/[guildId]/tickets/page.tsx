@@ -1,7 +1,7 @@
-import { TicketForm } from "@/components/forms/TicketForm";
-import { getTicketCategories } from "@shared/services/database";
+import { getTicketCategories, getGuildConfig } from "@shared/services/database";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-service";
+import { TicketDashboardClient } from "./TicketDashboardClient";
 
 interface PageProps {
     params: Promise<{
@@ -17,16 +17,18 @@ export default async function TicketDashboardPage({ params }: PageProps) {
         redirect("/api/auth/signin");
     }
 
-    // Fetch data
-    const categories = await getTicketCategories(guildId);
+    // Fetch data in parallel
+    const [categories, guildConfig] = await Promise.all([
+        getTicketCategories(guildId),
+        getGuildConfig(guildId)
+    ]);
 
     return (
-        <div className="space-y-6">
-            <TicketForm
-                guildId={guildId}
-                userId={user.id}
-                categories={categories}
-            />
-        </div>
+        <TicketDashboardClient
+            guildId={guildId}
+            userId={user.id}
+            categories={categories}
+            guildConfig={guildConfig || {}}
+        />
     );
 }

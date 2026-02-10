@@ -1,9 +1,9 @@
 /**
- * ╔═══════════════════════════════════════════════════════════════════════════╗
- * ║                      NEXSTAR DATABASE SERVICE                             ║
- * ║                   PostgreSQL Connection + Queries                         ║
- * ╚═══════════════════════════════════════════════════════════════════════════╝
- */
+* ╔═══════════════════════════════════════════════════════════════════════════╗
+* ║                     COREBOT DATABASE SERVICE                             ║
+* ║                   PostgreSQL Connection + Queries                         ║
+* ╚═══════════════════════════════════════════════════════════════════════════╝
+*/
 
 import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 import { config } from './config.service';
@@ -53,6 +53,15 @@ export interface GuildConfig extends QueryResultRow {
     private_calls_category_id?: string | null;
     private_calls_allowed_roles?: string[];
     private_calls_manager_role?: string | null;
+
+    // Configurações Ticket Panel
+    ticket_panel_title?: string | null;
+    ticket_panel_description?: string | null;
+    ticket_panel_banner_url?: string | null;
+    ticket_panel_color?: string | null;
+    ticket_panel_button_text?: string | null;
+    ticket_panel_button_emoji?: string | null;
+    ticket_panel_footer?: string | null;
 
     updated_at: Date;
 }
@@ -198,6 +207,13 @@ CREATE TABLE IF NOT EXISTS guild_configs (
     private_calls_category_id VARCHAR(20),
     private_calls_allowed_roles TEXT[] DEFAULT '{}',
     private_calls_manager_role VARCHAR(20),
+    ticket_panel_title VARCHAR(255),
+    ticket_panel_description TEXT,
+    ticket_panel_banner_url VARCHAR(255),
+    ticket_panel_color VARCHAR(20),
+    ticket_panel_button_text VARCHAR(50),
+    ticket_panel_button_emoji VARCHAR(50),
+    ticket_panel_footer VARCHAR(255),
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -297,7 +313,16 @@ export async function initializeSchema(): Promise<void> {
                 ADD COLUMN IF NOT EXISTS private_calls_enabled BOOLEAN DEFAULT false,
                 ADD COLUMN IF NOT EXISTS private_calls_category_id VARCHAR(20),
                 ADD COLUMN IF NOT EXISTS private_calls_allowed_roles TEXT[] DEFAULT '{}',
-                ADD COLUMN IF NOT EXISTS private_calls_manager_role VARCHAR(20);
+                ADD COLUMN IF NOT EXISTS private_calls_manager_role VARCHAR(20),
+                
+                -- Ticket Panel Customization
+                ADD COLUMN IF NOT EXISTS ticket_panel_title VARCHAR(255),
+                ADD COLUMN IF NOT EXISTS ticket_panel_description TEXT,
+                ADD COLUMN IF NOT EXISTS ticket_panel_banner_url VARCHAR(255),
+                ADD COLUMN IF NOT EXISTS ticket_panel_color VARCHAR(20),
+                ADD COLUMN IF NOT EXISTS ticket_panel_button_text VARCHAR(50),
+                ADD COLUMN IF NOT EXISTS ticket_panel_button_emoji VARCHAR(50),
+                ADD COLUMN IF NOT EXISTS ticket_panel_footer VARCHAR(255);
             `);
 
             // Ticket Migration

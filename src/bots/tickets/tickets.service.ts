@@ -17,9 +17,9 @@ import {
     createTicket as createDbTicket,
     closeTicket as closeDbTicket,
     claimTicket as claimDbTicket,
+    getGuildConfig,
     logAudit,
-    logger,
-    config
+    logger
 } from '../../shared/services';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -56,10 +56,7 @@ export const THEME = {
     }
 } as const;
 
-const NEXSTAR_BANNER = 'https://i.ibb.co/TDRDH2kq/nexstar.jpg';
-const STAFF_ROLE_ID = config.get('STAFF_ROLE_ID');
-const TICKETS_CATEGORY_ID = config.get('TICKETS_CATEGORY_ID');
-const LOGS_TICKETS = config.getOptional('LOGS_TICKETS');
+const DEFAULT_BANNER = 'https://i.ibb.co/TDRDH2kq/nexstar.jpg';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🧠 LÓGICA DE SERVIÇO
@@ -67,29 +64,46 @@ const LOGS_TICKETS = config.getOptional('LOGS_TICKETS');
 
 export async function sendTicketPanel(channel: TextChannel, guildId: string): Promise<void> {
     const categories = await getTicketCategories(guildId);
+    const guildConfig = await getGuildConfig(guildId);
+
+    logger.info(`[DEBUG] sendTicketPanel`, {
+        guildId,
+        hasConfig: !!guildConfig,
+        title: guildConfig?.ticket_panel_title,
+        desc: guildConfig?.ticket_panel_description,
+        categoriesCount: categories.length
+    });
+
+    let title = `${THEME.emojis.galaxy} Central de Tickets - Nexstar`;
+    let description = `${THEME.emojis.star} **Bem-vindo ao Sistema de Tickets!**\n\nSelecione uma categoria abaixo para abrir seu ticket.\nNossa equipe galáctica está pronta para te ajudar!\n\n${THEME.emojis.rocket} Escolha a categoria que melhor descreve sua necessidade.`;
+    let banner = DEFAULT_BANNER;
+    let color: any = THEME.colors.primary;
+    let footerText = '🌌 Nexstar - Explorando o Universo Juntos';
+
+    if (guildConfig) {
+        if (guildConfig.ticket_panel_title) title = guildConfig.ticket_panel_title;
+        if (guildConfig.ticket_panel_description) description = guildConfig.ticket_panel_description;
+        if (guildConfig.ticket_panel_banner_url) banner = guildConfig.ticket_panel_banner_url;
+        if (guildConfig.ticket_panel_color) color = guildConfig.ticket_panel_color;
+        if (guildConfig.ticket_panel_footer) footerText = guildConfig.ticket_panel_footer;
+    }
 
     const embed = new EmbedBuilder()
-        .setColor(THEME.colors.primary)
-        .setTitle(`${THEME.emojis.galaxy} Central de Tickets - Nexstar`)
-        .setDescription(`
-${THEME.emojis.star} **Bem-vindo ao Sistema de Tickets!**
-
-Selecione uma categoria abaixo para abrir seu ticket.
-Nossa equipe galáctica está pronta para te ajudar!
-
-${THEME.emojis.rocket} Escolha a categoria que melhor descreve sua necessidade.
-        `)
-        .setImage(NEXSTAR_BANNER)
-        .setThumbnail(NEXSTAR_BANNER)
-        .setFooter({ text: '🌌 Nexstar - Explorando o Universo Juntos' })
+        .setColor(color)
+        .setTitle(title)
+        .setDescription(description)
+        .setImage(banner)
+        .setThumbnail(banner)
+        .setFooter({ text: footerText })
         .setTimestamp();
 
     if (categories.length === 0) {
-        embed.addFields({
-            name: `${THEME.emojis.warning} Nenhuma Categoria`,
-            value: 'Ainda não há categorias configuradas. Use `/ticket-categoria criar` para começar.'
-        });
-        await channel.send({ embeds: [embed] });
+        const warningEmbed = new EmbedBuilder()
+            .setColor(THEME.colors.warning)
+            .setTitle(`${THEME.emojis.warning} Configuração Necessária`)
+            .setDescription('Nenhuma categoria de ticket foi encontrada.\n\nPor favor, crie categorias através do comando `/ticket-categoria criar` ou pelo painel web antes de disponibilizar o sistema.');
+
+        await channel.send({ embeds: [embed, warningEmbed] });
         return;
     }
 
@@ -97,7 +111,7 @@ ${THEME.emojis.rocket} Escolha a categoria que melhor descreve sua necessidade.
         label: cat.name,
         description: cat.description ? cat.description.substring(0, 100) : 'Sem descrição',
         value: cat.id,
-        emoji: THEME.emojis.planet
+        emoji: cat.emoji || THEME.emojis.planet
     }));
 
     const selectMenu = new StringSelectMenuBuilder()
@@ -115,13 +129,14 @@ export async function createTicketChannel(
     member: GuildMember,
     categoryId: string
 ): Promise<TextChannel | string> {
+    // Busca configs e categoria
+    const guildConfig = await getGuildConfig(guild.id);
     const categories = await getTicketCategories(guild.id);
     const category = categories.find(c => c.id === categoryId);
 
     if (!category) return "CATEGORY_NOT_FOUND";
 
-    // Verificar se já tem ticket aberto (opcional, por simplicidade vamos permitir múltiplos por enquanto ou verificar via DB)
-    // Para simplificar e seguir o original:
+    // Verificar ticket existente
     const existingChannel = guild.channels.cache.find(
         ch => ch.name === `ticket-${member.user.username.toLowerCase().replace(/[^a-z0-9]/g, '')}`
     );
@@ -129,25 +144,30 @@ export async function createTicketChannel(
     if (existingChannel) return existingChannel.toString();
 
     try {
-        const parentCategory = category.ticket_channel_category_id || TICKETS_CATEGORY_ID;
+        const parentCategory = category.ticket_channel_category_id; // Se null, cria sem categoria pai
+
+        // Define staff role (Categoria > Global > Nenhuma)
+        const staffRoleId = category.support_role_id || guildConfig?.staff_role_id;
 
         const permissionOverwrites: any[] = [
             { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-            { id: member.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
-            { id: STAFF_ROLE_ID, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages] }
+            { id: member.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] }
         ];
 
-        if (category.support_role_id && category.support_role_id !== STAFF_ROLE_ID) {
+        // Se tiver cargo de staff configurado, adiciona permissão
+        if (staffRoleId) {
             permissionOverwrites.push({
-                id: category.support_role_id,
+                id: staffRoleId,
                 allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages]
             });
+        } else {
+            logger.warn(`⚠️ Ticket criado sem cargo de staff definido (Guild: ${guild.id}, Categoria: ${category.name})`);
         }
 
         const ticketChannel = await guild.channels.create({
             name: `ticket-${member.user.username.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
             type: ChannelType.GuildText,
-            parent: parentCategory,
+            parent: parentCategory || undefined,
             permissionOverwrites
         });
 
@@ -166,7 +186,7 @@ ${THEME.emojis.rocket} Nossa equipe responderá em breve!
             `;
 
         const ticketEmbed = new EmbedBuilder()
-            .setColor(parseInt(category.color.replace('#', ''), 16) || THEME.colors.primary)
+            .setColor(category.color ? (category.color.startsWith('#') ? parseInt(category.color.replace('#', ''), 16) : THEME.colors.primary) : THEME.colors.primary)
             .setTitle(embedTitle)
             .setDescription(embedDesc)
             .addFields(
@@ -190,10 +210,10 @@ ${THEME.emojis.rocket} Nossa equipe responderá em breve!
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(closeButton, claimButton);
 
-        const pingRole = category.support_role_id || STAFF_ROLE_ID;
+        const pingRole = staffRoleId ? `<@&${staffRoleId}>` : '(Sem cargo de staff)';
 
         await ticketChannel.send({
-            content: `${member.user} | <@&${pingRole}>`,
+            content: `${member.user} | ${pingRole}`,
             embeds: [ticketEmbed],
             components: [row]
         });
@@ -215,13 +235,20 @@ ${THEME.emojis.rocket} Nossa equipe responderá em breve!
 export async function handleTicketClaim(
     interaction: any // ButtonInteraction
 ): Promise<void> {
-    if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
+    const guildConfig = await getGuildConfig(interaction.guildId!);
+    // Tenta pegar o cargo da categoria do ticket atual (precisaria ler do DB, mas aqui simplificamos usando o staff global ou verificando permissão de admin)
+
+    // Verificação básica: Tem permissão de MANAGE_MESSAGES ou é Staff Global?
+    const member = interaction.member as GuildMember;
+    const isStaff = member.permissions.has(PermissionFlagsBits.ManageMessages)
+        || (guildConfig?.staff_role_id && member.roles.cache.has(guildConfig.staff_role_id));
+
+    if (!isStaff) {
         await interaction.reply({ content: `${THEME.emojis.error} Apenas Staff pode assumir tickets!`, ephemeral: true });
         return;
     }
 
     const channel = interaction.channel as TextChannel;
-    const member = interaction.member as GuildMember;
 
     await claimDbTicket(channel.id, member.id);
 
@@ -271,9 +298,10 @@ export async function closeTicketProcess(
     categoryName: string
 ): Promise<void> {
     const transcript = await generateTranscript(channel, closedBy);
+    const guildConfig = await getGuildConfig(guild.id);
 
-    if (LOGS_TICKETS) {
-        const logsChannel = guild.channels.cache.get(LOGS_TICKETS) as TextChannel;
+    if (guildConfig?.logs_channel_id) {
+        const logsChannel = guild.channels.cache.get(guildConfig.logs_channel_id) as TextChannel;
         if (logsChannel) {
             const buffer = Buffer.from(transcript, 'utf8');
             const attachment = new AttachmentBuilder(buffer, { name: `transcript-${channel.name}.txt` });

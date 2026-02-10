@@ -10,7 +10,7 @@ cloudinary.config({
 
 export default cloudinary;
 
-export const uploadImage = async (file: File | string, folder: string = "nexstar/banners") => {
+export const uploadImage = async (file: File | string, folder: string = "corebot/banners") => {
     try {
         // If it's a base64 string or file path
         if (typeof file === 'string') {

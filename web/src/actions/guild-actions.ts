@@ -233,3 +233,42 @@ export async function updatePrivateCallsConfig(prevState: GuildConfigState, form
         return { success: false, error: "Erro ao salvar configurações." };
     }
 }
+// ... existing imports ...
+
+export async function updateTicketConfigAction(prevState: GuildConfigState, formData: FormData): Promise<GuildConfigState> {
+    try {
+        const guildId = formData.get("guildId") as string;
+        const title = formData.get("title") as string;
+        const description = formData.get("description") as string;
+        const color = formData.get("color") as string;
+        const buttonText = formData.get("buttonText") as string;
+        const buttonEmoji = formData.get("buttonEmoji") as string;
+        const footer = formData.get("footer") as string;
+
+        // Image upload logic
+        const bannerFile = formData.get("bannerFile") as File;
+        let bannerUrl = formData.get("bannerUrl") as string; // Keep existing URL if no new file
+
+        if (bannerFile && bannerFile.size > 0) {
+            bannerUrl = await uploadImage(bannerFile);
+        }
+
+        if (!guildId) return { success: false, error: "Guild ID missing" };
+
+        await database.upsertGuildConfig(guildId, {
+            ticket_panel_title: title,
+            ticket_panel_description: description,
+            ticket_panel_banner_url: bannerUrl,
+            ticket_panel_color: color,
+            ticket_panel_button_text: buttonText,
+            ticket_panel_button_emoji: buttonEmoji,
+            ticket_panel_footer: footer
+        });
+
+        revalidatePath(`/dashboard/${guildId}/tickets`);
+        return { success: true, message: "Configurações do Painel salvas!" };
+    } catch (error) {
+        console.error("Ticket Config Update Error:", error);
+        return { success: false, error: "Erro ao salvar configurações." };
+    }
+}

@@ -1,6 +1,6 @@
 /**
  * ╔═══════════════════════════════════════════════════════════════════════════╗
- * ║                         BOT WELCOME - NEXSTAR                             ║
+ * ║                         BOT WELCOME - COREBOT                             ║
  * ║                     Sistema de Boas-vindas Premium                        ║
  * ╚═══════════════════════════════════════════════════════════════════════════╝
  * 
@@ -12,18 +12,18 @@
  * - Slash commands para configuração
  */
 
-import { 
-    Client, 
-    GatewayIntentBits, 
+import {
+    Client,
+    GatewayIntentBits,
     REST,
     Routes,
     SlashCommandBuilder,
-    ActionRowBuilder, 
-    ButtonBuilder, 
-    ButtonStyle, 
-    ModalBuilder, 
-    TextInputBuilder, 
-    TextInputStyle, 
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
     AttachmentBuilder,
     MessageFlags,
     TextChannel,
@@ -40,14 +40,13 @@ import path from 'path';
 import https from 'https';
 import { URL } from 'url';
 
-import { 
-    config, 
-    logger, 
-    testConnection, 
-    initializeSchema, 
+import {
+    config,
+    logger,
+    testConnection,
+    initializeSchema,
     upsertGuildConfig,
-    closePool,
-    hasAdminPermission
+    closePool
 } from '../../shared/services';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -58,6 +57,10 @@ config.validate(['DISCORD_TOKENS', 'CLIENT_ID']);
 
 const TOKEN = config.get('DISCORD_TOKENS');
 const CLIENT_ID = config.get('CLIENT_ID');
+
+function hasAdminPermission(member: any, OWNER_ROLE_ID: string | undefined, SEMI_OWNER_ROLE_ID: string | undefined): boolean {
+    return member.permissions.has('Administrator');
+}
 const OWNER_ROLE_ID = config.getOptional('OWNER_ROLE_ID');
 const SEMI_OWNER_ROLE_ID = config.getOptional('SEMI_OWNER_ROLE_ID');
 const CATEGORY_ID = config.getOptional('CATEGORY_ID');
@@ -149,9 +152,9 @@ function saveConfigToDB(guildId: string, guildConfig: GuildConfig): void {
         configs[guildId] = guildConfig;
         fs.writeJsonSync(dbPath, configs, { spaces: 2 });
         logger.info(`Config salva para guild ${guildId}`);
-        
+
         // Sync com banco em background (não bloqueia)
-        syncConfigToDb(guildId, guildConfig).catch(() => {});
+        syncConfigToDb(guildId, guildConfig).catch(() => { });
     } catch (error) {
         logger.error('Erro ao salvar config');
     }
@@ -194,7 +197,7 @@ async function fetchWithTimeout(url: string, timeout = 5000): Promise<Response> 
 
 function getImageTypeFromBuffer(buffer: Buffer): string {
     const firstBytes = buffer.slice(0, 12);
-    
+
     if (firstBytes[0] === 0x89 && firstBytes[1] === 0x50 && firstBytes[2] === 0x4E && firstBytes[3] === 0x47) {
         return 'image/png';
     }
@@ -208,7 +211,7 @@ function getImageTypeFromBuffer(buffer: Buffer): string {
     if (firstBytes[0] === 0x47 && firstBytes[1] === 0x49 && firstBytes[2] === 0x46 && firstBytes[3] === 0x38) {
         return 'image/gif';
     }
-    
+
     return 'unknown';
 }
 
@@ -234,7 +237,7 @@ async function loadAvatarSafe(urlToLoad: string): Promise<ReturnType<typeof load
                 timeout: 2000,
                 headers: { 'User-Agent': 'DiscordBot/1.0' }
             };
-            
+
             const req = https.request(options, (res) => {
                 if (res.statusCode !== 200) {
                     reject(new Error(`HTTP ${res.statusCode}`));
@@ -244,7 +247,7 @@ async function loadAvatarSafe(urlToLoad: string): Promise<ReturnType<typeof load
                 res.on('data', (c) => chunks.push(c));
                 res.on('end', () => resolve(Buffer.concat(chunks)));
             });
-            
+
             req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
             req.on('error', (e) => reject(e));
             req.end();
@@ -275,12 +278,12 @@ function drawHexagon(ctx: CanvasRenderingContext2D, cx: number, cy: number, size
 }
 
 function renderTextCentered(
-    ctx: CanvasRenderingContext2D, 
-    text: string, 
-    centerX: number, 
-    startY: number, 
-    maxWidth: number, 
-    lineHeight = 70, 
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    centerX: number,
+    startY: number,
+    maxWidth: number,
+    lineHeight = 70,
     maxLines = 3
 ): number {
     const words = text.split(' ');
@@ -324,14 +327,14 @@ function drawCosmicBackground(ctx: CanvasRenderingContext2D, width: number, heig
     bgGradient.addColorStop(1, '#05000a');
     ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, width, height);
-    
+
     // Nebulosas
     const nebulas = [
         { x: 150, y: 100, r: 200, color1: 'rgba(138, 43, 226, 0.15)', color2: 'rgba(138, 43, 226, 0)' },
         { x: 650, y: 450, r: 250, color1: 'rgba(0, 191, 255, 0.12)', color2: 'rgba(0, 191, 255, 0)' },
         { x: 400, y: 300, r: 300, color1: 'rgba(255, 0, 128, 0.08)', color2: 'rgba(255, 0, 128, 0)' },
     ];
-    
+
     nebulas.forEach(neb => {
         const nebGrad = ctx.createRadialGradient(neb.x, neb.y, 0, neb.x, neb.y, neb.r);
         nebGrad.addColorStop(0, neb.color1);
@@ -339,19 +342,19 @@ function drawCosmicBackground(ctx: CanvasRenderingContext2D, width: number, heig
         ctx.fillStyle = nebGrad;
         ctx.fillRect(0, 0, width, height);
     });
-    
+
     // Estrelas
     for (let i = 0; i < 100; i++) {
         const x = Math.random() * width;
         const y = Math.random() * height;
         const size = Math.random() * 2 + 0.5;
-        
+
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.arc(x, y, size, 0, Math.PI * 2);
         ctx.fill();
     }
-    
+
     // Grid futurístico sutil
     ctx.strokeStyle = 'rgba(0, 255, 255, 0.03)';
     ctx.lineWidth = 1;
@@ -383,7 +386,7 @@ async function generateBanner(member: GuildMember, text: string, _isWelcome = tr
     // Fundo
     const guildConfig = getConfig(member.guild.id);
     let backgroundImage = null;
-    
+
     if (guildConfig.background && fs.existsSync(guildConfig.background)) {
         try {
             backgroundImage = await loadImage(guildConfig.background);
@@ -417,7 +420,7 @@ async function generateBanner(member: GuildMember, text: string, _isWelcome = tr
             { size: avatarRadius + 18, color: 'rgba(255, 0, 255, 0.2)', blur: 20 },
             { size: avatarRadius + 12, color: 'rgba(0, 255, 255, 0.3)', blur: 15 },
         ];
-        
+
         glowLayers.forEach(layer => {
             ctx.save();
             ctx.shadowColor = layer.color;
@@ -496,7 +499,7 @@ async function generateBanner(member: GuildMember, text: string, _isWelcome = tr
     textGrad.addColorStop(0.5, '#ff00ff');
     textGrad.addColorStop(0.7, '#ffffff');
     textGrad.addColorStop(1, '#00ffff');
-    
+
     ctx.shadowColor = '#00ffff';
     ctx.shadowBlur = 20;
     ctx.fillStyle = textGrad;
@@ -506,7 +509,7 @@ async function generateBanner(member: GuildMember, text: string, _isWelcome = tr
     // Contador de membros
     const memberCount = member.guild?.memberCount || 0;
     ctx.save();
-    
+
     const counterY = mainY + 70;
     ctx.shadowColor = '#00ffff';
     ctx.shadowBlur = 8;
@@ -519,7 +522,7 @@ async function generateBanner(member: GuildMember, text: string, _isWelcome = tr
     ctx.save();
     ctx.font = `16px ${PREFERRED_FONT}, sans-serif`;
     ctx.fillStyle = 'rgba(200, 200, 255, 0.7)';
-    ctx.fillText('━━━━━━━━━━ ✦ NEXSTAR ✦ ━━━━━━━━━━', 400, 550);
+    ctx.fillText('━━━━━━━━━━ ✦ COREBOT ✦ ━━━━━━━━━━', 400, 550);
     ctx.restore();
 
     logger.info('Banner gerado com sucesso');
@@ -528,14 +531,14 @@ async function generateBanner(member: GuildMember, text: string, _isWelcome = tr
 
 async function generateBannerFast(member: GuildMember, text: string, _isWelcome = true): Promise<Buffer> {
     const username = member?.user?.username || member?.displayName || 'Usuário';
-    
+
     const canvas = createCanvas(800, 600);
     const ctx = canvas.getContext('2d');
 
     // Fundo simples
     const guildConfig = getConfig(member.guild.id);
     let backgroundImage = null;
-    
+
     if (guildConfig.background && fs.existsSync(guildConfig.background)) {
         try {
             backgroundImage = await loadImage(guildConfig.background);
@@ -561,7 +564,7 @@ async function generateBannerFast(member: GuildMember, text: string, _isWelcome 
     const avatarCenterX = 400;
     const avatarCenterY = 180;
     const avatarRadius = 100;
-    
+
     ctx.save();
     const placeholderGradient = ctx.createRadialGradient(avatarCenterX, avatarCenterY, 0, avatarCenterX, avatarCenterY, avatarRadius);
     placeholderGradient.addColorStop(0, '#ffdd44');
@@ -587,11 +590,11 @@ async function generateBannerFast(member: GuildMember, text: string, _isWelcome 
     // Texto
     const displayText = text.replace('[username]', username);
     const mainYFast = 360;
-    
+
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = `bold 56px ${PREFERRED_FONT}, sans-serif`;
-    
+
     const gradFast = ctx.createLinearGradient(200, mainYFast - 40, 600, mainYFast + 40);
     gradFast.addColorStop(0, '#ffd54f');
     gradFast.addColorStop(0.4, '#ff8a00');
@@ -698,7 +701,7 @@ client.on('guildMemberAdd', async (member: GuildMember) => {
         logger.warn('WELCOME_CHANNEL_ID não configurado');
         return;
     }
-    
+
     const channel = member.guild.channels.cache.get(welcomeChannelId) as TextChannel | undefined;
     if (!channel) {
         logger.error(`Canal de welcome não encontrado: ${welcomeChannelId}`);
@@ -740,7 +743,7 @@ client.on('guildMemberRemove', async (member) => {
         logger.warn('LEAVE_CHANNEL_ID não configurado');
         return;
     }
-    
+
     const channel = guildMember.guild.channels.cache.get(leaveChannelId) as TextChannel | undefined;
     if (!channel) {
         logger.error(`Canal de leave não encontrado: ${leaveChannelId}`);
@@ -777,7 +780,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
     // Comandos
     if (interaction.isChatInputCommand()) {
         const member = interaction.member as GuildMember;
-        
+
         if (!hasPermission(member)) {
             await safeReply(interaction, '❌ Sem permissão.');
             return;
@@ -859,7 +862,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
     // Botões
     if (interaction.isButton()) {
         const member = interaction.member as GuildMember;
-        
+
         if (!hasPermission(member)) {
             await safeReply(interaction, '❌ Sem permissão.');
             return;
@@ -914,13 +917,13 @@ client.on('interactionCreate', async (interaction: Interaction) => {
                 try {
                     const guildConfig = getConfig(interaction.guildId!);
                     let buffer: Buffer;
-                    
+
                     try {
                         buffer = await generateBanner(member, guildConfig.welcomeText, true);
                     } catch (avatarError) {
                         buffer = await generateBannerFast(member, guildConfig.welcomeText, true);
                     }
-                    
+
                     const attachment = new AttachmentBuilder(buffer, { name: 'preview.png' });
                     await interaction.editReply({ content: '🌌 **Preview:**', files: [attachment] });
                 } catch (previewError) {
@@ -975,7 +978,7 @@ client.on('messageCreate', async (message: Message) => {
 
     const isWelcomeChannel = message.channel.id === getWelcomeChannelId(message.guild.id);
     const isLeaveChannel = message.channel.id === getLeaveChannelId(message.guild.id);
-    
+
     if (!isWelcomeChannel && !isLeaveChannel) return;
 
     const member = message.member;
@@ -983,7 +986,7 @@ client.on('messageCreate', async (message: Message) => {
 
     for (const attachment of message.attachments.values()) {
         logger.info(`Processando anexo: ${attachment.name}`);
-        
+
         const maxSize = 5 * 1024 * 1024;
         if (attachment.size > maxSize) {
             await message.reply('❌ A imagem deve ter no máximo 5MB!');
@@ -991,21 +994,21 @@ client.on('messageCreate', async (message: Message) => {
         }
 
         const filePath = path.join(backgroundsPath, `background_${message.guild.id}.png`);
-        
+
         try {
             const response = await fetchWithTimeout(attachment.url, 30000);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            
+
             const arrayBuffer = await response.arrayBuffer();
             const imageBuffer = Buffer.from(arrayBuffer);
-            
+
             const realImageType = getImageTypeFromBuffer(imageBuffer);
-            
+
             if (!['image/png', 'image/jpeg'].includes(realImageType)) {
                 await message.reply(`❌ **Formato não suportado!**\n\nTipo detectado: \`${realImageType}\`\nUse apenas PNG ou JPEG.`);
                 continue;
             }
-            
+
             // Validar imagem
             try {
                 await loadImage(imageBuffer);
@@ -1015,14 +1018,14 @@ client.on('messageCreate', async (message: Message) => {
             }
 
             fs.writeFileSync(filePath, imageBuffer);
-            
+
             const guildConfig = getConfig(message.guild.id);
             guildConfig.background = filePath;
             saveConfigToDB(message.guild.id, guildConfig);
-            
+
             const stats = fs.statSync(filePath);
             await message.reply(`✅ **Background atualizado com sucesso!**\n\n📊 **Detalhes:**\n• Tipo: ${realImageType}\n• Tamanho: ${Math.round(stats.size / 1024)}KB\n\n🌌 Use \`/config-welcome\` → Preview para ver o resultado!`);
-            
+
         } catch (error) {
             logger.error('Erro ao processar background');
             await message.reply('❌ Erro ao processar o background.');
@@ -1036,7 +1039,7 @@ client.on('messageCreate', async (message: Message) => {
 
 client.once('ready', async () => {
     logger.info(`✅ Bot Welcome ${client.user?.tag} está online!`);
-    
+
     // Inicializar banco de dados
     try {
         const connected = await testConnection();

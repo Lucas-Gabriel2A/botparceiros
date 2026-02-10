@@ -223,11 +223,11 @@ OPÇÕES (Slash Command Options):
 - Types: STRING, USER, CHANNEL, ROLE, INTEGER, BOOLEAN, NUMBER, ATTACHMENT.
 
 REGRAS CRÍTICAS PARA TIPO DE COMANDO:
-1.      - Se o comando envolve uma ação em um usuário (banir, mudar apelido), DEVE haver uma option do tipo USER, se possível `required: true`.
-      - Opções auxiliares (ex: "novo apelido", "cargo a dar") devem ser `required: false` para permitir que o comando seja flexível (ex: mudar só o apelido sem mudar cargo).
-      - Se o usuário pedir "Adicionar ou Remover", crie opções com nomes claros. Observação: O bot executa TODAS as ações sequencialmente. Não há lógica condicional (IF). Se o usuário não preencher a opção opcional, a ação associada será ignorada.
-      - Para comandos de "mudar apelido", a opção DEVE ser STRING.
-      - Para comandos de "dar cargo", a opção DEVE ser ROLE.
+1. Se o comando envolve uma ação em um usuário (banir, mudar apelido), DEVE haver uma option do tipo USER, se possível 'required: true'.
+   - Opções auxiliares (ex: "novo apelido", "cargo a dar") devem ser 'required: false' para permitir que o comando seja flexível.
+   - Se o usuário pedir "Adicionar ou Remover", crie opções com nomes claros.
+   - Para comandos de "mudar apelido", a opção DEVE ser STRING.
+   - Para comandos de "dar cargo", a opção DEVE ser ROLE.
    - Se o comando envolve INTERAGIR COM OUTRO USUÁRIO (beijar, banir, mudar apelido, dar cargo), VOCÊ DEVE CRIAR UMA OPÇÃO 'type: USER'.
    - Ex: "Comando para mudar apelido" -> options: [{name: "usuario", type: "USER"}, {name: "novo_apelido", type: "STRING"}]
    - Ex: "Banir alguém" -> options: [{name: "alvo", type: "USER", required: true}]

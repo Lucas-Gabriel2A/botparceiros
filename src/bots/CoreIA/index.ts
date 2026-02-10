@@ -1,6 +1,6 @@
 /**
  * ╔═══════════════════════════════════════════════════════════════════════════╗
- * ║                      NEXSTAR IA - ASSISTENTE INTELIGENTE                  ║
+ * ║                      COREBOT IA - ASSISTENTE INTELIGENTE                  ║
  * ║                        Chat IA + Admin Commands                           ║
  * ╚═══════════════════════════════════════════════════════════════════════════╝
  * 
@@ -110,7 +110,7 @@ class LLMService {
 
 
 
-    async gerarResposta(mensagens: ChatMessage[], systemPrompt = "Você é a IA da Nexstar.", imageUrl: string | null = null): Promise<string> {
+    async gerarResposta(mensagens: ChatMessage[], systemPrompt = "Você é a IA do CoreBot.", imageUrl: string | null = null): Promise<string> {
         if (this.mode === 'MOCK') {
             await new Promise(r => setTimeout(r, 1000));
             return `[MOCK] Recebi texto e ${imageUrl ? 'uma imagem' : 'nenhuma imagem'}. Configure a API Key!`;
@@ -281,7 +281,7 @@ async function executeAdminAction(message: Message, action: string, params: Reco
                 await member.timeout(duration, params.reason || 'Sem motivo');
 
                 try {
-                    await member.send(`⚠️ **Timeout no Nexstar!**\nMotivo: ${params.reason || 'Não especificado'}\nDuração: ${params.duration || 5} min`);
+                    await member.send(`⚠️ **Timeout no CoreBot!**\nMotivo: ${params.reason || 'Não especificado'}\nDuração: ${params.duration || 5} min`);
                 } catch { }
 
                 return `✅ ${member.user.tag} em timeout por ${params.duration || 5} min.`;
@@ -292,7 +292,7 @@ async function executeAdminAction(message: Message, action: string, params: Reco
                     await guild.members.fetch(params.targetUser).catch(() => null);
                 if (!member) return '❌ Usuário não encontrado.';
 
-                try { await member.send(`⚠️ **Expulso do Nexstar!**\nMotivo: ${params.reason || 'Não especificado'}`); } catch { }
+                try { await member.send(`⚠️ **Expulso do CoreBot!**\nMotivo: ${params.reason || 'Não especificado'}`); } catch { }
                 await member.kick(params.reason);
                 return `✅ ${member.user.tag} foi expulso.`;
             }
@@ -302,7 +302,7 @@ async function executeAdminAction(message: Message, action: string, params: Reco
                     await guild.members.fetch(params.targetUser).catch(() => null);
                 if (!member) return '❌ Usuário não encontrado.';
 
-                try { await member.send(`🔨 **Banido do Nexstar!**\nMotivo: ${params.reason || 'Não especificado'}`); } catch { }
+                try { await member.send(`🔨 **Banido do CoreBot!**\nMotivo: ${params.reason || 'Não especificado'}`); } catch { }
                 await member.ban({ reason: params.reason });
                 return `🔨 ${member.user.tag} foi BANIDO.`;
             }
@@ -316,7 +316,7 @@ async function executeAdminAction(message: Message, action: string, params: Reco
             case 'warn': {
                 const member = message.mentions.members?.first();
                 if (!member) return '❌ Mencione o usuário.';
-                try { await member.send(`⚠️ **Aviso no Nexstar!**\nMotivo: ${params.reason || 'Não especificado'}`); } catch { }
+                try { await member.send(`⚠️ **Aviso no CoreBot!**\nMotivo: ${params.reason || 'Não especificado'}`); } catch { }
                 return `⚠️ ${member.user.tag} foi avisado.`;
             }
 
@@ -417,7 +417,7 @@ async function executeAdminAction(message: Message, action: string, params: Reco
                 const role = await guild.roles.create({
                     name: params.roleName,
                     color: params.color || '#99AAB5',
-                    reason: 'Criado via NexstarIA'
+                    reason: 'Criado via CoreBotIA'
                 });
                 return `✅ Cargo **${role.name}** criado.`;
             }
@@ -453,7 +453,7 @@ async function executeAdminAction(message: Message, action: string, params: Reco
 
                 const content = await llmService.gerarResposta(
                     [{ role: 'user', content: `Gere uma mensagem: ${params.prompt || 'Se apresente'}` }],
-                    'Você é a NexstarIA. Responda de forma amigável. Pode usar emojis.'
+                    'Você é a CoreBotIA. Responda de forma amigável. Pode usar emojis.'
                 );
 
                 let finalMessage = content;
@@ -590,7 +590,7 @@ async function runChatGeralLogic(message: Message): Promise<void> {
             }
 
             // SaaS: Personalidade Dinâmica
-            const promptSistema = config.ia_system_prompt || `Você é a IA da Nexstar. Personalidade ÁCIDA. Usuario: ${contextoUsuario}`;
+            const promptSistema = config.ia_system_prompt || `Você é a IA do CoreBot. Personalidade ÁCIDA. Usuario: ${contextoUsuario}`;
 
             const resposta = await llmService.gerarResposta(historicoContexto, promptSistema, imageUrl);
             await message.reply(resposta);
@@ -623,7 +623,7 @@ async function runChatPrivadoLogic(message: Message): Promise<void> {
             imgUrl = message.attachments.first()!.url;
         }
 
-        const resposta = await llmService.gerarResposta(historicoBuild, "Você é a IA da Nexstar.", imgUrl);
+        const resposta = await llmService.gerarResposta(historicoBuild, "Você é a IA do CoreBot.", imgUrl);
 
         if (resposta.length > 2000) {
             const partes = resposta.match(/[\s\S]{1,1900}/g) || [];
@@ -875,6 +875,14 @@ client.on('interactionCreate', async (interaction) => {
     // 🤖 EXECUÇÃO DE COMANDOS PERSONALIZADOS
     // ═══════════════════════════════════════════════════════════════════════════
     else {
+        // Ignorar comandos de outros módulos para evitar conflito/dupla resposta
+        const MODULE_COMMANDS = [
+            'ticket-painel', 'ticket-categoria',
+            'entrar-call', 'sair-call', 'painel-call', 'config-call'
+        ];
+
+        if (MODULE_COMMANDS.includes(interaction.commandName)) return;
+
         try {
             const guildId = interaction.guildId;
             if (guildId) {

@@ -1,6 +1,6 @@
 /**
  * ╔═══════════════════════════════════════════════════════════════════════════╗
- * ║                      NEXSTAR AUTOMOD - MODERAÇÃO AUTOMÁTICA               ║
+ * ║                      COREBOT AUTOMOD - MODERAÇÃO AUTOMÁTICA               ║
  * ║                    Filtro de Palavras + Logs de Moderação                 ║
  * ╚═══════════════════════════════════════════════════════════════════════════╝
  * 
@@ -12,13 +12,13 @@
  * - Debug commands
  */
 
-import { 
-    Client, 
-    GatewayIntentBits, 
-    REST, 
-    Routes, 
+import {
+    Client,
+    GatewayIntentBits,
+    REST,
+    Routes,
     SlashCommandBuilder,
-    PermissionFlagsBits, 
+    PermissionFlagsBits,
     MessageFlags,
     Message,
     GuildMember,
@@ -27,17 +27,16 @@ import {
     TextChannel
 } from 'discord.js';
 
-import { 
-    config, 
-    logger, 
-    testConnection, 
-    initializeSchema, 
-    getGuildConfig, 
-    upsertGuildConfig, 
+import {
+    config,
+    logger,
+    testConnection,
+    initializeSchema,
+    getGuildConfig,
+    upsertGuildConfig,
     logAudit,
     closePool,
-    GuildConfig,
-    hasModerationPermission
+    GuildConfig
 } from '../../shared/services';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -48,6 +47,10 @@ config.validate(['DISCORD_TOKEN_AUTOMOD', 'CLIENT_ID_AUTOMOD']);
 
 const TOKEN = config.get('DISCORD_TOKEN_AUTOMOD');
 const CLIENT_ID = config.get('CLIENT_ID_AUTOMOD');
+
+function hasModerationPermission(member: any): boolean {
+    return member.permissions.has('Administrator') || member.permissions.has('ManageMessages') || member.permissions.has('KickMembers') || member.permissions.has('BanMembers');
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 📊 CACHE LOCAL
@@ -61,11 +64,11 @@ const cacheTimestamps = new Map<string, number>();
 async function getCachedConfig(guildId: string): Promise<GuildConfig | null> {
     const now = Date.now();
     const cacheTime = cacheTimestamps.get(guildId);
-    
+
     if (cacheTime && now - cacheTime < CACHE_TTL && guildConfigCache.has(guildId)) {
         return guildConfigCache.get(guildId)!;
     }
-    
+
     const config = await getGuildConfig(guildId);
     if (config) {
         guildConfigCache.set(guildId, config);
@@ -122,11 +125,11 @@ async function addProhibitedWord(guildId: string, word: string): Promise<boolean
         const config = await getCachedConfig(guildId);
         const currentWords = config?.prohibited_words || [];
         const wordLower = word.toLowerCase();
-        
+
         if (currentWords.includes(wordLower)) {
             return false;
         }
-        
+
         const newWords = [...currentWords, wordLower];
         await upsertGuildConfig(guildId, { prohibited_words: newWords });
         invalidateCache(guildId);
@@ -142,11 +145,11 @@ async function removeProhibitedWord(guildId: string, word: string): Promise<bool
         const config = await getCachedConfig(guildId);
         const currentWords = config?.prohibited_words || [];
         const wordLower = word.toLowerCase();
-        
+
         if (!currentWords.includes(wordLower)) {
             return false;
         }
-        
+
         const newWords = currentWords.filter(w => w !== wordLower);
         await upsertGuildConfig(guildId, { prohibited_words: newWords });
         invalidateCache(guildId);
@@ -169,11 +172,11 @@ async function clearProhibitedWords(guildId: string): Promise<boolean> {
 }
 
 async function logModerationAction(
-    guildId: string, 
-    userId: string, 
-    channelId: string, 
-    messageContent: string, 
-    violationType: string, 
+    guildId: string,
+    userId: string,
+    channelId: string,
+    messageContent: string,
+    violationType: string,
     actionTaken: string
 ): Promise<void> {
     try {
@@ -340,7 +343,7 @@ client.on('interactionCreate', async (interaction) => {
             if (!channel || !commandInteraction.guild) return;
 
             await commandInteraction.deferReply({ flags: MessageFlags.Ephemeral });
-            
+
             if (await setModerationChannel(commandInteraction.guild.id, channel.id)) {
                 await commandInteraction.editReply({
                     content: `✅ Canal de moderação definido para ${channel}.\n\nA automoderação agora atuará neste canal.`
@@ -350,7 +353,7 @@ client.on('interactionCreate', async (interaction) => {
                     content: '❌ Erro ao definir canal de moderação.'
                 });
             }
-        } 
+        }
         else if (commandName === 'add-prohibited-word') {
             const word = commandInteraction.options.getString('palavra')?.trim();
             if (!word || !commandInteraction.guild) return;
@@ -364,7 +367,7 @@ client.on('interactionCreate', async (interaction) => {
             }
 
             await commandInteraction.deferReply({ flags: MessageFlags.Ephemeral });
-            
+
             if (await addProhibitedWord(commandInteraction.guild.id, word)) {
                 await commandInteraction.editReply({
                     content: `✅ Palavra "${word}" adicionada à lista de proibidas.`
@@ -393,7 +396,7 @@ client.on('interactionCreate', async (interaction) => {
         }
         else if (commandName === 'list-prohibited-words') {
             if (!commandInteraction.guild) return;
-            
+
             await commandInteraction.deferReply({ flags: MessageFlags.Ephemeral });
             const words = await getProhibitedWords(commandInteraction.guild.id);
 
@@ -427,7 +430,7 @@ client.on('interactionCreate', async (interaction) => {
             if (!commandInteraction.guild) return;
 
             await commandInteraction.deferReply({ flags: MessageFlags.Ephemeral });
-            
+
             const channelId = await getModerationChannel(commandInteraction.guild.id);
             const words = await getProhibitedWords(commandInteraction.guild.id);
             const channel = channelId ? commandInteraction.guild.channels.cache.get(channelId) : null;
@@ -461,7 +464,7 @@ client.on('interactionCreate', async (interaction) => {
                     flags: MessageFlags.Ephemeral
                 });
             }
-        } catch {}
+        } catch { }
     }
 });
 
@@ -472,7 +475,7 @@ client.on('interactionCreate', async (interaction) => {
 client.once('ready', async () => {
     logger.info(`✅ Bot AutoMod ${client.user?.tag} está online!`);
     logger.info(`📊 Servidores: ${client.guilds.cache.size}`);
-    
+
     // Inicializar conexão e schema
     try {
         const connected = await testConnection();

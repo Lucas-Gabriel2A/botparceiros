@@ -291,7 +291,7 @@ export async function generateBanner(member: GuildMember, text: string, backgrou
     ctx.save();
     ctx.font = `16px ${PREFERRED_FONT}, sans-serif`;
     ctx.fillStyle = 'rgba(200, 200, 255, 0.7)';
-    ctx.fillText('━━━━━━━━━━ ✦ NEXSTAR ✦ ━━━━━━━━━━', 400, 550);
+    ctx.fillText('━━━━━━━━━━ ✦ COREBOT ✦ ━━━━━━━━━━', 400, 550);
     ctx.restore();
 
     return canvas.toBuffer();

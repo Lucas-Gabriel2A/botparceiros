@@ -1,6 +1,6 @@
 /**
  * ╔═══════════════════════════════════════════════════════════════════════════╗
- * ║                      NEXSTAR CALLS - SALAS VIP PRIVADAS                   ║
+ * ║                      COREBOT CALLS - SALAS VIP PRIVADAS                   ║
  * ║                   Criação e Gerenciamento de Calls VIP                    ║
  * ╚═══════════════════════════════════════════════════════════════════════════╝
  * 
@@ -12,17 +12,17 @@
  * - Deleção automática quando vazia
  */
 
-import { 
-    Client, 
-    GatewayIntentBits, 
-    Partials, 
-    EmbedBuilder, 
-    ActionRowBuilder, 
-    ButtonBuilder, 
-    ButtonStyle, 
-    ChannelType, 
-    PermissionFlagsBits, 
-    MessageFlags, 
+import {
+    Client,
+    GatewayIntentBits,
+    Partials,
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    ChannelType,
+    PermissionFlagsBits,
+    MessageFlags,
     SlashCommandBuilder,
     ModalBuilder,
     TextInputBuilder,
@@ -35,13 +35,13 @@ import {
     ColorResolvable
 } from 'discord.js';
 
-import { 
-    config, 
-    logger, 
-    testConnection, 
-    initializeSchema, 
-    createPrivateCall, 
-    deletePrivateCall, 
+import {
+    config,
+    logger,
+    testConnection,
+    initializeSchema,
+    createPrivateCall,
+    deletePrivateCall,
     getAllPrivateCalls,
     closePool
 } from '../../shared/services';
@@ -181,7 +181,7 @@ async function loadCallsFromDatabase(guildId: string): Promise<void> {
 // Limpeza automática de canais órfãos
 const cleanupInterval = setInterval(async () => {
     let cleanedCount = 0;
-    
+
     for (const [channelId] of privateCallOwners) {
         const guild = client.guilds.cache.first();
         if (guild && !guild.channels.cache.has(channelId)) {
@@ -190,7 +190,7 @@ const cleanupInterval = setInterval(async () => {
             cleanedCount++;
         }
     }
-    
+
     if (cleanedCount > 0) {
         logger.info(`🧹 Limpeza: ${cleanedCount} canais órfãos removidos`);
     }
@@ -201,7 +201,7 @@ function logMemoryUsage(): void {
     const used = process.memoryUsage();
     const memMB = Math.round(used.heapUsed / 1024 / 1024 * 100) / 100;
     logger.info(`💾 Memória: ${memMB}MB | Calls: ${privateCallOwners.size}`);
-    
+
     if (memMB > 70) {
         logger.warn(`⚠️ Uso de memória alto: ${memMB}MB`);
     }
@@ -215,9 +215,9 @@ function criarEmbedNexstar(options: EmbedOptions): EmbedBuilder {
     const embed = new EmbedBuilder()
         .setColor(options.cor || CORES.DOURADO_VIP)
         .setTimestamp()
-        .setFooter({ 
-            text: options.footer || `${EMOJIS.ESTRELA} Nexstar VIP`, 
-            iconURL: NEXSTAR_ICON 
+        .setFooter({
+            text: options.footer || `${EMOJIS.ESTRELA} CoreBot VIP`,
+            iconURL: NEXSTAR_ICON
         });
 
     if (options.titulo) embed.setTitle(options.titulo);
@@ -286,7 +286,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         try {
             const guild = interaction.guild;
             const category = guild.channels.cache.get(ID_CATEGORIA_CALLS);
-            
+
             if (!category) {
                 const embed = criarEmbedNexstar({
                     cor: CORES.ERRO,
@@ -298,7 +298,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
             }
 
             const channelName = `${EMOJIS.TELEFONE} ${interaction.user.displayName}`;
-            
+
             const channel = await guild.channels.create({
                 name: channelName,
                 type: ChannelType.GuildVoice,
@@ -311,11 +311,11 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
                     {
                         id: interaction.user.id,
                         allow: [
-                            PermissionFlagsBits.ViewChannel, 
-                            PermissionFlagsBits.Connect, 
-                            PermissionFlagsBits.ManageChannels, 
-                            PermissionFlagsBits.MuteMembers, 
-                            PermissionFlagsBits.DeafenMembers, 
+                            PermissionFlagsBits.ViewChannel,
+                            PermissionFlagsBits.Connect,
+                            PermissionFlagsBits.ManageChannels,
+                            PermissionFlagsBits.MuteMembers,
+                            PermissionFlagsBits.DeafenMembers,
                             PermissionFlagsBits.MoveMembers
                         ],
                     },
@@ -350,13 +350,13 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
                 thumbnail: interaction.user.displayAvatarURL({ size: 256 }),
                 imagem: NEXSTAR_BANNER,
                 campos: [
-                    { 
-                        name: `${EMOJIS.PAINEL} Comandos Disponíveis`, 
+                    {
+                        name: `${EMOJIS.PAINEL} Comandos Disponíveis`,
                         value: '`/convidar` `/painel` `/limite`\n`/renomear` `/fechar` `/transferir`',
-                        inline: false 
+                        inline: false
                     }
                 ],
-                footer: `${EMOJIS.ESTRELA} Nexstar VIP • A sala será deletada quando você sair`
+                footer: `${EMOJIS.ESTRELA} CoreBot VIP • A sala será deletada quando você sair`
             });
 
             const row = new ActionRowBuilder<ButtonBuilder>()
@@ -384,7 +384,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
             });
             try {
                 await interaction.editReply({ embeds: [embed] });
-            } catch {}
+            } catch { }
         }
     }
 
@@ -425,7 +425,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
             await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
             return;
         }
-        
+
         if (!memberToInvite) {
             const embed = criarEmbedNexstar({
                 cor: CORES.ERRO,
@@ -435,7 +435,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
             await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
             return;
         }
-        
+
         if (memberToInvite.id === interaction.user.id) {
             const embed = criarEmbedNexstar({
                 cor: CORES.AVISO,
@@ -495,8 +495,8 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
                     iconURL: memberToInvite.user.displayAvatarURL()
                 },
                 descricao: `${memberToInvite} foi convidado para ${userVoiceChannel}.\n\n` +
-                    (dmSent 
-                        ? `> ${EMOJIS.SUCESSO} DM enviada com sucesso!` 
+                    (dmSent
+                        ? `> ${EMOJIS.SUCESSO} DM enviada com sucesso!`
                         : `> ${EMOJIS.AVISO} Não foi possível enviar DM.`),
                 thumbnail: memberToInvite.user.displayAvatarURL({ size: 128 })
             });
@@ -554,7 +554,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 
         try {
             await userVoiceChannel.permissionOverwrites.delete(memberToKick.id);
-            
+
             if (memberToKick.voice?.channel?.id === userVoiceChannel.id) {
                 await memberToKick.voice.disconnect('Expulso da sala privada');
             }
@@ -617,7 +617,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
             const embed = criarEmbedNexstar({
                 cor: CORES.SUCESSO,
                 titulo: `${EMOJIS.LIMITE} Limite Atualizado`,
-                descricao: limite === 0 
+                descricao: limite === 0
                     ? `Sua sala agora **não tem limite** de membros.`
                     : `Sua sala agora suporta no máximo **${limite} membros**.`,
                 campos: [
@@ -1004,7 +1004,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
             const embed = criarEmbedNexstar({
                 cor: callData.isOpen ? CORES.SUCESSO : CORES.INFO,
                 titulo: callData.isOpen ? `${EMOJIS.CADEADO_ABERTO} Sala Aberta` : `${EMOJIS.CADEADO} Sala Fechada`,
-                descricao: callData.isOpen 
+                descricao: callData.isOpen
                     ? `Sua sala agora aceita novos convites.`
                     : `Sua sala não aceita mais convites.`
             });
@@ -1150,7 +1150,7 @@ async function handleModal(interaction: ModalSubmitInteraction): Promise<void> {
             const embed = criarEmbedNexstar({
                 cor: CORES.SUCESSO,
                 titulo: `${EMOJIS.LIMITE} Limite Atualizado`,
-                descricao: limite === 0 
+                descricao: limite === 0
                     ? `Sua sala agora **não tem limite** de membros.`
                     : `Sua sala agora suporta no máximo **${limite} membros**.`
             });
@@ -1198,7 +1198,7 @@ client.on('voiceStateUpdate', (oldState, _newState) => {
 
     if (channelLeft && privateCallOwners.has(channelLeft.id)) {
         const callData = privateCallOwners.get(channelLeft.id)!;
-        
+
         // CASO 1: O criador saiu
         if (userWhoLeft && userWhoLeft.id === callData.ownerId) {
             channelLeft.delete('Proprietário da sala saiu.')
@@ -1248,7 +1248,7 @@ client.once('ready', async () => {
             await initializeSchema();
             dbConnected = true;
             logger.info('💾 Database PostgreSQL conectado!');
-            
+
             // Carregar calls existentes do banco
             const guild = client.guilds.cache.first();
             if (guild) {
@@ -1271,7 +1271,7 @@ client.once('ready', async () => {
         new SlashCommandBuilder()
             .setName('criar-call')
             .setDescription(`${EMOJIS.VIP} Cria uma sala de voz privada VIP exclusiva`),
-        
+
         new SlashCommandBuilder()
             .setName('convidar')
             .setDescription(`${EMOJIS.CONVITE} Convida um membro para sua sala privada`)
@@ -1279,7 +1279,7 @@ client.once('ready', async () => {
                 option.setName('membro')
                     .setDescription('O membro que você deseja convidar')
                     .setRequired(true)),
-        
+
         new SlashCommandBuilder()
             .setName('expulsar')
             .setDescription(`${EMOJIS.EXPULSAR} Remove um membro da sua sala privada`)
@@ -1287,7 +1287,7 @@ client.once('ready', async () => {
                 option.setName('membro')
                     .setDescription('O membro que você deseja remover')
                     .setRequired(true)),
-        
+
         new SlashCommandBuilder()
             .setName('limite')
             .setDescription(`${EMOJIS.LIMITE} Define o limite de membros da sua sala`)
@@ -1297,7 +1297,7 @@ client.once('ready', async () => {
                     .setRequired(true)
                     .setMinValue(0)
                     .setMaxValue(99)),
-        
+
         new SlashCommandBuilder()
             .setName('renomear')
             .setDescription(`${EMOJIS.RENOMEAR} Renomeia sua sala privada`)
@@ -1306,15 +1306,15 @@ client.once('ready', async () => {
                     .setDescription('Novo nome para a sala')
                     .setRequired(true)
                     .setMaxLength(50)),
-        
+
         new SlashCommandBuilder()
             .setName('fechar')
             .setDescription(`${EMOJIS.CADEADO} Fecha sua sala para novos convites`),
-        
+
         new SlashCommandBuilder()
             .setName('abrir')
             .setDescription(`${EMOJIS.CADEADO_ABERTO} Reabre sua sala para convites`),
-        
+
         new SlashCommandBuilder()
             .setName('transferir')
             .setDescription(`${EMOJIS.TRANSFERIR} Transfere a propriedade da sala`)
@@ -1322,12 +1322,12 @@ client.once('ready', async () => {
                 option.setName('membro')
                     .setDescription('O novo dono da sala')
                     .setRequired(true)),
-        
+
         new SlashCommandBuilder()
             .setName('painel')
             .setDescription(`${EMOJIS.PAINEL} Abre o painel de controle da sua sala`),
     ];
-    
+
     const commandsAsJson = commands.map(command => command.toJSON());
     client.application?.commands.set(commandsAsJson);
     logger.info(`${EMOJIS.SUCESSO} ${commands.length} comandos registrados!`);
