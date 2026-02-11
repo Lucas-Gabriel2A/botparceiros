@@ -1,9 +1,10 @@
 import { ReactNode } from "react";
 import { getServerSession } from "next-auth";
 import { redirect, notFound } from "next/navigation";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth-options";
 import Link from "next/link";
-import { ServerSidebar } from "@/components/ServerSidebar";
+import { ServerSidebar, MobileServerSidebar } from "@/components/ServerSidebar";
+import Image from "next/image";
 
 interface Props {
     children: ReactNode;
@@ -45,8 +46,20 @@ export default async function ServerLayout({ children, params }: Props) {
     }
 
     return (
-        <div className="flex h-screen bg-black text-white overflow-hidden">
+        <div className="flex flex-col md:flex-row h-dvh bg-black text-white overflow-hidden">
+            {/* Desktop Sidebar */}
             <ServerSidebar guild={guild} locale={locale} />
+
+            {/* Mobile Header */}
+            <div className="md:hidden flex items-center p-4 border-b border-white/10 bg-zinc-900/90 backdrop-blur-md z-20 shrink-0 sticky top-0">
+                <MobileServerSidebar guild={guild} locale={locale} />
+                <div className="ml-4 flex items-center gap-3">
+                    <div className="relative w-8 h-8">
+                        <Image src="/CoreBot.png" alt="CoreBot Logo" fill className="object-contain" />
+                    </div>
+                    <span className="font-bold text-lg">CoreBot's</span>
+                </div>
+            </div>
 
             {/* Main Content */}
             <main className="flex-1 overflow-y-auto bg-[#060609] relative h-full">

@@ -5,7 +5,7 @@ import { config, logger } from '../../shared/services';
 import { customCommandService } from './service';
 
 // Use config.get or env directly if config is not available in web context
-const TOKEN = process.env.DISCORD_TOKEN || config.get('DISCORD_TOKEN');
+const TOKEN = process.env.DISCORD_TOKEN || config.getOptional('DISCORD_TOKEN') || process.env.DISCORD_TOKEN_AGENTE_IA || config.get('DISCORD_TOKEN_AGENTE_IA');
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || config.get('DISCORD_CLIENT_ID');
 
 export async function refreshGuildCommands(guildId: string) {

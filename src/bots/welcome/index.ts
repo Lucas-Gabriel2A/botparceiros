@@ -58,6 +58,8 @@ config.validate(['DISCORD_TOKENS', 'CLIENT_ID']);
 const TOKEN = config.get('DISCORD_TOKENS');
 const CLIENT_ID = config.get('CLIENT_ID');
 
+import { getUserPlan, hasPlanAccess } from '../../shared/services/plan-features';
+
 function hasAdminPermission(member: any, OWNER_ROLE_ID: string | undefined, SEMI_OWNER_ROLE_ID: string | undefined): boolean {
     return member.permissions.has('Administrator');
 }
@@ -387,7 +389,13 @@ async function generateBanner(member: GuildMember, text: string, _isWelcome = tr
     const guildConfig = getConfig(member.guild.id);
     let backgroundImage = null;
 
-    if (guildConfig.background && fs.existsSync(guildConfig.background)) {
+    // Check if user has plan for custom background (welcome feature also includes background?)
+    // Actually typically custom background might be a separate perk or part of welcome_custom
+    // Let's assume it's part of the welcome_custom feature package
+    const ownerId = member.guild.ownerId;
+    const canUseCustomBackground = await hasPlanAccess(await getUserPlan(ownerId), 'welcome');
+
+    if (canUseCustomBackground && guildConfig.background && fs.existsSync(guildConfig.background)) {
         try {
             backgroundImage = await loadImage(guildConfig.background);
         } catch (error) {
@@ -539,7 +547,11 @@ async function generateBannerFast(member: GuildMember, text: string, _isWelcome 
     const guildConfig = getConfig(member.guild.id);
     let backgroundImage = null;
 
-    if (guildConfig.background && fs.existsSync(guildConfig.background)) {
+    // Check plan for fast generator too
+    const ownerId = member.guild.ownerId;
+    const canUseCustomBackground = await hasPlanAccess(await getUserPlan(ownerId), 'welcome');
+
+    if (canUseCustomBackground && guildConfig.background && fs.existsSync(guildConfig.background)) {
         try {
             backgroundImage = await loadImage(guildConfig.background);
         } catch (error) {
@@ -716,13 +728,21 @@ client.on('guildMemberAdd', async (member: GuildMember) => {
 
     try {
         const guildConfig = getConfig(member.guild.id);
+        const ownerId = member.guild.ownerId;
+        const plan = await getUserPlan(ownerId);
+
+        // Enforce Free Plan Limit
+        // If plan is free, force default message
+        const isFree = plan === 'free';
+        const finalMessage = isFree ? 'Bem-vindo {user} ao servidor!' : guildConfig.welcomeText;
+
         let buffer: Buffer;
 
         try {
-            buffer = await generateBanner(member, guildConfig.welcomeText, true);
+            buffer = await generateBanner(member, finalMessage, true);
         } catch (bannerError) {
             logger.warn('Banner completo falhou, usando versão rápida');
-            buffer = await generateBannerFast(member, guildConfig.welcomeText, true);
+            buffer = await generateBannerFast(member, finalMessage, true);
         }
 
         const attachment = new AttachmentBuilder(buffer, { name: 'welcome.png' });
@@ -758,13 +778,20 @@ client.on('guildMemberRemove', async (member) => {
 
     try {
         const guildConfig = getConfig(guildMember.guild.id);
+        const ownerId = guildMember.guild.ownerId;
+        const plan = await getUserPlan(ownerId);
+
+        // Enforce Free Plan Limit
+        const isFree = plan === 'free';
+        const finalMessage = isFree ? '{user} saiu do servidor.' : guildConfig.leaveText;
+
         let buffer: Buffer;
 
         try {
-            buffer = await generateBanner(guildMember, guildConfig.leaveText, false);
+            buffer = await generateBanner(guildMember, finalMessage, false);
         } catch (bannerError) {
             logger.warn('Banner completo falhou, usando versão rápida');
-            buffer = await generateBannerFast(guildMember, guildConfig.leaveText, false);
+            buffer = await generateBannerFast(guildMember, finalMessage, false);
         }
 
         const attachment = new AttachmentBuilder(buffer, { name: 'leave.png' });

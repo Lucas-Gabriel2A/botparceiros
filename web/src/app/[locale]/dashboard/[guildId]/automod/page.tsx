@@ -1,7 +1,7 @@
 import { database } from "@shared/services/database";
 import { AutoModForm } from "@/components/forms/AutoModForm";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth-options";
 
 interface Props {
     params: Promise<{

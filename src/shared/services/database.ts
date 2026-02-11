@@ -37,6 +37,7 @@ export interface GuildConfig extends QueryResultRow {
     automod_timeout_duration?: number;
     automod_log_channel?: string | null;
     automod_bypass_roles?: string[];
+    automod_ai_enabled?: boolean;
 
     // Configurações NexstarIA (SaaS)
     ia_enabled?: boolean;
@@ -62,6 +63,10 @@ export interface GuildConfig extends QueryResultRow {
     ticket_panel_button_text?: string | null;
     ticket_panel_button_emoji?: string | null;
     ticket_panel_footer?: string | null;
+
+    // Configurações Whitelabel
+    whitelabel_name?: string | null;
+    whitelabel_avatar_url?: string | null;
 
     updated_at: Date;
 }
@@ -291,6 +296,60 @@ CREATE TABLE IF NOT EXISTS custom_commands (
 
 CREATE INDEX IF NOT EXISTS idx_custom_commands_guild ON custom_commands(guild_id);
 
+-- Guild Analytics (Daily Metrics)
+CREATE TABLE IF NOT EXISTS guild_analytics (
+    guild_id VARCHAR(20) NOT NULL,
+    date DATE NOT NULL DEFAULT CURRENT_DATE,
+    messages_count INTEGER DEFAULT 0,
+    members_joined INTEGER DEFAULT 0,
+    members_left INTEGER DEFAULT 0,
+    tickets_opened INTEGER DEFAULT 0,
+    tickets_closed INTEGER DEFAULT 0,
+    automod_actions INTEGER DEFAULT 0,
+    commands_used INTEGER DEFAULT 0,
+    ai_responses INTEGER DEFAULT 0,
+    PRIMARY KEY (guild_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_guild_analytics_guild ON guild_analytics(guild_id);
+
+-- Partnerships
+CREATE TABLE IF NOT EXISTS partnerships (
+    id SERIAL PRIMARY KEY,
+    guild_id VARCHAR(20) NOT NULL,
+    partner_guild_id VARCHAR(20) NOT NULL,
+    partner_guild_name VARCHAR(100) NOT NULL,
+    partner_invite VARCHAR(100),
+    partner_description TEXT,
+    channel_id VARCHAR(20),
+    status VARCHAR(20) DEFAULT 'active',
+    created_by VARCHAR(20),
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(guild_id, partner_guild_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_partnerships_guild ON partnerships(guild_id);
+
+
+-- AI Usage Tracking (Daily per User per Guild)
+CREATE TABLE IF NOT EXISTS ai_usage (
+    user_id VARCHAR(20) NOT NULL,
+    guild_id VARCHAR(20) NOT NULL,
+    date DATE NOT NULL DEFAULT CURRENT_DATE,
+    count INTEGER DEFAULT 0,
+    PRIMARY KEY (user_id, guild_id, date)
+);
+
+
+CREATE INDEX IF NOT EXISTS idx_ai_usage_user ON ai_usage(user_id);
+
+-- Server Generation Usage (Monthly per User)
+CREATE TABLE IF NOT EXISTS server_generation_usage (
+    user_id VARCHAR(20) NOT NULL,
+    month_year VARCHAR(7) NOT NULL, -- Format: YYYY-MM
+    count INTEGER DEFAULT 0,
+    PRIMARY KEY (user_id, month_year)
+);
 `;
 
 export async function initializeSchema(): Promise<void> {
@@ -322,7 +381,10 @@ export async function initializeSchema(): Promise<void> {
                 ADD COLUMN IF NOT EXISTS ticket_panel_color VARCHAR(20),
                 ADD COLUMN IF NOT EXISTS ticket_panel_button_text VARCHAR(50),
                 ADD COLUMN IF NOT EXISTS ticket_panel_button_emoji VARCHAR(50),
-                ADD COLUMN IF NOT EXISTS ticket_panel_footer VARCHAR(255);
+                ADD COLUMN IF NOT EXISTS ticket_panel_footer VARCHAR(255),
+                ADD COLUMN IF NOT EXISTS automod_ai_enabled BOOLEAN DEFAULT false,
+                ADD COLUMN IF NOT EXISTS whitelabel_name VARCHAR(32),
+                ADD COLUMN IF NOT EXISTS whitelabel_avatar_url VARCHAR(255);
             `);
 
             // Ticket Migration
@@ -371,12 +433,35 @@ export async function getGuildConfig(guildId: string): Promise<GuildConfig | nul
     return result.rows[0] || null;
 }
 
+// Whitelist de colunas permitidas para prevenir SQL Injection
+const GUILD_CONFIG_COLUMNS = new Set([
+    'automod_channel', 'prohibited_words', 'vip_category_id', 'vip_role_id',
+    'welcome_channel_id', 'leave_channel_id', 'logs_channel_id', 'staff_role_id',
+    'welcome_message', 'leave_message', 'autorole_id',
+    'automod_links_enabled', 'automod_caps_enabled', 'automod_spam_enabled',
+    'automod_action', 'automod_timeout_duration', 'automod_log_channel', 'automod_bypass_roles',
+    'ia_enabled', 'ia_channel_id', 'ia_system_prompt', 'ia_admin_roles',
+    'ia_voice_enabled', 'ia_temperature', 'ia_ignored_channels', 'ia_ignored_roles',
+    'private_calls_enabled', 'private_calls_category_id', 'private_calls_allowed_roles', 'private_calls_manager_role',
+    'ticket_panel_title', 'ticket_panel_description', 'ticket_panel_banner_url',
+    'ticket_panel_color', 'ticket_panel_button_text', 'ticket_panel_button_emoji', 'ticket_panel_footer',
+    'automod_ai_enabled',
+    'whitelabel_name', 'whitelabel_avatar_url'
+]);
+
+const PRIVATE_CALL_COLUMNS = new Set(['is_open', 'member_limit', 'owner_id']);
+
+const TICKET_CATEGORY_COLUMNS = new Set([
+    'name', 'description', 'emoji', 'color',
+    'ticket_channel_category_id', 'support_role_id', 'welcome_title', 'welcome_description'
+]);
+
 export async function upsertGuildConfig(
     guildId: string,
     updates: Partial<Omit<GuildConfig, 'guild_id' | 'updated_at'>>
 ): Promise<GuildConfig> {
-    const fields = Object.keys(updates);
-    const values = Object.values(updates);
+    const fields = Object.keys(updates).filter(f => GUILD_CONFIG_COLUMNS.has(f));
+    const values = fields.map(f => (updates as Record<string, unknown>)[f]);
 
     if (fields.length === 0) {
         throw new Error('No fields to update');
@@ -484,7 +569,7 @@ export async function updatePrivateCall(
     channelId: string,
     updates: { is_open?: boolean; member_limit?: number | null; owner_id?: string }
 ): Promise<PrivateCall | null> {
-    const fields = Object.keys(updates).filter(k => updates[k as keyof typeof updates] !== undefined);
+    const fields = Object.keys(updates).filter(k => PRIVATE_CALL_COLUMNS.has(k) && updates[k as keyof typeof updates] !== undefined);
     if (fields.length === 0) return null;
 
     const setClause = fields.map((f, i) => `${f} = $${i + 2}`).join(', ');
@@ -599,8 +684,8 @@ export async function updateTicketCategory(
     id: string,
     updates: Partial<Omit<TicketCategory, 'id' | 'guild_id' | 'created_at' | 'created_by'>>
 ): Promise<TicketCategory | null> {
-    const fields = Object.keys(updates);
-    const values = Object.values(updates);
+    const fields = Object.keys(updates).filter(f => TICKET_CATEGORY_COLUMNS.has(f));
+    const values = fields.map(f => (updates as Record<string, unknown>)[f]);
 
     if (fields.length === 0) return null;
 

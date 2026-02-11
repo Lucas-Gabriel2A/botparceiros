@@ -361,7 +361,38 @@ export default function Home() {
                             <span className="mt-4 text-[10px] text-green-400 font-bold bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">{t('pricing.save_text')}</span>
                         </div>
 
-                        <div className="grid md:grid-cols-3 gap-8 max-w-7xl mx-auto items-start">
+                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto items-start">
+
+                            {/* Free Plan */}
+                            <div className="p-8 rounded-3xl border border-white/10 bg-[#0A0A0C] hover:bg-white/2 transition-colors relative group">
+                                <div className="mb-8">
+                                    <h3 className="text-lg font-medium text-emerald-400 mb-4">{t('pricing.free.name')}</h3>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-4xl font-serif text-white">{t('pricing.free.price')}</span>
+                                        <span className="text-sm text-zinc-600">/sempre</span>
+                                    </div>
+                                    <p className="text-sm text-zinc-500 mt-4">{t('pricing.free.desc')}</p>
+                                </div>
+
+                                <div className="h-px w-full bg-white/5 mb-8"></div>
+
+                                <ul className="space-y-4 mb-8">
+                                    {[0, 1, 2, 3, 4].map((i) => (
+                                        <li key={i} className="flex items-center gap-3 text-sm text-zinc-400">
+                                            <div className="w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                                                <Check className="w-3 h-3 text-emerald-500" />
+                                            </div>
+                                            {t(`pricing.free.features.${i}`)}
+                                        </li>
+                                    ))}
+                                </ul>
+                                <button
+                                    onClick={handleStartNow}
+                                    className="w-full py-4 rounded-xl border border-emerald-500/30 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/10 transition-colors"
+                                >
+                                    Começar Grátis
+                                </button>
+                            </div>
 
                             {/* Starter Plan */}
                             <div className="p-8 rounded-3xl border border-white/10 bg-[#0A0A0C] hover:bg-white/2 transition-colors relative group">
@@ -398,7 +429,7 @@ export default function Home() {
                             </div>
 
                             {/* Pro Plan (Popular) */}
-                            <div className="p-8 rounded-3xl border border-purple-500/30 bg-[#0A0A0C] relative group overflow-hidden transform md:-translate-y-4">
+                            <div className="p-8 rounded-3xl border border-purple-500/30 bg-[#0A0A0C] relative group overflow-hidden transform lg:-translate-y-4">
                                 {/* Glow Effect */}
                                 <div className="absolute inset-0 bg-linear-to-b from-purple-500/10 to-transparent opacity-50 pointer-events-none"></div>
 

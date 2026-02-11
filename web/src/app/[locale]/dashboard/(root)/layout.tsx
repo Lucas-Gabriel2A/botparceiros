@@ -1,8 +1,10 @@
 "use client";
 
 import { Sidebar } from "@/components/Sidebar";
+import { MobileSidebar } from "@/components/MobileSidebar";
 import { LayoutDashboard, CreditCard } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
+import Image from "next/image";
 
 export default function DashboardRootLayout({ children }: { children: React.ReactNode }) {
     const t = useTranslations("dashboard.sidebar");
@@ -13,13 +15,28 @@ export default function DashboardRootLayout({ children }: { children: React.Reac
         { name: t("billing"), icon: CreditCard, href: `/${locale}/dashboard/billing` },
     ];
 
+    const sidebarProps = {
+        title: "CoreBot's",
+        logo: "/CoreBot.png",
+        items: menu
+    };
+
     return (
-        <div className="flex h-screen bg-[#060609] text-white font-sans overflow-hidden">
-            <Sidebar
-                title="CoreBot's"
-                logo="/CoreBot.png"
-                items={menu}
-            />
+        <div className="flex flex-col md:flex-row h-dvh bg-[#060609] text-white font-sans overflow-hidden">
+            {/* Desktop Sidebar */}
+            <Sidebar {...sidebarProps} />
+
+            {/* Mobile Header */}
+            <div className="md:hidden flex items-center p-4 border-b border-white/10 bg-zinc-900/90 backdrop-blur-md z-20 shrink-0 sticky top-0">
+                <MobileSidebar {...sidebarProps} />
+                <div className="ml-4 flex items-center gap-3">
+                    <div className="relative w-8 h-8">
+                        <Image src="/CoreBot.png" alt="CoreBot Logo" fill className="object-contain" />
+                    </div>
+                    <span className="font-bold text-lg">CoreBot's</span>
+                </div>
+            </div>
+
             <main className="flex-1 overflow-hidden relative">
                 {/* Background noise/gradient specific to dashboard */}
                 <div className="fixed inset-0 z-0 pointer-events-none opacity-20">

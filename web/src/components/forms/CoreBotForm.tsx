@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useEffect } from "react";
 import { Bot, MessageSquare, Save, Sparkles } from "lucide-react";
+import { AiUsageStats } from "../dashboard/AiUsageStats";
 
 interface GuildConfig {
     guild_id: string;
@@ -57,6 +58,9 @@ export function CoreBotForm({ config, guildId }: { config: any, guildId: string 
     return (
         <form action={formAction} className="space-y-6 w-full max-w-3xl mx-auto font-sans">
             <input type="hidden" name="guildId" value={guildId} />
+
+            {/* AI Usage Stats */}
+            <AiUsageStats guildId={guildId} />
 
             {/* Config Card */}
             <div className="bg-[#0A0A0C] border border-purple-500/30 rounded-3xl p-8 relative overflow-hidden group hover:border-purple-500/50 transition-all duration-500">

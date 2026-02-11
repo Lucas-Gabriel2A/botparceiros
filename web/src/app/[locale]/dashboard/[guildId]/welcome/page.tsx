@@ -2,7 +2,7 @@
 import { database } from "@shared/services/database";
 import { WelcomeForm } from "@/components/forms/WelcomeForm";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth-options";
 
 interface Props {
     params: Promise<{
@@ -43,6 +43,18 @@ export default async function WelcomePage({ params }: Props) {
         };
     }
 
+    // Fetch user plan
+    // @ts-ignore
+    const userId = session?.user?.id;
+    let plan = 'free';
+
+    if (userId) {
+        const sub = await database.getSubscriptionByUser(userId);
+        if (sub?.status === 'authorized') {
+            plan = sub.plan;
+        }
+    }
+
     return (
         <div className="space-y-8 flex flex-col items-center w-full max-w-7xl mx-auto px-4">
             <header className="text-center mb-8 w-full">
@@ -57,7 +69,7 @@ export default async function WelcomePage({ params }: Props) {
                 </p>
             </header>
 
-            <WelcomeForm config={config} guildId={guildId} user={session?.user} />
+            <WelcomeForm config={config} guildId={guildId} user={session?.user} plan={plan} />
         </div>
     );
 }

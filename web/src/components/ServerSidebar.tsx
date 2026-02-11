@@ -1,7 +1,8 @@
 "use client";
 
 import { Sidebar } from "@/components/Sidebar";
-import { LayoutDashboard, Bot, ShieldAlert, Settings, Hand, Ticket, Wand2, Phone } from "lucide-react";
+import { MobileSidebar } from "@/components/MobileSidebar";
+import { LayoutDashboard, Bot, ShieldAlert, Settings, Hand, Ticket, Wand2, Phone, BarChart3, Tag, Handshake } from "lucide-react";
 
 interface ServerSidebarProps {
     guild: {
@@ -12,21 +13,27 @@ interface ServerSidebarProps {
     locale: string;
 }
 
+function getServerMenuItems(guildId: string, locale: string) {
+    return [
+        { name: "Visão Geral", icon: LayoutDashboard, href: `/${locale}/dashboard/${guildId}`, exact: true },
+        { name: "CoreBot AI", icon: Bot, href: `/${locale}/dashboard/${guildId}/corebot` },
+        { name: "Boas-vindas", icon: Hand, href: `/${locale}/dashboard/${guildId}/welcome` },
+        { name: "AutoMod", icon: ShieldAlert, href: `/${locale}/dashboard/${guildId}/automod` },
+        { name: "Tickets", icon: Ticket, href: `/${locale}/dashboard/${guildId}/tickets` },
+        { name: "Comandos AI", icon: Wand2, href: `/${locale}/dashboard/${guildId}/commands` },
+        { name: "Calls Privadas", icon: Phone, href: `/${locale}/dashboard/${guildId}/private-calls` },
+        { name: "Analytics", icon: BarChart3, href: `/${locale}/dashboard/${guildId}/analytics` },
+        { name: "Whitelabel", icon: Tag, href: `/${locale}/dashboard/${guildId}/whitelabel` },
+        { name: "Configurações", icon: Settings, href: `/${locale}/dashboard/${guildId}/settings` },
+    ];
+}
+
 export function ServerSidebar({ guild, locale }: ServerSidebarProps) {
     const iconUrl = guild.icon
         ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`
         : undefined;
 
-    const menuItems = [
-        { name: "Overview", icon: LayoutDashboard, href: `/${locale}/dashboard/${guild.id}`, exact: true },
-        { name: "CoreBot AI", icon: Bot, href: `/${locale}/dashboard/${guild.id}/corebot` },
-        { name: "Boas-vindas", icon: Hand, href: `/${locale}/dashboard/${guild.id}/welcome` },
-        { name: "AutoMod", icon: ShieldAlert, href: `/${locale}/dashboard/${guild.id}/automod` },
-        { name: "Tickets", icon: Ticket, href: `/${locale}/dashboard/${guild.id}/tickets` },
-        { name: "Comandos AI", icon: Wand2, href: `/${locale}/dashboard/${guild.id}/commands` },
-        { name: "Calls Privadas", icon: Phone, href: `/${locale}/dashboard/${guild.id}/private-calls` },
-        { name: "Settings", icon: Settings, href: `/${locale}/dashboard/${guild.id}/settings` },
-    ];
+    const menuItems = getServerMenuItems(guild.id, locale);
 
     return (
         <Sidebar
@@ -35,7 +42,27 @@ export function ServerSidebar({ guild, locale }: ServerSidebarProps) {
             items={menuItems}
             backLink={{
                 href: `/${locale}/dashboard`,
-                label: "Back to Servers" // We can use useTranslations here if needed, keeping it simple for now or adding hook
+                label: "Voltar para Servidores"
+            }}
+        />
+    );
+}
+
+export function MobileServerSidebar({ guild, locale }: ServerSidebarProps) {
+    const iconUrl = guild.icon
+        ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`
+        : undefined;
+
+    const menuItems = getServerMenuItems(guild.id, locale);
+
+    return (
+        <MobileSidebar
+            title={guild.name}
+            serverIcon={iconUrl}
+            items={menuItems}
+            backLink={{
+                href: `/${locale}/dashboard`,
+                label: "Voltar para Servidores"
             }}
         />
     );

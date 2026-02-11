@@ -89,8 +89,9 @@ export function setupTicketEvents(client: Client) {
                         await interaction.reply({ content: 'Sem permissão.', ephemeral: true });
                         return;
                     }
+                    await interaction.deferReply({ ephemeral: true });
                     await sendTicketPanel(interaction.channel as TextChannel, interaction.guildId!);
-                    await interaction.reply({ content: 'Painel enviado!', ephemeral: true });
+                    await interaction.editReply({ content: 'Painel enviado!' });
                 }
 
                 if (commandName === 'ticket-categoria') {

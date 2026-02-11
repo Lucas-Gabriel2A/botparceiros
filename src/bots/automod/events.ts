@@ -1,7 +1,8 @@
 
 import { Client, Message, PermissionFlagsBits } from 'discord.js';
 import { getGuildConfig, logger } from '../../shared/services';
-import { checkProhibitedWords, checkCaps, checkLinks, handleViolation } from './automod.service';
+import { checkProhibitedWords, checkCaps, checkLinks, checkWithAI, handleViolation } from './automod.service';
+import { canUseFeature } from '../../shared/services/plan-features';
 
 export function setupAutoModEvents(client: Client) {
     logger.info('🛡️ Módulo AutoMod: Eventos inicializados');
@@ -52,8 +53,18 @@ export function setupAutoModEvents(client: Client) {
                 }
             }
 
-            // 4. Verificar Spam (Futuro - requer cache de mensagens recentes)
-            // if (config.automod_spam_enabled) { ... }
+            // 4. AutoMod IA (Pro/Ultimate) — Verifica plano antes de usar
+            if (config.automod_ai_enabled) {
+                const hasAccess = await canUseFeature(message.guild.ownerId, 'automod_ia');
+                if (hasAccess) {
+                    const aiResult = await checkWithAI(message.content, message.guild.id);
+                    if (aiResult) {
+                        logger.info(`🤖 AutoMod IA: ${aiResult.type} detectado de ${message.author.tag}`);
+                        await handleViolation(message, aiResult.type, aiResult.reason, config);
+                        return;
+                    }
+                }
+            }
 
         } catch (error) {
             logger.error('Erro no processamento do AutoMod', { error });

@@ -37,9 +37,16 @@ import {
     closePool,
     upsertGuildConfig,
     getGuildConfig,
-
+    checkAiLimit,
+    incrementAiUsage,
+    getLimitMessage,
+    checkServerGenLimit,
+    incrementServerGenUsage,
 } from '../../shared/services';
 import { serverBuilder } from '../../shared/services/server-builder.service';
+import { getBrandingFooter, applyBranding } from '../../shared/services/branding.service';
+import { trackEvent } from '../../shared/services/analytics.service';
+import { createPartnership, listPartnerships, removePartnership } from '../../shared/services/partnerships.service';
 import { setupWelcomeEvents } from '../welcome/events';
 import { setupAutoModEvents } from '../automod/events';
 import { setupTicketEvents, TICKET_EVENTS } from '../tickets/events';
@@ -54,7 +61,7 @@ let dbConnected = false;
 // 🔐 VALIDAÇÃO
 // ═══════════════════════════════════════════════════════════════════════════
 
-config.validate(['DISCORD_TOKEN_AGENTE_IA', 'OPENAI_API_KEY', 'OWNER_ROLE_ID', 'CANAL_CHAT_GERAL']);
+config.validate(['DISCORD_TOKEN_AGENTE_IA', 'OPENAI_API_KEY']);
 
 const TOKEN = config.get('DISCORD_TOKEN_AGENTE_IA');
 const OPENAI_API_KEY = config.get('OPENAI_API_KEY');
@@ -62,9 +69,8 @@ const LLM_BASE_URL = config.getOptional('LLM_BASE_URL') || 'https://api.openai.c
 const MODELO_IA = config.getOptional('MODELO_IA') || 'gpt-3.5-turbo';
 
 const CATEGORIA_ASSISTENTE = config.getOptional('CATEGORIA_ASSISTENTE');
-const CANAL_CHAT_GERAL = config.get('CANAL_CHAT_GERAL');
-const OWNER_ROLE_ID = config.get('OWNER_ROLE_ID');
-const SEMI_OWNER_ROLE_ID = config.getOptional('SEMI_OWNER_ROLE_ID');
+const CANAL_CHAT_GERAL = config.getOptional('CANAL_CHAT_GERAL');
+// const OWNER_ROLE_ID = config.get('OWNER_ROLE_ID'); // Removed for multi-tenancy
 const STAFF_ROLE_ID = config.getOptional('STAFF_ROLE_ID');
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -188,6 +194,9 @@ AÇÕES DISPONÍVEIS:
 - send_message: Enviar mensagem IA. Params: channelName, prompt, mentionEveryone?
 - embed: Criar embed. Params: channelName, title, description, color?
 - reminder: Criar lembrete. Params: duration (min), message
+- partnership_add: Adicionar parceria. Params: partnerGuildId, partnerGuildName, invite?, description?
+- partnership_list: Listar parcerias
+- partnership_remove: Remover parceria. Params: partnerGuildId
 - none: Não é comando admin
 
 REGRAS:
@@ -197,10 +206,24 @@ REGRAS:
 
 Responda APENAS com JSON: {"action": "nome_acao", "params": {...}}`;
 
-function isAuthorized(member: GuildMember | null): boolean {
-    if (!member?.roles) return false;
-    return member.roles.cache.has(OWNER_ROLE_ID) ||
-        (SEMI_OWNER_ROLE_ID ? member.roles.cache.has(SEMI_OWNER_ROLE_ID) : false);
+async function isAuthorized(member: GuildMember | null): Promise<boolean> {
+    if (!member) return false;
+
+    // 1. Check Native Administrator Permission (Owner always has this)
+    if (member.permissions.has(PermissionFlagsBits.Administrator)) return true;
+
+    // 2. Check Database Configured Roles
+    try {
+        const config = await getGuildConfig(member.guild.id);
+        if (config?.ia_admin_roles && config.ia_admin_roles.length > 0) {
+            // Check if user has any of the allowed roles
+            return member.roles.cache.some(role => config.ia_admin_roles!.includes(role.id));
+        }
+    } catch (error) {
+        logger.warn(`Error checking auth for guild ${member.guild.id}`, { error });
+    }
+
+    return false;
 }
 
 async function parseAdminCommand(userMessage: string): Promise<ParsedCommand> {
@@ -492,6 +515,35 @@ async function executeAdminAction(message: Message, action: string, params: Reco
             case 'none':
                 return null;
 
+            case 'partnership_add': {
+                if (!params.partnerGuildId || !params.partnerGuildName) {
+                    return '❌ Preciso do ID e nome do servidor parceiro.';
+                }
+                await createPartnership(
+                    guild.id,
+                    params.partnerGuildId,
+                    params.partnerGuildName,
+                    message.author.id,
+                    { invite: params.invite, description: params.description }
+                );
+                return `🤝 Parceria com **${params.partnerGuildName}** adicionada!`;
+            }
+
+            case 'partnership_list': {
+                const partnerships = await listPartnerships(guild.id);
+                if (partnerships.length === 0) return '📋 Nenhuma parceria ativa.';
+                const list = partnerships.map((p, i) =>
+                    `${i + 1}. **${p.partner_guild_name}**${p.partner_invite ? ` — ${p.partner_invite}` : ''}`
+                ).join('\n');
+                return `🤝 **Parcerias Ativas (${partnerships.length}):**\n${list}`;
+            }
+
+            case 'partnership_remove': {
+                if (!params.partnerGuildId) return '❌ Preciso do ID do servidor parceiro.';
+                const removed = await removePartnership(guild.id, params.partnerGuildId);
+                return removed ? '✅ Parceria removida.' : '❌ Parceria não encontrada.';
+            }
+
             default:
                 return null;
         }
@@ -563,6 +615,13 @@ async function runChatGeralLogic(message: Message): Promise<void> {
 
     if (deveResponder) {
         try {
+            // 🛑 Check AI Limit
+            const limitCheck = await checkAiLimit(message.author.id, guildId, message.guild!.ownerId);
+            if (!limitCheck.allowed) {
+                await message.reply(getLimitMessage(limitCheck.plan, limitCheck.limit));
+                return;
+            }
+
             await (message.channel as TextChannel).sendTyping();
             conversasAtivas.set(message.author.id, Date.now());
 
@@ -593,7 +652,38 @@ async function runChatGeralLogic(message: Message): Promise<void> {
             const promptSistema = config.ia_system_prompt || `Você é a IA do CoreBot. Personalidade ÁCIDA. Usuario: ${contextoUsuario}`;
 
             const resposta = await llmService.gerarResposta(historicoContexto, promptSistema, imageUrl);
-            await message.reply(resposta);
+
+            // ✅ Increment Usage
+            await incrementAiUsage(message.author.id, guildId);
+
+            // Analytics: rastrear resposta IA
+            trackEvent(guildId, 'ai_response').catch(() => { });
+
+            // Branding: Free/Starter = com marca d'água
+            const brandingFooter = await getBrandingFooter(message.guild!.ownerId);
+            const respostaFinal = applyBranding(resposta, brandingFooter);
+
+            // Whitelabel: Se configurado, usar webhook com nome/avatar customizado
+            if (config.whitelabel_name) {
+                try {
+                    const channel = message.channel as TextChannel;
+                    const webhooks = await channel.fetchWebhooks();
+                    let webhook = webhooks.find(wh => wh.name === 'CoreBot-Whitelabel');
+                    if (!webhook) {
+                        webhook = await channel.createWebhook({ name: 'CoreBot-Whitelabel' });
+                    }
+                    await webhook.send({
+                        content: respostaFinal,
+                        username: config.whitelabel_name,
+                        avatarURL: config.whitelabel_avatar_url || undefined
+                    });
+                } catch {
+                    // Fallback: responder normalmente se webhook falhar
+                    await message.reply(respostaFinal);
+                }
+            } else {
+                await message.reply(respostaFinal);
+            }
         } catch (err) {
             logger.error('Erro no chat geral');
         }
@@ -601,6 +691,14 @@ async function runChatGeralLogic(message: Message): Promise<void> {
 }
 
 async function runChatPrivadoLogic(message: Message): Promise<void> {
+
+    // 🛑 Check AI Limit
+    const limitCheck = await checkAiLimit(message.author.id, message.guild!.id, message.guild!.ownerId);
+    if (!limitCheck.allowed) {
+        await message.reply(getLimitMessage(limitCheck.plan, limitCheck.limit));
+        return;
+    }
+
     await (message.channel as TextChannel).sendTyping();
     try {
         const mensagensAnteriores = await message.channel.messages.fetch({ limit: 10 });
@@ -624,6 +722,9 @@ async function runChatPrivadoLogic(message: Message): Promise<void> {
         }
 
         const resposta = await llmService.gerarResposta(historicoBuild, "Você é a IA do CoreBot.", imgUrl);
+
+        // ✅ Increment Usage
+        await incrementAiUsage(message.author.id, message.guild!.id);
 
         if (resposta.length > 2000) {
             const partes = resposta.match(/[\s\S]{1,1900}/g) || [];
@@ -655,7 +756,7 @@ client.on('messageCreate', async (message: Message) => {
     const isMention = message.mentions.users.has(client.user!.id);
 
     if ((isAdminPrefix || isMention) && message.guild) {
-        if (isAuthorized(message.member)) {
+        if (await isAuthorized(message.member)) {
             logger.info(`🔐 Comando admin: ${message.content}`);
 
             const channelMentions = message.content.match(/<#(\d+)>/g) || [];
@@ -762,19 +863,22 @@ client.on('interactionCreate', async (interaction) => {
         logger.info('🏗️ Comando /construir-servidor recebido');
         try {
             const theme = interaction.options.getString('tema', true);
-            logger.info(`🏗️ Tema: ${theme}`);
+            const guildId = interaction.guildId!;
+
+            // ⚡ DEFER FIRST (Prevent 3s timeout)
             await interaction.deferReply({ ephemeral: false });
             logger.info('🏗️ DeferReply enviado');
 
-            const guildId = interaction.guildId;
-            if (!guildId) {
-                await interaction.editReply('❌ Este comando só funciona em servidores.');
+            // 🛑 Check Server Generation Limit
+            const limitCheck = await checkServerGenLimit(interaction.user.id);
+            if (!limitCheck.allowed) {
+                await interaction.editReply({
+                    content: `⚠️ **Limite Atingido!**\nVocê atingiu seu limite de **${limitCheck.limit} servidor(es) por mês** com o plano **${limitCheck.plan.toUpperCase()}**.\n\nFazer upgrade para **PRO** garante gerações ilimitadas!`
+                });
                 return;
             }
 
-            const guild = interaction.guild || await client.guilds.fetch(guildId);
-
-            await interaction.editReply(`🏗️ Entendido! Projetando um servidor com o tema: **${theme}**...\nIsso pode levar cerca de 1 minuto.`);
+            logger.info(`🏗️ Tema: ${theme}`);
 
             // 1. Gerar Arquitetura
             const schema = await serverBuilder.generateServerPlan(theme);
@@ -784,12 +888,16 @@ client.on('interactionCreate', async (interaction) => {
                 return;
             }
 
+            const guild = interaction.guild || await client.guilds.fetch(guildId);
             await interaction.editReply(`📐 Plano gerado! Criando ${schema.roles.length} cargos e ${schema.categories.length} categorias...`);
 
             // 2. Construir
             await serverBuilder.buildServer(guild, schema, async (msg) => {
                 logger.info(msg);
             });
+
+            // ✅ Increment Usage
+            await incrementServerGenUsage(interaction.user.id);
 
             await interaction.followUp({
                 content: `✅ **Servidor Construído com Sucesso!** 🚀\nTema: ${theme.substring(0, 100)}${theme.length > 100 ? '...' : ''}\n\n*Nota: Ajuste as permissões de canais se necessário.*`,
@@ -1060,7 +1168,7 @@ async function registerCommands(clientId: string) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 client.once('ready', async () => {
-    logger.info(`🤖 Bot NexstarIA ${client.user?.tag} está online!`);
+    logger.info(`🤖 Bot IA ${client.user?.tag} está online!`);
 
     // Iniciar verificação de inatividade
     verificarInatividade();

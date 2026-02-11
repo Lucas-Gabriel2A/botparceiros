@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Hand, ShieldAlert, Type, UserPlus, LogOut, ShieldCheck, Image as ImageIcon, Sparkles, Save, Link, MessageSquare, AlertTriangle, X } from "lucide-react";
+import { Hand, ShieldAlert, Type, UserPlus, LogOut, ShieldCheck, Image as ImageIcon, Sparkles, Save, Link, MessageSquare, AlertTriangle, X, Bot, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
+import { usePlan } from "@/components/PlanGate";
 
 interface AutoModConfig {
     guild_id: string;
@@ -48,6 +49,8 @@ function SubmitButton() {
 
 export function AutoModForm({ config, guildId, user }: { config: any, guildId: string, user?: any }) {
     const [state, formAction] = useActionState(updateAutoModConfig, { success: false, error: "", message: "" });
+    const { plan, canUse } = usePlan();
+    const canUseAI = canUse('automod_ia');
 
     const [prohibitedWords, setProhibitedWords] = useState<string[]>(config?.prohibited_words || []);
     const [newWord, setNewWord] = useState("");
@@ -151,6 +154,36 @@ export function AutoModForm({ config, guildId, user }: { config: any, guildId: s
                                     className="data-[state=checked]:bg-red-500"
                                 />
                             </div>
+
+                            {/* AutoMod IA */}
+                            <div className="flex items-center justify-between p-4 bg-[#13111C] rounded-xl border border-purple-500/20 hover:border-purple-500/40 transition-all duration-300 group/toggle relative overflow-hidden">
+                                <div className="absolute inset-0 bg-linear-to-r from-purple-500/5 to-transparent pointer-events-none"></div>
+                                <div className="flex items-center gap-4 relative z-10">
+                                    <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center group-hover/toggle:bg-purple-500/20 transition-colors">
+                                        <Bot className="w-5 h-5 text-purple-400" />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="automod-ai" className="text-base font-medium text-white pointer-events-none block">
+                                            AutoMod IA
+                                            <span className="ml-2 text-[9px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded font-bold tracking-wider">PRO</span>
+                                        </Label>
+                                        <p className="text-xs text-zinc-400">Detecção avançada por IA: toxicidade, assédio, NSFW e evasão.</p>
+                                    </div>
+                                </div>
+                                <Switch
+                                    id="automod-ai"
+                                    name="automodAiEnabled"
+                                    defaultChecked={config?.automod_ai_enabled}
+                                    disabled={!canUseAI}
+                                    className="data-[state=checked]:bg-purple-500 relative z-10 disabled:opacity-40 disabled:cursor-not-allowed"
+                                />
+                            </div>
+                            {!canUseAI && (
+                                <div className="flex items-center gap-2 px-4 py-2 bg-amber-500/5 border border-amber-500/20 rounded-lg text-amber-300 text-xs">
+                                    <Lock className="w-3 h-3 shrink-0" />
+                                    Requer plano Pro ou superior. Faça upgrade para ativar.
+                                </div>
+                            )}
                         </div>
 
                         {/* Actions & Sensitivity */}

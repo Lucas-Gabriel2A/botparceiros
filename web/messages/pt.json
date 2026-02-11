@@ -44,6 +44,18 @@
     "yearly": "/ano",
     "billed_yearly": "Equivalente a {price}/mês",
     "save_text": "Economize 20%",
+    "free": {
+      "name": "Free",
+      "price": "R$ 0",
+      "desc": "Comece gratuitamente e explore o CoreBot.",
+      "features": [
+        "5 respostas IA/usuário/dia",
+        "1 Geração de Servidor",
+        "1 Categoria de Ticket",
+        "AutoMod Básico",
+        "Boas-vindas padrão"
+      ]
+    },
     "starter": {
       "name": "Starter",
       "price": "R$ 19,90",
@@ -51,9 +63,11 @@
       "price_yearly_total": "R$ 190,80",
       "desc": "Essencial para servidores em crescimento.",
       "features": [
-        "10 Gerações de Servidor/mês",
-        "AutoMod Básico",
-        "Tickets Simples",
+        "15 Respostas IA/usuário/dia",
+        "5 Gerações de Servidor/mês",
+        "AutoMod Avançado (IA)",
+        "3 Categorias de Ticket",
+        "Boas-vindas Personalizável",
         "Suporte via Comunidade"
       ]
     },
@@ -64,7 +78,8 @@
       "price_yearly_total": "R$ 286,80",
       "desc": "Poder total para comunidades ativas.",
       "features": [
-        "Gerações Ilimitadas",
+        "Gerações IA Ilimitadas",
+        "Gerações de Servidor Ilimitadas",
         "AutoMod Avançado (IA)",
         "Tickets com Transcrição",
         "Call Privada",
@@ -79,9 +94,9 @@
       "desc": "Para grandes redes e empresas.",
       "features": [
         "Tudo do Pro",
+        "Prioridade no Suporte",
         "Bot Whitelabel (Seu Nome/Foto)",
         "Gestor de Parcerias",
-        "Prioridade no Suporte",
         "Analytics Avançado"
       ]
     }
@@ -115,6 +130,10 @@
       "upgrade": "Fazer Upgrade Agora",
       "secure_payment": "Pagamento 100% Seguro via Mercado Pago",
       "features_title": "O que está incluído:",
+      "free": {
+        "name": "Free",
+        "price": "Grátis"
+      },
       "starter": {
         "name": "Starter",
         "price": "R$ 19,90"

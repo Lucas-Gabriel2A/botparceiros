@@ -103,6 +103,7 @@ export async function updateAutoModConfig(prevState: GuildConfigState, formData:
         const automodLinks = formData.get("automodLinks") === "on";
         const automodCaps = formData.get("automodCaps") === "on";
         const automodSpam = formData.get("automodSpam") === "on";
+        const automodAiEnabled = formData.get("automodAiEnabled") === "on";
 
         if (!guildId) return { success: false, error: "Guild ID missing" };
 
@@ -136,7 +137,8 @@ export async function updateAutoModConfig(prevState: GuildConfigState, formData:
             automod_action: automodAction,
             automod_timeout_duration: automodTimeoutDuration,
             automod_log_channel: automodLogChannel || null,
-            automod_bypass_roles: automodBypassRoles
+            automod_bypass_roles: automodBypassRoles,
+            automod_ai_enabled: automodAiEnabled
         };
 
         await database.upsertGuildConfig(guildId, updateData);

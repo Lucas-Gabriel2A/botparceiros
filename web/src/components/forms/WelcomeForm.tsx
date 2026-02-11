@@ -49,7 +49,11 @@ function SubmitButton() {
 }
 
 
-export function WelcomeForm({ config, guildId, user }: { config: any, guildId: string, user?: any }) {
+// ─────────────────────────────────────────────────────────────────────────────
+// ✨ FORM COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function WelcomeForm({ config, guildId, user, plan = 'free' }: { config: any, guildId: string, user?: any, plan?: string }) {
     // We will need to update the action import later, for now we keep it as placeholder or error until we fix guild-actions.ts
     // let's assume updateWelcomeConfig is exported from guild-actions
     // but to avoid TS error before I create the action, I will use updateAutoModConfig and rename it in next step
@@ -58,6 +62,10 @@ export function WelcomeForm({ config, guildId, user }: { config: any, guildId: s
     const [selectedFont, setSelectedFont] = useState(config?.welcome_font || 'Inter');
     const [welcomeMessage, setWelcomeMessage] = useState(config?.welcome_message || "Bem-vindo {user} ao servidor!");
     const [bannerPreview, setBannerPreview] = useState(config?.welcome_banner_url || null);
+
+    // Limits
+    const isFree = plan === 'free';
+    const canCustomizeMessage = !isFree;
 
     const previewUser = {
         name: user?.name || "Usuário",
@@ -162,11 +170,20 @@ export function WelcomeForm({ config, guildId, user }: { config: any, guildId: s
                                             id="welcome-msg"
                                             name="welcomeMessage"
                                             placeholder="Bem-vindo {user} ao servidor!"
-
+                                            disabled={!canCustomizeMessage}
                                             value={welcomeMessage}
                                             onChange={(e) => setWelcomeMessage(e.target.value)}
-                                            className="bg-black/50 border-white/10 text-white rounded-xl focus:border-blue-500/50 min-h-[100px] resize-none p-3 text-sm transition-all group-hover/input:border-white/20"
+                                            className={`bg-black/50 border-white/10 text-white rounded-xl focus:border-blue-500/50 min-h-[100px] resize-none p-3 text-sm transition-all group-hover/input:border-white/20 ${!canCustomizeMessage ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         />
+                                        {!canCustomizeMessage && (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-[1px] rounded-xl border border-white/5">
+                                                <div className="text-center p-4">
+                                                    <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block mb-1">Recurso Premium</span>
+                                                    <p className="text-[10px] text-zinc-400">Mensagens personalizadas requerem plano Starter.</p>
+                                                    <a href="/dashboard/billing" className="text-[10px] text-blue-400 hover:text-blue-300 underline mt-1 block">Fazer Upgrade</a>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     <p className="text-[10px] text-zinc-500">
                                         Variáveis: <span className="text-blue-400">{"{user}"}</span>, <span className="text-blue-400">{"{server}"}</span>
