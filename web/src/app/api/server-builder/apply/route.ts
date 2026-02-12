@@ -29,6 +29,18 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Token do bot não configurado" }, { status: 500 });
         }
 
+        // 🛑 Check Server Generation Limits
+        // We import dynamically to avoid issues if shared libs fail, but here we use local lib
+        const { checkServerGenLimit, incrementServerGenUsage } = await import("@/lib/server-limits");
+        const limitCheck = await checkServerGenLimit(session.user.id);
+
+        if (!limitCheck.allowed) {
+            return NextResponse.json({
+                error: `Limite de geração excedido (${limitCheck.limit}/mês no plano ${limitCheck.plan})`,
+                limitReached: true
+            }, { status: 403 });
+        }
+
         const messages: string[] = [];
 
         const discordFetch = async (endpoint: string, options: RequestInit = {}) => {
@@ -219,6 +231,10 @@ export async function POST(req: Request) {
         }
 
         messages.push(`\n🎉 Estrutura aplicada com sucesso!`);
+
+        // ✅ Increment Usage
+        await incrementServerGenUsage(session.user.id);
+
         return NextResponse.json({ success: true, messages });
     } catch (error) {
         console.error("[ServerBuilder Apply] Error:", error);

@@ -327,6 +327,13 @@ export default function ServerBuilderPage() {
     const [applyDone, setApplyDone] = useState(false);
     const [activeId, setActiveId] = useState<string | null>(null);
     const [editingRole, setEditingRole] = useState<ServerRole | null>(null);
+    const [limitState, setLimitState] = useState<{
+        allowed: boolean;
+        limit: number;
+        current: number;
+        plan: string;
+        loading: boolean;
+    }>({ allowed: true, limit: -1, current: 0, plan: 'free', loading: true });
     const router = useRouter();
 
     const sensors = useSensors(
@@ -341,6 +348,17 @@ export default function ServerBuilderPage() {
                 .catch(() => { });
         }
     }, [step]);
+
+    useEffect(() => {
+        fetch('/api/server-builder/limits')
+            .then(res => res.json())
+            .then(data => {
+                if (data && typeof data.allowed === 'boolean') {
+                    setLimitState({ ...data, loading: false });
+                }
+            })
+            .catch(err => console.error(err));
+    }, []);
 
     // ── TEMPLATE / AI SELECTION ──────────────────────────────
     const selectTemplate = (template: ServerTemplate) => {
@@ -694,6 +712,27 @@ export default function ServerBuilderPage() {
                     </div>
                 </motion.div>
 
+                {!limitState.loading && !limitState.allowed && (
+                    <div className="mb-8 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                        <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
+                            <Shield className="text-red-400" size={20} />
+                        </div>
+                        <div>
+                            <h3 className="text-red-400 font-bold">Limite de Criação Atingido</h3>
+                            <p className="text-red-200/70 text-sm">
+                                Você atingiu o limite de {limitState.limit} servidores por mês no plano {limitState.plan.toUpperCase()}.
+                                <br />Atualize seu plano para criar servidores ilimitados.
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => router.push('/dashboard/billing?plan=pro')}
+                            className="ml-auto px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors shadow-lg shadow-red-500/20"
+                        >
+                            Fazer Upgrade
+                        </button>
+                    </div>
+                )}
+
                 <AnimatePresence mode="wait">
 
                     {/* ═══════════════════════════════════════════════════ */}
@@ -725,7 +764,7 @@ export default function ServerBuilderPage() {
                                         />
                                         <button
                                             onClick={generateWithAI}
-                                            disabled={aiLoading || !aiPrompt.trim()}
+                                            disabled={aiLoading || !aiPrompt.trim() || !limitState.allowed}
                                             className="px-6 py-3.5 bg-white hover:bg-zinc-200 text-black text-sm font-bold uppercase tracking-wider rounded-xl flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-[0_0_20px_-5px_rgba(255,255,255,0.2)] hover:shadow-[0_0_30px_-5px_rgba(255,255,255,0.4)]"
                                         >
                                             {aiLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
@@ -766,8 +805,9 @@ export default function ServerBuilderPage() {
                                     return (
                                         <motion.button
                                             key={template.id}
-                                            onClick={() => selectTemplate(template)}
-                                            whileHover={{ y: -4 }}
+                                            onClick={() => !limitState.allowed ? toast.error('Limite atingido, faça upgrade para usar.') : selectTemplate(template)}
+                                            disabled={!limitState.allowed}
+                                            whileHover={{ y: !limitState.allowed ? 0 : -4 }}
                                             transition={{ duration: 0.2 }}
                                             className={`text-left p-6 rounded-3xl border bg-[#0A0A0C] ${borderClass} transition-all group relative overflow-hidden`}
                                         >
@@ -807,9 +847,10 @@ export default function ServerBuilderPage() {
 
                             {/* From Scratch */}
                             <motion.button
-                                onClick={startFromScratch}
-                                whileHover={{ y: -2 }}
-                                className="w-full p-6 rounded-3xl border border-dashed border-white/10 hover:border-white/20 bg-[#0A0A0C] text-zinc-500 hover:text-zinc-300 flex items-center justify-center gap-3 transition-all group"
+                                onClick={() => !limitState.allowed ? toast.error('Limite atingido, faça upgrade para usar.') : startFromScratch()}
+                                disabled={!limitState.allowed}
+                                whileHover={{ y: !limitState.allowed ? 0 : -2 }}
+                                className="w-full p-6 rounded-3xl border border-dashed border-white/10 hover:border-white/20 bg-[#0A0A0C] text-zinc-500 hover:text-zinc-300 flex items-center justify-center gap-3 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center group-hover:bg-white/10 transition-colors">
                                     <PenLine className="w-5 h-5" />
@@ -847,7 +888,8 @@ export default function ServerBuilderPage() {
 
                                 <button
                                     onClick={() => setStep('apply')}
-                                    className="group px-6 py-3 bg-white hover:bg-zinc-200 text-black font-semibold flex items-center justify-center gap-3 transition-all rounded-xl shadow-[0_0_20px_-5px_rgba(255,255,255,0.2)] hover:shadow-[0_0_30px_-5px_rgba(255,255,255,0.4)] shrink-0 h-fit"
+                                    disabled={!limitState.allowed}
+                                    className="group px-6 py-3 bg-white hover:bg-zinc-200 text-black font-semibold flex items-center justify-center gap-3 transition-all rounded-xl shadow-[0_0_20px_-5px_rgba(255,255,255,0.2)] hover:shadow-[0_0_30px_-5px_rgba(255,255,255,0.4)] shrink-0 h-fit disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     Aplicar no Servidor
                                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
@@ -1288,7 +1330,7 @@ export default function ServerBuilderPage() {
                                 ) : (
                                     <button
                                         onClick={applyToServer}
-                                        disabled={!applyGuildId || applying}
+                                        disabled={!applyGuildId || applying || !limitState.allowed}
                                         className="w-full py-4 rounded-xl font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-3 transition-all bg-white hover:bg-zinc-200 text-black shadow-[0_0_30px_-5px_rgba(255,255,255,0.2)] hover:shadow-[0_0_40px_-5px_rgba(255,255,255,0.4)] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
                                     >
                                         {applying ? (
