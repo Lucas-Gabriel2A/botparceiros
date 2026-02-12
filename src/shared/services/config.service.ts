@@ -5,8 +5,12 @@
  */
 
 import * as dotenv from 'dotenv';
+import * as path from 'path';
 
-// Carrega .env
+// Carrega .env do web/ (prioritário ou complementar)
+dotenv.config({ path: path.resolve(process.cwd(), 'web', '.env.local') });
+
+// Carrega .env da raiz (fallback)
 dotenv.config();
 
 export interface BotConfig {

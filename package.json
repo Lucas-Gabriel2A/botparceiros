@@ -15,11 +15,11 @@
     "tickets",
     "partnerships",
     "calls",
-    "nexstar"
+    "core"
   ],
   "author": "Nexstar",
   "license": "MIT",
-  "description": "Sistema de tickets e calls privadas para Discord",
+  "description": "bot inteligente para gerenciamento de servidores do discord",
   "dependencies": {
     "@discordjs/voice": "^0.19.0",
     "@snazzah/davey": "^0.1.9",

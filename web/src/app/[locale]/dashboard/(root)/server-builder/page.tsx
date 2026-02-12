@@ -11,7 +11,8 @@ import {
     FolderPlus, Palette, Shield, Edit3, Eye, Wand2, Bot, Settings, X,
     Users, Gamepad2, ShoppingCart, Headphones, GraduationCap, Server, Zap,
     type LucideIcon,
-    Home
+    Home,
+    AlertTriangle
 } from "lucide-react";
 import {
     DndContext, closestCenter, PointerSensor, useSensor, useSensors,
@@ -1219,6 +1220,20 @@ export default function ServerBuilderPage() {
                                             ))}
                                         </div>
                                     )}
+                                </div>
+
+                                {/* Warning */}
+                                <div className="p-6 rounded-3xl bg-yellow-500/10 border border-yellow-500/20 mb-6 flex gap-4">
+                                    <AlertTriangle className="text-yellow-500 shrink-0" size={24} />
+                                    <div className="space-y-2">
+                                        <h3 className="font-bold text-yellow-500">Atenção: Verifique seu Servidor</h3>
+                                        <p className="text-yellow-200/80 text-sm leading-relaxed">
+                                            A aplicação da estrutura é um processo complexo. O CoreBot tentará criar todos os canais, cargos e permissões conforme configurado, mas limitações do Discord podem ocorrer.
+                                        </p>
+                                        <p className="text-yellow-200/80 text-sm leading-relaxed font-medium">
+                                            Após a conclusão, recomendamos fortemente que você revise manualmente as permissões de canais e configurações sensíveis.
+                                        </p>
+                                    </div>
                                 </div>
 
                                 {/* Server selection */}
