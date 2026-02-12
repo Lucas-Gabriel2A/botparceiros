@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { Settings, ShieldAlert, Plus, ExternalLink } from "lucide-react";
 
 interface Guild {
@@ -20,10 +21,20 @@ function getBotInviteUrl(guildId: string) {
 
 export default function DashboardPage() {
     const t = useTranslations("dashboard");
+    const searchParams = useSearchParams();
+    const success = searchParams.get('success');
+
     const [guilds, setGuilds] = useState<Guild[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
     const [botStatus, setBotStatus] = useState<Record<string, boolean>>({});
+
+    useEffect(() => {
+        if (success === 'true') {
+            // Force refresh plan cache silently
+            fetch("/api/user/usage?refresh=true").catch(() => { });
+        }
+    }, [success]);
 
     useEffect(() => {
         fetch("/api/user/guilds")

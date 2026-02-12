@@ -31,6 +31,7 @@ import OpenAI from 'openai';
 import {
     config,
     logger,
+    query,
     testConnection,
     initializeSchema,
     logAudit,
@@ -618,7 +619,14 @@ async function runChatGeralLogic(message: Message): Promise<void> {
             // 🛑 Check AI Limit
             const limitCheck = await checkAiLimit(message.author.id, guildId, message.guild!.ownerId);
             if (!limitCheck.allowed) {
-                await message.reply(getLimitMessage(limitCheck.plan, limitCheck.limit));
+                const limitMsg = getLimitMessage(limitCheck.plan, limitCheck.limit);
+                const embed = new EmbedBuilder()
+                    .setTitle(limitMsg.title)
+                    .setDescription(limitMsg.description)
+                    .setColor(limitMsg.color)
+                    .setFooter({ text: limitMsg.footer })
+                    .setTimestamp();
+                await message.reply({ embeds: [embed] });
                 return;
             }
 
@@ -695,7 +703,14 @@ async function runChatPrivadoLogic(message: Message): Promise<void> {
     // 🛑 Check AI Limit
     const limitCheck = await checkAiLimit(message.author.id, message.guild!.id, message.guild!.ownerId);
     if (!limitCheck.allowed) {
-        await message.reply(getLimitMessage(limitCheck.plan, limitCheck.limit));
+        const limitMsg = getLimitMessage(limitCheck.plan, limitCheck.limit);
+        const embed = new EmbedBuilder()
+            .setTitle(limitMsg.title)
+            .setDescription(limitMsg.description)
+            .setColor(limitMsg.color)
+            .setFooter({ text: limitMsg.footer })
+            .setTimestamp();
+        await message.reply({ embeds: [embed] });
         return;
     }
 
@@ -794,6 +809,94 @@ client.on('messageCreate', async (message: Message) => {
     }
 });
 
+
+// ═══════════════════════════════════════════════════════════════
+// 🎮 Handler de Botões (Interações Sociais GIF)
+// ═══════════════════════════════════════════════════════════════
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isButton()) return;
+
+    const customId = interaction.customId;
+
+    // Handle GIF interaction buttons: gif_retribuir:category:originalUserId or gif_action:category:originalUserId
+    if (!customId.startsWith('gif_retribuir:') && !customId.startsWith('gif_action:')) return;
+
+    try {
+        await interaction.deferReply();
+
+        const parts = customId.split(':');
+        const actionType = parts[0]; // gif_retribuir or gif_action
+        const category = parts[1]; // kiss, slap, hug, etc.
+        const originalUserId = parts[2]; // who triggered the original command
+
+        // For "Retribuir", only the target can click it
+        if (actionType === 'gif_retribuir') {
+            // The target is the person who was mentioned, not the original sender
+            // Only they should retribuir
+            if (interaction.user.id === originalUserId) {
+                await interaction.editReply({ content: '❌ Você não pode retribuir a si mesmo!' });
+                return;
+            }
+        }
+
+        const { gifService } = await import('../../shared/services/gif.service');
+        const url = await gifService.get(category);
+
+        if (!url) {
+            await interaction.editReply({ content: '❌ Não consegui encontrar um GIF. Tente novamente!' });
+            return;
+        }
+
+        // Category theming (matching engine.ts themes)
+        const categoryThemes: Record<string, { emoji: string; color: number; label: string }> = {
+            kiss: { emoji: '💋', color: 0xFF69B4, label: 'Beijo' },
+            hug: { emoji: '🤗', color: 0xFFD700, label: 'Abraço' },
+            slap: { emoji: '👋', color: 0xFF4444, label: 'Tapa' },
+            pat: { emoji: '💆', color: 0x87CEEB, label: 'Carinho' },
+            cuddle: { emoji: '🥰', color: 0xFF8FAE, label: 'Conchinha' },
+            dance: { emoji: '💃', color: 0x9B59B6, label: 'Dança' },
+            bite: { emoji: '😈', color: 0xE74C3C, label: 'Mordida' },
+            poke: { emoji: '👉', color: 0x3498DB, label: 'Cutucão' },
+            tickle: { emoji: '🤭', color: 0xF1C40F, label: 'Cócegas' },
+            wave: { emoji: '👋', color: 0x2ECC71, label: 'Tchau' },
+            wink: { emoji: '😉', color: 0xE91E63, label: 'Piscadinha' },
+            highfive: { emoji: '🙌', color: 0xFF9800, label: 'High Five' },
+            yeet: { emoji: '🚀', color: 0xF44336, label: 'Yeet' },
+        };
+
+        const theme = categoryThemes[category] || { emoji: '✨', color: 0x99AAB5, label: category };
+
+        // Build description based on action type
+        let description: string;
+        if (actionType === 'gif_retribuir') {
+            description = `${theme.emoji} **${interaction.user.displayName}** retribuiu o ${theme.label.toLowerCase()} para <@${originalUserId}>!`;
+        } else {
+            description = `${theme.emoji} **${interaction.user.displayName}** deu um ${theme.label.toLowerCase()} em <@${originalUserId}>!`;
+        }
+
+        const embed = new EmbedBuilder()
+            .setAuthor({
+                name: interaction.user.displayName,
+                iconURL: interaction.user.displayAvatarURL({ size: 32 })
+            })
+            .setDescription(description)
+            .setImage(url)
+            .setColor(theme.color)
+            .setFooter({ text: `${theme.label} • Interações Sociais` })
+            .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+
+    } catch (error) {
+        logger.error('Erro ao processar botão GIF:', { error });
+        try {
+            if (interaction.deferred) {
+                await interaction.editReply({ content: '❌ Ocorreu um erro ao processar a interação.' });
+            }
+        } catch { }
+    }
+});
+
 // Handler de Interações (Slash Commands)
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
@@ -872,9 +975,14 @@ client.on('interactionCreate', async (interaction) => {
             // 🛑 Check Server Generation Limit
             const limitCheck = await checkServerGenLimit(interaction.user.id);
             if (!limitCheck.allowed) {
-                await interaction.editReply({
-                    content: `⚠️ **Limite Atingido!**\nVocê atingiu seu limite de **${limitCheck.limit} servidor(es) por mês** com o plano **${limitCheck.plan.toUpperCase()}**.\n\nFazer upgrade para **PRO** garante gerações ilimitadas!`
-                });
+                const planNames: Record<string, string> = { free: 'Free', starter: 'Starter', pro: 'Pro', ultimate: 'Ultimate' };
+                const limitEmbed = new EmbedBuilder()
+                    .setTitle('⚠️ Limite de Gerações Atingido')
+                    .setDescription(`Você utilizou todas as **${limitCheck.limit} geração(ões) de servidor** disponíveis este mês no plano **${planNames[limitCheck.plan] || limitCheck.plan}**.\n\nPara gerar mais servidores, o **dono do servidor** pode fazer upgrade no painel.`)
+                    .setColor(0xFFA500)
+                    .setFooter({ text: `Plano: ${planNames[limitCheck.plan] || limitCheck.plan} • Limite: ${limitCheck.limit}/mês` })
+                    .setTimestamp();
+                await interaction.editReply({ embeds: [limitEmbed] });
                 return;
             }
 
@@ -1184,6 +1292,26 @@ client.once('ready', async () => {
             await initializeSchema();
             dbConnected = true;
             logger.info('💾 Database PostgreSQL conectado!');
+
+            // 🔄 Sincronizar guilds ausentes no banco
+            try {
+                const dbGuildsResult = await query<{ guild_id: string }>('SELECT guild_id FROM guild_configs');
+                const dbGuildIds = new Set(dbGuildsResult.rows.map(r => r.guild_id));
+
+                const missingGuilds = client.guilds.cache.filter(g => !dbGuildIds.has(g.id));
+
+                if (missingGuilds.size > 0) {
+                    logger.info(`🔄 Sincronizando ${missingGuilds.size} servidores ausentes no banco...`);
+                    for (const guild of missingGuilds.values()) {
+                        await upsertGuildConfig(guild.id, { ia_enabled: true });
+                        logger.info(`✅ [Sync] Config criada para ${guild.name}`);
+                    }
+                } else {
+                    logger.info('✅ Todos os servidores estão sincronizados no banco.');
+                }
+            } catch (error) {
+                logger.error('❌ Erro na sincronização de guilds:', { error });
+            }
         }
     } catch (error) {
         logger.warn('⚠️ Database não disponível, usando apenas memória');
@@ -1197,6 +1325,35 @@ setupWelcomeEvents(client);
 setupAutoModEvents(client);
 setupTicketEvents(client);
 setupPrivateCallsEvents(client);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🆕 GUILD EVENTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+client.on('guildCreate', async (guild) => {
+    logger.info(`📥 Entrei em um novo servidor: ${guild.name} (${guild.id})`);
+    try {
+        // Inicializar configuração no banco de dados
+        await upsertGuildConfig(guild.id, { ia_enabled: true });
+        logger.info(`✅ Configuração inicial criada para ${guild.name}`);
+
+        // Log analytics
+        trackEvent(guild.id, 'guild_join').catch(() => { });
+    } catch (error) {
+        logger.error(`❌ Erro ao criar config para ${guild.name}:`, { error });
+    }
+});
+
+client.on('guildDelete', async (guild) => {
+    logger.info(`📤 Removido do servidor: ${guild.name} (${guild.id})`);
+    try {
+        // Opcional: Limpar dados ou marcar como inativo
+        // Por enquanto mantemos a config para caso o bot volte
+        trackEvent(guild.id, 'guild_leave').catch(() => { });
+    } catch (error) {
+        logger.error(`❌ Erro ao processar saída de ${guild.name}:`, { error });
+    }
+});
 
 client.login(TOKEN).catch(error => {
     logger.error('Falha no login:', error);

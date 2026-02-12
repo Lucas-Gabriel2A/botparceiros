@@ -2,7 +2,7 @@
 
 import { Sidebar } from "@/components/Sidebar";
 import { MobileSidebar } from "@/components/MobileSidebar";
-import { LayoutDashboard, CreditCard } from "lucide-react";
+import { LayoutDashboard, CreditCard, Hammer } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Image from "next/image";
 
@@ -12,6 +12,7 @@ export default function DashboardRootLayout({ children }: { children: React.Reac
 
     const menu = [
         { name: t("servers"), icon: LayoutDashboard, href: `/${locale}/dashboard`, exact: true },
+        { name: "Server Builder", icon: Hammer, href: `/${locale}/dashboard/server-builder` },
         { name: t("billing"), icon: CreditCard, href: `/${locale}/dashboard/billing` },
     ];
 

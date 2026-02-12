@@ -54,14 +54,23 @@ export async function incrementAiUsage(userId: string, guildId: string): Promise
     }
 }
 
-export function getLimitMessage(plan: PlanTier, limit: number): string {
-    const dashboardUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-    const upgradeLink = `[Fazer Upgrade](${dashboardUrl}/dashboard/billing)`;
+export function getLimitMessage(plan: PlanTier, limit: number): { title: string; description: string; color: number; footer: string } {
+    const planNames: Record<PlanTier, string> = { free: 'Free', starter: 'Starter', pro: 'Pro', ultimate: 'Ultimate' };
 
     if (plan === 'free') {
-        return `⚠️ Você atingiu o limite gratuito de **${limit} mensagens diárias** neste servidor.\nPeça ao dono do servidor para fazer upgrade para o plano **Pro** para conversas ilimitadas!\n🔗 ${upgradeLink}`;
+        return {
+            title: '⚠️ Limite de Mensagens Atingido',
+            description: `Você utilizou todas as **${limit} mensagens diárias** disponíveis no plano **${planNames[plan]}** deste servidor.\n\nPara liberar mais interações, o **dono do servidor** pode fazer upgrade de plano no painel.`,
+            color: 0xFFA500,
+            footer: `Plano atual do servidor: ${planNames[plan]} • Limite: ${limit}/dia`
+        };
     }
-    return `⚠️ Você atingiu o limite de **${limit} mensagens diárias**.\nO servidor precisa de um plano superior para liberar mais interações.\n🔗 ${upgradeLink}`;
+    return {
+        title: '⚠️ Limite Diário Atingido',
+        description: `Você atingiu o limite de **${limit} mensagens diárias** com o plano **${planNames[plan]}**.\n\nO dono do servidor pode ampliar os limites fazendo upgrade no painel.`,
+        color: 0xFFA500,
+        footer: `Plano: ${planNames[plan]} • Limite: ${limit}/dia`
+    };
 }
 
 // Server Generation Limits (Monthly)

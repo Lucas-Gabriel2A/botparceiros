@@ -308,11 +308,13 @@ CREATE TABLE IF NOT EXISTS guild_analytics (
     automod_actions INTEGER DEFAULT 0,
     commands_used INTEGER DEFAULT 0,
     ai_responses INTEGER DEFAULT 0,
+    guild_joins INTEGER DEFAULT 0,
+    guild_leaves INTEGER DEFAULT 0,
     PRIMARY KEY (guild_id, date)
 );
 
 CREATE INDEX IF NOT EXISTS idx_guild_analytics_guild ON guild_analytics(guild_id);
-
+ 
 -- Partnerships
 CREATE TABLE IF NOT EXISTS partnerships (
     id SERIAL PRIMARY KEY,
@@ -407,6 +409,13 @@ export async function initializeSchema(): Promise<void> {
             await query(`
                 ALTER TABLE custom_commands
                 ADD COLUMN IF NOT EXISTS options JSONB DEFAULT '[]';
+            `);
+
+            // Analytics Migration
+            await query(`
+                ALTER TABLE guild_analytics
+                ADD COLUMN IF NOT EXISTS guild_joins INTEGER DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS guild_leaves INTEGER DEFAULT 0;
             `);
 
             logger.info('✅ Schema migrado: colunas verificadas.');

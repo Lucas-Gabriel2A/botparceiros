@@ -60,11 +60,13 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 min
  * Retorna o plano do owner de uma guild.
  * Se não tiver assinatura ativa, retorna 'free'.
  */
-export async function getUserPlan(userId: string): Promise<PlanTier> {
+export async function getUserPlan(userId: string, ignoreCache = false): Promise<PlanTier> {
     try {
-        const cached = planCache.get(userId);
-        if (cached && cached.expires > Date.now()) {
-            return cached.plan;
+        if (!ignoreCache) {
+            const cached = planCache.get(userId);
+            if (cached && cached.expires > Date.now()) {
+                return cached.plan;
+            }
         }
 
         const sub = await getSubscriptionByUser(userId);

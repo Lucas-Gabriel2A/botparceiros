@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Check, ShieldCheck, Zap, CreditCard, Calendar, Clock, ArrowUpRight } from "lucide-react";
+import { Check, ShieldCheck, Zap, CreditCard, Calendar, Clock, ArrowUpRight, MessageSquare, Server, Sparkles, Lock, Unlock, TrendingUp } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { SUBSCRIPTION_PLANS } from "@/config/subscription";
@@ -15,6 +15,20 @@ interface SubscriptionData {
     updatedAt: string;
 }
 
+interface UsageData {
+    plan: string;
+    aiMessages: { current: number; limit: number; period: string };
+    serverBuilds: { current: number; limit: number; period: string };
+    features: {
+        welcome_custom: boolean;
+        private_calls: boolean;
+        whitelabel: boolean;
+        transcription: boolean;
+        automod_level: string;
+        ticket_categories: number;
+    };
+}
+
 export default function BillingPage() {
     const t = useTranslations("dashboard.billing");
     const tPricing = useTranslations("pricing");
@@ -22,6 +36,8 @@ export default function BillingPage() {
     const [loading, setLoading] = useState<string | null>(null);
     const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
     const [subLoading, setSubLoading] = useState(true);
+    const [usage, setUsage] = useState<UsageData | null>(null);
+    const [usageLoading, setUsageLoading] = useState(true);
     const searchParams = useSearchParams();
     const planParam = searchParams.get('plan');
     const autoParam = searchParams.get('auto');
@@ -44,6 +60,19 @@ export default function BillingPage() {
             })
             .catch(() => { })
             .finally(() => setSubLoading(false));
+    }, []);
+
+    // Buscar uso do plano
+    useEffect(() => {
+        fetch("/api/user/usage")
+            .then((res) => res.json())
+            .then((data) => {
+                if (!data.error) {
+                    setUsage(data);
+                }
+            })
+            .catch(() => { })
+            .finally(() => setUsageLoading(false));
     }, []);
 
     useEffect(() => {
@@ -94,6 +123,36 @@ export default function BillingPage() {
     return (
         <div className="h-full overflow-y-auto p-8 md:p-12">
             <div className="max-w-7xl mx-auto">
+
+                {/* ═══════════════════════════════════════════ */}
+                {/* 📋 PAGE HEADER                              */}
+                {/* ═══════════════════════════════════════════ */}
+                <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div>
+                        <h1 className="text-3xl font-serif font-medium mb-2">{t("title")}</h1>
+                        <p className="text-zinc-500">{t("subtitle")}</p>
+                    </div>
+
+                    {/* Toggle */}
+                    <div className="flex items-center gap-1 p-1 bg-white/5 rounded-full border border-white/5 relative">
+                        <button
+                            onClick={() => setBillingCycle('monthly')}
+                            className={`relative z-10 px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${billingCycle === 'monthly' ? 'text-black' : 'text-zinc-400 hover:text-white'}`}
+                        >
+                            {tPricing('monthly')}
+                        </button>
+                        <button
+                            onClick={() => setBillingCycle('yearly')}
+                            className={`relative z-10 px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${billingCycle === 'yearly' ? 'text-black' : 'text-zinc-400 hover:text-white'}`}
+                        >
+                            {tPricing('yearly')}
+                        </button>
+                        <div
+                            className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-full transition-all duration-300 shadow-lg ${billingCycle === 'yearly' ? 'translate-x-[calc(100%+4px)]' : 'translate-x-0'}`}
+                        ></div>
+                    </div>
+                </header>
+
 
                 {/* ═══════════════════════════════════════════ */}
                 {/* 📋 ACTIVE SUBSCRIPTION CARD                */}
@@ -159,33 +218,187 @@ export default function BillingPage() {
                 )}
 
                 {/* ═══════════════════════════════════════════ */}
+                {/* 📊 PLAN USAGE DASHBOARD                     */}
+                {/* ═══════════════════════════════════════════ */}
+                {!usageLoading && usage && (() => {
+                    const currentPlan = usage.plan;
+                    const planColorMap: Record<string, string> = {
+                        free: 'emerald', starter: 'blue', pro: 'purple', ultimate: 'amber'
+                    };
+                    const accent = planColorMap[currentPlan] || 'zinc';
+
+                    const getPercentage = (current: number, limit: number) => {
+                        if (limit === -1) return 5; // "Unlimited" = tiny bar
+                        if (limit === 0) return 100;
+                        return Math.min((current / limit) * 100, 100);
+                    };
+
+                    const getBarColor = (pct: number, unlimited: boolean) => {
+                        if (unlimited) return 'bg-gradient-to-r from-purple-500 to-cyan-400';
+                        if (pct >= 90) return 'bg-gradient-to-r from-red-500 to-orange-500';
+                        if (pct >= 60) return 'bg-gradient-to-r from-amber-500 to-yellow-400';
+                        return `bg-gradient-to-r from-${accent}-500 to-${accent}-400`;
+                    };
+
+                    const aiPct = getPercentage(usage.aiMessages.current, usage.aiMessages.limit);
+                    const sgPct = getPercentage(usage.serverBuilds.current, usage.serverBuilds.limit);
+                    const aiUnlimited = usage.aiMessages.limit === -1;
+                    const sgUnlimited = usage.serverBuilds.limit === -1;
+
+                    const nextPlan: Record<string, string> = { free: 'Starter', starter: 'Pro', pro: 'Ultimate' };
+                    const showUpgrade = currentPlan !== 'ultimate';
+                    const upgradePlanKey: Record<string, string> = { free: 'starter', starter: 'pro', pro: 'ultimate' };
+
+                    const featureList = [
+                        { label: 'Boas-vindas Personalizadas', enabled: usage.features.welcome_custom, icon: Sparkles },
+                        { label: 'Calls Privadas', enabled: usage.features.private_calls, icon: MessageSquare },
+                        { label: 'Transcrição de Áudio', enabled: usage.features.transcription, icon: MessageSquare },
+                        { label: 'Whitelabel (Bot Próprio)', enabled: usage.features.whitelabel, icon: Zap },
+                    ];
+
+                    return (
+                        <div className="mb-12 p-6 rounded-2xl bg-[#0A0A0C] border border-white/10 relative overflow-hidden">
+                            <div className={`absolute inset-0 bg-gradient-to-br from-${accent}-500/5 via-transparent to-transparent pointer-events-none`} />
+
+                            <div className="relative z-10">
+                                {/* Header */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-xl bg-${accent}-500/10 border border-${accent}-500/20`}>
+                                            <TrendingUp className={`w-5 h-5 text-${accent}-400`} />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-lg font-bold text-white">Uso do Plano</h2>
+                                            <p className="text-xs text-zinc-500">Acompanhe seus limites e recursos disponíveis</p>
+                                        </div>
+                                    </div>
+                                    <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-${accent}-500/10 text-${accent}-400 border border-${accent}-500/20`}>
+                                        {currentPlan}
+                                    </span>
+                                </div>
+
+                                {/* Usage Bars */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                    {/* AI Messages */}
+                                    <div className="bg-zinc-900/60 p-4 rounded-xl border border-white/5">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                                <MessageSquare className="w-4 h-4 text-cyan-400" />
+                                                <span className="text-sm font-medium text-white">Mensagens IA</span>
+                                            </div>
+                                            <span className="text-xs text-zinc-500">
+                                                {aiUnlimited
+                                                    ? '∞ / dia'
+                                                    : `${usage.aiMessages.current} / ${usage.aiMessages.limit} por dia`
+                                                }
+                                            </span>
+                                        </div>
+                                        <div className="w-full h-2.5 bg-zinc-800 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-1000 ease-out ${aiUnlimited ? 'bg-gradient-to-r from-purple-500 to-cyan-400' : aiPct >= 90 ? 'bg-gradient-to-r from-red-500 to-orange-500' : aiPct >= 60 ? 'bg-gradient-to-r from-amber-500 to-yellow-400' : 'bg-gradient-to-r from-emerald-500 to-emerald-400'}`}
+                                                style={{ width: `${aiUnlimited ? 100 : aiPct}%` }}
+                                            />
+                                        </div>
+                                        {aiUnlimited && (
+                                            <p className="text-[10px] text-purple-400 mt-1.5">✨ Ilimitado no seu plano</p>
+                                        )}
+                                        {!aiUnlimited && aiPct >= 80 && (
+                                            <p className="text-[10px] text-amber-400 mt-1.5">⚠️ Quase no limite diário</p>
+                                        )}
+                                    </div>
+
+                                    {/* Server Builds */}
+                                    <div className="bg-zinc-900/60 p-4 rounded-xl border border-white/5">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                                <Server className="w-4 h-4 text-blue-400" />
+                                                <span className="text-sm font-medium text-white">Gerações de Servidor</span>
+                                            </div>
+                                            <span className="text-xs text-zinc-500">
+                                                {sgUnlimited
+                                                    ? '∞ / mês'
+                                                    : `${usage.serverBuilds.current} / ${usage.serverBuilds.limit} por mês`
+                                                }
+                                            </span>
+                                        </div>
+                                        <div className="w-full h-2.5 bg-zinc-800 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-1000 ease-out ${sgUnlimited ? 'bg-gradient-to-r from-purple-500 to-cyan-400' : sgPct >= 90 ? 'bg-gradient-to-r from-red-500 to-orange-500' : sgPct >= 60 ? 'bg-gradient-to-r from-amber-500 to-yellow-400' : 'bg-gradient-to-r from-blue-500 to-blue-400'}`}
+                                                style={{ width: `${sgUnlimited ? 100 : sgPct}%` }}
+                                            />
+                                        </div>
+                                        {sgUnlimited && (
+                                            <p className="text-[10px] text-purple-400 mt-1.5">✨ Ilimitado no seu plano</p>
+                                        )}
+                                        {!sgUnlimited && sgPct >= 80 && (
+                                            <p className="text-[10px] text-amber-400 mt-1.5">⚠️ Quase no limite mensal</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Feature Access */}
+                                <div className="bg-zinc-900/40 p-4 rounded-xl border border-white/5 mb-4">
+                                    <h3 className="text-xs uppercase tracking-wider text-zinc-500 mb-3 font-medium">Recursos do Plano</h3>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        {featureList.map((f) => (
+                                            <div key={f.label} className={`flex items-center gap-2 p-2 rounded-lg ${f.enabled ? 'bg-emerald-500/5 border border-emerald-500/10' : 'bg-zinc-900/50 border border-white/5 opacity-50'}`}>
+                                                {f.enabled
+                                                    ? <Unlock className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                                    : <Lock className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
+                                                }
+                                                <span className={`text-xs ${f.enabled ? 'text-white' : 'text-zinc-500'}`}>{f.label}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {/* AutoMod + Tickets inline */}
+                                    <div className="mt-3 flex flex-wrap gap-3">
+                                        <span className="text-xs text-zinc-500">
+                                            AutoMod: <span className={`font-medium ${usage.features.automod_level === 'ai' ? 'text-purple-400' : usage.features.automod_level === 'advanced' ? 'text-blue-400' : 'text-zinc-400'}`}>
+                                                {usage.features.automod_level === 'ai' ? 'IA Avançado' : usage.features.automod_level === 'advanced' ? 'Avançado' : 'Básico'}
+                                            </span>
+                                        </span>
+                                        <span className="text-xs text-zinc-500">
+                                            Categorias de Ticket: <span className="font-medium text-white">
+                                                {usage.features.ticket_categories === -1 ? 'Ilimitadas' : usage.features.ticket_categories}
+                                            </span>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Upgrade CTA */}
+                                {showUpgrade && (
+                                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-gradient-to-r from-purple-500/10 via-blue-500/5 to-transparent border border-purple-500/20">
+                                        <div className="flex items-center gap-3">
+                                            <Zap className="w-5 h-5 text-purple-400" />
+                                            <div>
+                                                <p className="text-sm font-medium text-white">Quer mais limites e recursos?</p>
+                                                <p className="text-xs text-zinc-400">Faça upgrade para o <span className="text-purple-400 font-bold">{nextPlan[currentPlan]}</span> e desbloqueie mais poder.</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => handleSubscribe(upgradePlanKey[currentPlan])}
+                                            disabled={loading !== null}
+                                            className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-purple-500/20 flex items-center gap-2 shrink-0"
+                                        >
+                                            {loading ? (
+                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                            ) : (
+                                                <>
+                                                    <ArrowUpRight className="w-4 h-4" />
+                                                    Fazer Upgrade
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })()}
+
+                {/* ═══════════════════════════════════════════ */}
                 {/* 💰 PRICING CARDS                           */}
                 {/* ═══════════════════════════════════════════ */}
-                <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
-                    <div>
-                        <h1 className="text-3xl font-serif font-medium mb-2">{t("title")}</h1>
-                        <p className="text-zinc-500">{t("subtitle")}</p>
-                    </div>
-
-                    {/* Toggle */}
-                    <div className="flex items-center gap-1 p-1 bg-white/5 rounded-full border border-white/5 relative">
-                        <button
-                            onClick={() => setBillingCycle('monthly')}
-                            className={`relative z-10 px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${billingCycle === 'monthly' ? 'text-black' : 'text-zinc-400 hover:text-white'}`}
-                        >
-                            {tPricing('monthly')}
-                        </button>
-                        <button
-                            onClick={() => setBillingCycle('yearly')}
-                            className={`relative z-10 px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${billingCycle === 'yearly' ? 'text-black' : 'text-zinc-400 hover:text-white'}`}
-                        >
-                            {tPricing('yearly')}
-                        </button>
-                        <div
-                            className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-full transition-all duration-300 shadow-lg ${billingCycle === 'yearly' ? 'translate-x-[calc(100%+4px)]' : 'translate-x-0'}`}
-                        ></div>
-                    </div>
-                </header>
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {/* Free Plan */}

@@ -390,7 +390,7 @@ export default function Home() {
                                     onClick={handleStartNow}
                                     className="w-full py-4 rounded-xl border border-emerald-500/30 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/10 transition-colors"
                                 >
-                                    Começar Grátis
+                                   Comece Agora
                                 </button>
                             </div>
 

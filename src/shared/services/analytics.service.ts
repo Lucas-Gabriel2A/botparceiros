@@ -23,6 +23,8 @@ export interface GuildAnalytics {
     automod_actions: number;
     commands_used: number;
     ai_responses: number;
+    guild_joins: number;
+    guild_leaves: number;
 }
 
 export type AnalyticsEvent =
@@ -33,7 +35,9 @@ export type AnalyticsEvent =
     | 'ticket_close'
     | 'automod_action'
     | 'command_used'
-    | 'ai_response';
+    | 'ai_response'
+    | 'guild_join'
+    | 'guild_leave';
 
 // Mapa de evento → coluna no banco
 const EVENT_COLUMN_MAP: Record<AnalyticsEvent, string> = {
@@ -44,7 +48,9 @@ const EVENT_COLUMN_MAP: Record<AnalyticsEvent, string> = {
     'ticket_close': 'tickets_closed',
     'automod_action': 'automod_actions',
     'command_used': 'commands_used',
-    'ai_response': 'ai_responses'
+    'ai_response': 'ai_responses',
+    'guild_join': 'guild_joins',
+    'guild_leave': 'guild_leaves'
 };
 
 // ═══════════════════════════════════════════════════════════════════════════

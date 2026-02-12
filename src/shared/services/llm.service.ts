@@ -274,7 +274,7 @@ EXEMPLO DE SAÍDA:
     { "name": "usuario", "description": "Quem você quer beijar?", "type": "USER", "required": true }
   ],
   "actions": [
-    { "type": "REPLY", "content": "😘 Beijando <@{usuario}>!", "ephemeral": false },
+    { "type": "REPLY", "content": "Dando um beijo em <@{usuario}>! 💋", "ephemeral": false },
     { "type": "RANDOM_IMAGE", "category": "anime_kiss" }
   ]
 }`;
