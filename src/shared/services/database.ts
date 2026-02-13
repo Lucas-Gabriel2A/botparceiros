@@ -115,11 +115,12 @@ export function getPool(): Pool {
 
         pool = new Pool({
             connectionString: databaseUrl,
-            max: 10,
-            idleTimeoutMillis: 30000,
-            connectionTimeoutMillis: 20000,
+            max: 5, // Limite conservador para evitar erros no Railway/Dev
+            idleTimeoutMillis: 10000, // Fecha conexões ociosas após 10s
+            connectionTimeoutMillis: 10000, // Timeout de conexão de 10s
+            allowExitOnIdle: false,
             ssl: {
-                rejectUnauthorized: false // Railway uses self-signed certs (Required for connecting to Railway's Postgres from external sources)
+                rejectUnauthorized: false
             }
         });
 

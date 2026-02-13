@@ -11,9 +11,14 @@ const SERVER_GEN_LIMITS: Record<PlanTier, number> = {
 };
 
 export async function getUserPlan(userId: string): Promise<PlanTier> {
+
+   
+    // if (process.env.NODE_ENV === 'development') {
+    //     return 'ultimate';
+    // }
+
     try {
-        // Query subscriptions table
-        // Status must be 'authorized' or similar active status
+     
         const result = await query<{ plan: PlanTier }>(
             `SELECT plan FROM subscriptions 
              WHERE user_id = $1 AND status IN ('authorized', 'active') 
