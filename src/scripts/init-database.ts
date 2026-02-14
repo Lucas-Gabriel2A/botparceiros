@@ -9,7 +9,7 @@ import { logger } from '../shared/services';
 
 async function main() {
     console.log('╔═══════════════════════════════════════════════════════════════╗');
-    console.log('║        NEXSTAR DATABASE INITIALIZATION                        ║');
+    console.log('║        Core DATABASE INITIALIZATION                        ║');
     console.log('╚═══════════════════════════════════════════════════════════════╝\n');
 
     // 1. Test connection

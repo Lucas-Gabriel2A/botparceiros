@@ -35,3 +35,7 @@ temp_audio_*
 # Backups
 *.backup
 *.bak
+
+# Postgres Local
+postgres_data/
+pg_log.txt

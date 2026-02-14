@@ -15,7 +15,7 @@ export function getPool(): Pool {
             max: 5, // Lower max for serverless/Next.js to avoid exhaustion
             idleTimeoutMillis: 30000,
             connectionTimeoutMillis: 10000,
-            ssl: {
+            ssl: (databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1')) ? false : {
                 rejectUnauthorized: false
             }
         });

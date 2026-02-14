@@ -7,7 +7,9 @@
     "dev": "nodemon --exec ts-node src/bots/CoreIA/index.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"No tests specified\" && exit 0"
+    "test": "echo \"No tests specified\" && exit 0",
+    "db:start": "call \"C:\\Program Files\\PostgreSQL\\17\\bin\\pg_ctl.exe\" -D \"C:\\Users\\lucas\\botparceiros\\postgres_data\" -l \"C:\\Users\\lucas\\botparceiros\\pg_log.txt\" start",
+    "db:stop": "call \"C:\\Program Files\\PostgreSQL\\17\\bin\\pg_ctl.exe\" -D \"C:\\Users\\lucas\\botparceiros\\postgres_data\" stop"
   },
   "keywords": [
     "discord",

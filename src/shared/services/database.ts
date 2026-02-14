@@ -113,13 +113,15 @@ export function getPool(): Pool {
             throw new Error('DATABASE_URL não configurada. Database desabilitado.');
         }
 
+        const isLocal = databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1');
+
         pool = new Pool({
             connectionString: databaseUrl,
             max: 5, // Limite conservador para evitar erros no Railway/Dev
             idleTimeoutMillis: 10000, // Fecha conexões ociosas após 10s
             connectionTimeoutMillis: 10000, // Timeout de conexão de 10s
             allowExitOnIdle: false,
-            ssl: {
+            ssl: isLocal ? false : {
                 rejectUnauthorized: false
             }
         });
@@ -237,6 +239,19 @@ CREATE TABLE IF NOT EXISTS audit_log (
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_audit_log_guild ON audit_log(guild_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
+
+-- Private Calls Table (Restored)
+CREATE TABLE IF NOT EXISTS private_calls (
+    channel_id VARCHAR(20) PRIMARY KEY,
+    guild_id VARCHAR(20) NOT NULL,
+    owner_id VARCHAR(20) NOT NULL,
+    is_open BOOLEAN DEFAULT true,
+    member_limit INTEGER,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_private_calls_guild ON private_calls(guild_id);
+CREATE INDEX IF NOT EXISTS idx_private_calls_owner ON private_calls(owner_id);
 
 -- Subscriptions Table
 CREATE TABLE IF NOT EXISTS subscriptions (
