@@ -63,6 +63,7 @@ export interface GuildConfig extends QueryResultRow {
     ticket_panel_button_text?: string | null;
     ticket_panel_button_emoji?: string | null;
     ticket_panel_footer?: string | null;
+    ticket_logs_channel_id?: string | null;
 
     // Configurações Whitelabel
     whitelabel_name?: string | null;
@@ -197,6 +198,9 @@ CREATE TABLE IF NOT EXISTS guild_configs (
     automod_timeout_duration INTEGER DEFAULT 0,
     automod_log_channel VARCHAR(20),
     automod_bypass_roles TEXT[] DEFAULT '{}',
+    automod_links_enabled BOOLEAN DEFAULT false,
+    automod_caps_enabled BOOLEAN DEFAULT false,
+    automod_spam_enabled BOOLEAN DEFAULT false,
     vip_category_id VARCHAR(20),
     vip_role_id VARCHAR(20),
     welcome_channel_id VARCHAR(20),
@@ -222,6 +226,7 @@ CREATE TABLE IF NOT EXISTS guild_configs (
     ticket_panel_button_text VARCHAR(50),
     ticket_panel_button_emoji VARCHAR(50),
     ticket_panel_footer VARCHAR(255),
+    ticket_logs_channel_id VARCHAR(20),
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -276,6 +281,23 @@ CREATE TABLE IF NOT EXISTS payments (
 );
 
 CREATE INDEX IF NOT EXISTS idx_payments_subscription ON payments(subscription_id);
+
+-- Tickets Table (Restored)
+CREATE TABLE IF NOT EXISTS tickets (
+    id SERIAL PRIMARY KEY,
+    guild_id VARCHAR(20) NOT NULL,
+    channel_id VARCHAR(20),
+    user_id VARCHAR(20) NOT NULL,
+    category VARCHAR(50),
+    status VARCHAR(20) DEFAULT 'open',
+    claimed_by VARCHAR(20),
+    created_at TIMESTAMP DEFAULT NOW(),
+    closed_at TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_tickets_guild ON tickets(guild_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_user ON tickets(user_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_channel ON tickets(channel_id);
 
 -- Ticket Categories Table (New)
 CREATE TABLE IF NOT EXISTS ticket_categories (
@@ -384,6 +406,9 @@ export async function initializeSchema(): Promise<void> {
                 ADD COLUMN IF NOT EXISTS automod_timeout_duration INTEGER DEFAULT 0,
                 ADD COLUMN IF NOT EXISTS automod_log_channel VARCHAR(20),
                 ADD COLUMN IF NOT EXISTS automod_bypass_roles TEXT[] DEFAULT '{}',
+                ADD COLUMN IF NOT EXISTS automod_links_enabled BOOLEAN DEFAULT false,
+                ADD COLUMN IF NOT EXISTS automod_caps_enabled BOOLEAN DEFAULT false,
+                ADD COLUMN IF NOT EXISTS automod_spam_enabled BOOLEAN DEFAULT false,
                 ADD COLUMN IF NOT EXISTS ia_temperature DECIMAL(3, 2) DEFAULT 0.7,
                 ADD COLUMN IF NOT EXISTS ia_ignored_channels TEXT[] DEFAULT '{}',
                 ADD COLUMN IF NOT EXISTS ia_ignored_roles TEXT[] DEFAULT '{}',
@@ -400,6 +425,7 @@ export async function initializeSchema(): Promise<void> {
                 ADD COLUMN IF NOT EXISTS ticket_panel_button_text VARCHAR(50),
                 ADD COLUMN IF NOT EXISTS ticket_panel_button_emoji VARCHAR(50),
                 ADD COLUMN IF NOT EXISTS ticket_panel_footer VARCHAR(255),
+                ADD COLUMN IF NOT EXISTS ticket_logs_channel_id VARCHAR(20),
                 ADD COLUMN IF NOT EXISTS automod_ai_enabled BOOLEAN DEFAULT false,
                 ADD COLUMN IF NOT EXISTS whitelabel_name VARCHAR(32),
                 ADD COLUMN IF NOT EXISTS whitelabel_avatar_url VARCHAR(255);
@@ -470,6 +496,7 @@ const GUILD_CONFIG_COLUMNS = new Set([
     'private_calls_enabled', 'private_calls_category_id', 'private_calls_allowed_roles', 'private_calls_manager_role',
     'ticket_panel_title', 'ticket_panel_description', 'ticket_panel_banner_url',
     'ticket_panel_color', 'ticket_panel_button_text', 'ticket_panel_button_emoji', 'ticket_panel_footer',
+    'ticket_logs_channel_id',
     'automod_ai_enabled',
     'whitelabel_name', 'whitelabel_avatar_url'
 ]);

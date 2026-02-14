@@ -34,6 +34,7 @@ interface TicketFormProps {
     guildId: string;
     userId: string;
     categories: TicketCategory[];
+    userPlan: any;
 }
 
 function SubmitButton({ isEditing }: { isEditing?: boolean }) {
@@ -45,11 +46,15 @@ function SubmitButton({ isEditing }: { isEditing?: boolean }) {
     );
 }
 
-export function TicketForm({ guildId, userId, categories }: TicketFormProps) {
+export function TicketForm({ guildId, userId, categories, userPlan }: TicketFormProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<TicketCategory | null>(null);
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
     const modalRef = useRef<HTMLDivElement>(null);
+
+    // Limit Logic
+    const limit = userPlan === 'free' ? 5 : Infinity;
+    const canCreate = categories.length < limit;
 
     async function handleSubmit(formData: FormData) {
         setFeedback(null);
@@ -78,6 +83,10 @@ export function TicketForm({ guildId, userId, categories }: TicketFormProps) {
     }
 
     const openCreate = () => {
+        if (!canCreate) {
+            alert("Limite de categorias atingido! Faça upgrade para criar mais.");
+            return;
+        }
         setEditingCategory(null);
         setFeedback(null);
         setIsDialogOpen(true);
@@ -113,63 +122,99 @@ export function TicketForm({ guildId, userId, categories }: TicketFormProps) {
                         Gerencie as categorias de suporte do seu servidor.
                     </p>
                 </div>
-                <Button onClick={openCreate} className="bg-violet-600 hover:bg-violet-700 text-white shadow-lg shadow-violet-900/20 font-bold">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nova Categoria
-                </Button>
+
+                {canCreate ? (
+                    <Button onClick={openCreate} className="bg-violet-600 hover:bg-violet-700 text-white shadow-lg shadow-violet-900/20 font-bold">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Nova Categoria
+                    </Button>
+                ) : (
+                    <Button disabled className="bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700">
+                        Limite Atingido
+                    </Button>
+                )}
             </div>
 
             {/* Categories Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {categories.map((cat) => (
-                    <Card key={cat.id} className="bg-[#0A0A0C] border border-zinc-800 rounded-3xl p-6 hover:border-violet-500/50 transition-all duration-300 group relative overflow-hidden">
-                        {/* Glow Effect */}
-                        <div className="absolute inset-0 bg-linear-to-b from-violet-500/5 to-transparent opacity-50 pointer-events-none"></div>
-
-                        <div
-                            className="absolute left-0 top-0 bottom-0 w-1.5 transition-all"
-                            style={{ backgroundColor: cat.color || '#7B68EE' }}
-                        />
-
-                        <CardHeader className="pb-2 pl-6 p-0">
-                            <div className="flex justify-between items-start">
-                                <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
-                                    {cat.name}
-                                </CardTitle>
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg" onClick={() => openEdit(cat)}>
-                                        <Edit className="w-4 h-4" />
-                                    </Button>
-                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg" onClick={() => handleDelete(cat.id)}>
-                                        <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                            <CardDescription className="text-zinc-500 font-medium line-clamp-2 pl-0 mt-1">
-                                {cat.description || "Sem descrição definida."}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="pl-6 pt-4 p-0">
-                            <div className="flex items-center gap-2 text-xs text-zinc-400 font-bold font-mono bg-[#13111C] w-fit px-3 py-1.5 rounded-lg border border-zinc-800">
-                                <Palette className="w-3 h-3" style={{ color: cat.color || '#7B68EE' }} />
-                                {cat.color || '#7B68EE'}
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-
-                {categories.length === 0 && (
-                    <div className="col-span-full border border-dashed border-zinc-800 rounded-xl p-12 text-center">
-                        <div className="bg-zinc-900/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Ticket className="w-8 h-8 text-zinc-600" />
+            <div className="space-y-6">
+                {/* Usage Counter Bar */}
+                <div className="bg-[#0A0A0C] border border-zinc-800 rounded-xl p-4 flex items-center justify-between gap-4">
+                    <div className="flex-1">
+                        <div className="flex justify-between text-sm mb-2">
+                            <span className="text-zinc-400 font-medium">Uso de Categorias</span>
+                            <span className={`font-bold ${categories.length >= limit ? 'text-red-400' : 'text-violet-400'}`}>
+                                {categories.length} / {limit === Infinity ? '∞' : limit}
+                            </span>
                         </div>
-                        <h3 className="text-white font-medium mb-1">Nenhuma categoria criada</h3>
-                        <p className="text-zinc-500 text-sm mb-4">Comece criando categorias para organizar seu suporte.</p>
-                        <Button variant="outline" onClick={openCreate} className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800">
-                            Criar Categoria
-                        </Button>
+                        <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                            <div
+                                className={`h-full transition-all duration-500 ${categories.length >= limit ? 'bg-red-500' : 'bg-violet-500'}`}
+                                style={{ width: `${Math.min((categories.length / (limit === Infinity ? 100 : limit)) * 100, 100)}%` }}
+                            />
+                        </div>
                     </div>
-                )}
+                    {userPlan === 'free' && (
+                        <Button
+                            variant="outline"
+                            className="hidden sm:flex border-violet-500/30 text-violet-300 hover:bg-violet-500/10 hover:text-violet-200"
+                            onClick={() => window.open('https://loja.botparceiros.com', '_blank')}
+                        >
+                            Fazer Upgrade 🚀
+                        </Button>
+                    )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {categories.map((cat) => (
+                        <Card key={cat.id} className="bg-[#0A0A0C] border border-zinc-800 rounded-3xl p-6 hover:border-violet-500/50 transition-all duration-300 group relative overflow-hidden">
+                            {/* Glow Effect */}
+                            <div className="absolute inset-0 bg-linear-to-b from-violet-500/5 to-transparent opacity-50 pointer-events-none"></div>
+
+                            <div
+                                className="absolute left-0 top-0 bottom-0 w-1.5 transition-all"
+                                style={{ backgroundColor: cat.color || '#7B68EE' }}
+                            />
+
+                            <CardHeader className="pb-2 pl-6 p-0">
+                                <div className="flex justify-between items-start">
+                                    <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
+                                        {cat.name}
+                                    </CardTitle>
+                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg" onClick={() => openEdit(cat)}>
+                                            <Edit className="w-4 h-4" />
+                                        </Button>
+                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg" onClick={() => handleDelete(cat.id)}>
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                                <CardDescription className="text-zinc-500 font-medium line-clamp-2 pl-0 mt-1">
+                                    {cat.description || "Sem descrição definida."}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="pl-6 pt-4 p-0">
+                                <div className="flex items-center gap-2 text-xs text-zinc-400 font-bold font-mono bg-[#13111C] w-fit px-3 py-1.5 rounded-lg border border-zinc-800">
+                                    <Palette className="w-3 h-3" style={{ color: cat.color || '#7B68EE' }} />
+                                    {cat.color || '#7B68EE'}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+
+                    {categories.length === 0 && (
+                        <div className="col-span-full border border-dashed border-zinc-800 rounded-xl p-12 text-center">
+                            <div className="bg-zinc-900/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Ticket className="w-8 h-8 text-zinc-600" />
+                            </div>
+                            <h3 className="text-white font-medium mb-1">Nenhuma categoria criada</h3>
+                            <p className="text-zinc-500 text-sm mb-4">Comece criando categorias para organizar seu suporte.</p>
+                            <Button variant="outline" onClick={openCreate} className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800">
+                                Criar Categoria
+                            </Button>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Custom Modal */}

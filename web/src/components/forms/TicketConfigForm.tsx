@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Settings, Save, LayoutTemplate } from "lucide-react";
+import { Settings, Save, LayoutTemplate, Lock } from "lucide-react";
 import { useState } from "react";
 import { Check, X } from "lucide-react";
 
 interface TicketConfigFormProps {
     guildId: string;
+    userPlan: any;
     initialConfig: {
         title?: string | null;
         description?: string | null;
@@ -21,6 +22,7 @@ interface TicketConfigFormProps {
         buttonText?: string | null;
         buttonEmoji?: string | null;
         footer?: string | null;
+        logsChannelId?: string | null;
     };
 }
 
@@ -43,8 +45,9 @@ function SubmitButton() {
     );
 }
 
-export function TicketConfigForm({ guildId, initialConfig }: TicketConfigFormProps) {
+export function TicketConfigForm({ guildId, initialConfig, userPlan }: TicketConfigFormProps) {
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+    const isPremium = userPlan !== 'free';
 
     // State for Real-time Preview
     const [config, setConfig] = useState({
@@ -54,7 +57,8 @@ export function TicketConfigForm({ guildId, initialConfig }: TicketConfigFormPro
         color: initialConfig.color || '#5865F2', // Default Discord Blurple
         buttonText: initialConfig.buttonText || 'Abrir Ticket',
         buttonEmoji: initialConfig.buttonEmoji || '🎫',
-        footer: initialConfig.footer || ''
+        footer: initialConfig.footer || '',
+        logsChannelId: initialConfig.logsChannelId || ''
     });
 
     const [bannerFile, setBannerFile] = useState<File | null>(null);
@@ -114,7 +118,20 @@ export function TicketConfigForm({ guildId, initialConfig }: TicketConfigFormPro
                         Defina como o painel de abertura de tickets aparecerá no Discord.
                     </p>
                 </div>
-                <SubmitButton />
+                <div className="flex items-center gap-3">
+                    {!isPremium && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="border-amber-500/30 text-amber-300 hover:bg-amber-500/10 hover:text-amber-200 hidden sm:flex"
+                            onClick={() => window.open('https://loja.botparceiros.com', '_blank')}
+                        >
+                            <Lock className="w-4 h-4 mr-2" />
+                            Liberar Premium
+                        </Button>
+                    )}
+                    <SubmitButton />
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -150,13 +167,21 @@ export function TicketConfigForm({ guildId, initialConfig }: TicketConfigFormPro
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-zinc-300">Banner do Painel</Label>
-                                <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-zinc-300">Banner do Painel</Label>
+                                    {!isPremium && (
+                                        <span className="text-[10px] uppercase font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20 flex items-center gap-1">
+                                            <Lock className="w-3 h-3" /> Premium
+                                        </span>
+                                    )}
+                                </div>
+                                <div className={`space-y-3 ${!isPremium ? 'opacity-50 pointer-events-none' : ''}`}>
                                     <Input
                                         type="file"
                                         accept="image/*"
                                         onChange={handleFileChange}
-                                        className="bg-zinc-900/50 border-zinc-800 text-white file:text-violet-400 file:bg-zinc-900 file:border-0 file:rounded-md cursor-pointer"
+                                        disabled={!isPremium}
+                                        className="bg-zinc-900/50 border-zinc-800 text-white file:text-violet-400 file:bg-zinc-900 file:border-0 file:rounded-md cursor-pointer disabled:cursor-not-allowed"
                                     />
                                     <div className="flex items-center gap-2">
                                         <div className="h-px bg-zinc-800 flex-1"></div>
@@ -169,7 +194,8 @@ export function TicketConfigForm({ guildId, initialConfig }: TicketConfigFormPro
                                         placeholder="https://..."
                                         value={config.bannerUrl}
                                         onChange={handleInputChange}
-                                        className="bg-zinc-900/50 border-zinc-800 text-white focus:ring-violet-500/50 placeholder:text-zinc-600 font-mono text-sm"
+                                        disabled={!isPremium}
+                                        className="bg-zinc-900/50 border-zinc-800 text-white focus:ring-violet-500/50 placeholder:text-zinc-600 font-mono text-sm disabled:cursor-not-allowed"
                                     />
                                 </div>
                             </div>
@@ -183,21 +209,28 @@ export function TicketConfigForm({ guildId, initialConfig }: TicketConfigFormPro
                         <CardContent className="space-y-5 p-6">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="color" className="text-zinc-300">Cor do Embed</Label>
-                                    <div className="flex gap-2">
+                                    <div className="flex items-center justify-between">
+                                        <Label htmlFor="color" className="text-zinc-300">Cor do Embed</Label>
+                                        {!isPremium && (
+                                            <Lock className="w-3 h-3 text-amber-400" />
+                                        )}
+                                    </div>
+                                    <div className={`flex gap-2 ${!isPremium ? 'opacity-50 pointer-events-none' : ''}`}>
                                         <Input
                                             type="color"
                                             id="color"
                                             name="color"
                                             value={config.color}
                                             onChange={handleInputChange}
-                                            className="w-12 h-10 p-1 bg-zinc-900 border-zinc-800 cursor-pointer"
+                                            disabled={!isPremium}
+                                            className="w-12 h-10 p-1 bg-zinc-900 border-zinc-800 cursor-pointer disabled:cursor-not-allowed"
                                         />
                                         <Input
                                             value={config.color}
                                             onChange={handleInputChange}
                                             name="color"
-                                            className="bg-zinc-900/50 border-zinc-800 text-white font-mono uppercase"
+                                            disabled={!isPremium}
+                                            className="bg-zinc-900/50 border-zinc-800 text-white font-mono uppercase disabled:cursor-not-allowed"
                                         />
                                     </div>
                                 </div>
@@ -228,15 +261,44 @@ export function TicketConfigForm({ guildId, initialConfig }: TicketConfigFormPro
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="footer" className="text-zinc-300">Rodapé do Embed</Label>
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="footer" className="text-zinc-300">Rodapé do Embed</Label>
+                                    {!isPremium && (
+                                        <Lock className="w-3 h-3 text-amber-400" />
+                                    )}
+                                </div>
                                 <Input
                                     id="footer"
                                     name="footer"
                                     placeholder="Ex: Sistema de Tickets CoreBot"
                                     value={config.footer}
                                     onChange={handleInputChange}
-                                    className="bg-zinc-900/50 border-zinc-800 text-white focus:ring-violet-500/50 placeholder:text-zinc-600"
+                                    disabled={!isPremium}
+                                    className={`bg-zinc-900/50 border-zinc-800 text-white focus:ring-violet-500/50 placeholder:text-zinc-600 ${!isPremium ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-[#0A0A0C] border border-zinc-800 rounded-xl overflow-hidden">
+                        <CardHeader className="border-b border-zinc-800 bg-zinc-900/30">
+                            <CardTitle className="text-white text-base">Configurações de Logs</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-5 p-6">
+                            <div className="space-y-2">
+                                <Label htmlFor="logsChannelId" className="text-zinc-300">ID do Canal de Logs</Label>
+                                <Input
+                                    id="logsChannelId"
+                                    name="logsChannelId"
+                                    placeholder="Ex: 123456789012345678"
+                                    value={config.logsChannelId}
+                                    onChange={handleInputChange}
+                                    className="bg-zinc-900/50 border-zinc-800 text-white focus:ring-violet-500/50 placeholder:text-zinc-600 font-mono"
+                                />
+                                <p className="text-xs text-zinc-500">
+                                    Copie o ID do canal onde deseja receber os transcripts dos tickets fechados.
+                                    (Ative o Modo Desenvolvedor do Discord para copiar IDs)
+                                </p>
                             </div>
                         </CardContent>
                     </Card>

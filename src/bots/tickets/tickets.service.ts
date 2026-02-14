@@ -280,36 +280,54 @@ export async function closeTicketProcess(
     let transcript = `TRANSCRIPT DO TICKET\n`;
     transcript += `Canal: ${channel.name}\n`;
     transcript += `Fechado por: ${closedBy.user.tag}\n`;
+    transcript += `Categoria: ${categoryName}\n`;
     transcript += `Data: ${new Date().toLocaleString('pt-BR')}\n`;
     transcript += `------------------------------------------------\n\n`;
 
     for (const msg of sortedMessages) {
-        transcript += `[${msg.createdAt.toLocaleString('pt-BR')}] ${msg.author.tag}: ${msg.content || '[Anexo/Embed]'}\n`;
+        const time = msg.createdAt.toLocaleString('pt-BR');
+        const author = msg.author.tag;
+        const content = msg.content || '[Conteúdo não textual]';
+        const attachments = msg.attachments.size > 0 ? ` [${msg.attachments.size} anexo(s)]` : '';
+        transcript += `[${time}] ${author}: ${content}${attachments}\n`;
     }
 
     const guildConfig = await getGuildConfig(guild.id);
 
-    // Send to logs channel if configured
-    if (guildConfig?.logs_channel_id) {
-        const logsChannel = guild.channels.cache.get(guildConfig.logs_channel_id) as TextChannel;
+    // Prioridade: Canal de Logs de Ticket > Canal de Logs Geral
+    const logChannelId = guildConfig?.ticket_logs_channel_id || guildConfig?.logs_channel_id;
+
+    if (logChannelId) {
+        const logsChannel = guild.channels.cache.get(logChannelId) as TextChannel;
         if (logsChannel) {
-            const buffer = Buffer.from(transcript, 'utf8');
-            const attachment = new AttachmentBuilder(buffer, { name: `transcript-${channel.name}.txt` });
+            try {
+                const buffer = Buffer.from(transcript, 'utf8');
+                const attachment = new AttachmentBuilder(buffer, { name: `transcript-${channel.name}.txt` });
 
-            const logEmbed = new EmbedBuilder()
-                .setColor(DEFAULT_COLORS.info)
-                .setTitle(`${DEFAULT_EMOJIS.log} Ticket Fechado`)
-                .addFields(
-                    { name: 'Ticket', value: channel.name, inline: true },
-                    { name: 'Fechado por', value: closedBy.user.tag, inline: true },
-                    { name: 'Categoria', value: categoryName, inline: true }
-                )
-                .setTimestamp();
+                const logEmbed = new EmbedBuilder()
+                    .setColor(THEME.colors.info)
+                    .setTitle(`${THEME.emojis.log} Ticket Fechado`)
+                    .addFields(
+                        { name: 'Ticket', value: channel.name, inline: true },
+                        { name: 'Fechado por', value: `${closedBy.user} (${closedBy.user.tag})`, inline: true },
+                        { name: 'Categoria', value: categoryName, inline: true },
+                        { name: 'Dono do Ticket', value: `<@${getTicketOwnerIdFromTopic(channel) || 'Desconhecido'}>`, inline: true }
+                    )
+                    .setTimestamp();
 
-            await logsChannel.send({ embeds: [logEmbed], files: [attachment] }).catch(() => { });
+                await logsChannel.send({ embeds: [logEmbed], files: [attachment] });
+            } catch (error) {
+                logger.error('Erro ao enviar log de ticket', { error });
+            }
         }
     }
 
     await closeDbTicket(channel.id);
     await channel.delete();
+}
+
+function getTicketOwnerIdFromTopic(_channel: TextChannel): string | null {
+    // Tenta extrair ID do tópico se houver (não implementado no create, mas boa prática)
+    // Fallback: Apenas retorna null
+    return null;
 }

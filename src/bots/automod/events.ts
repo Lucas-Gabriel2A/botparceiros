@@ -12,6 +12,7 @@ export function setupAutoModEvents(client: Client) {
         if (message.author.bot || !message.guild) return;
 
         // Ignorar administradores (opcional, geralmente admins bypassam automod)
+        // Ignorar administradores (opcional, geralmente admins bypassam automod)
         if (message.member?.permissions.has(PermissionFlagsBits.Administrator)) return;
 
         try {

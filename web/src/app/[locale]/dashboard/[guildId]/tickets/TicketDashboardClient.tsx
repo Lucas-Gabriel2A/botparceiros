@@ -18,10 +18,12 @@ interface TicketDashboardClientProps {
         ticket_panel_button_text?: string | null;
         ticket_panel_button_emoji?: string | null;
         ticket_panel_footer?: string | null;
+        ticket_logs_channel_id?: string | null;
     };
+    userPlan: any;
 }
 
-export function TicketDashboardClient({ guildId, userId, categories, guildConfig }: TicketDashboardClientProps) {
+export function TicketDashboardClient({ guildId, userId, categories, guildConfig, userPlan }: TicketDashboardClientProps) {
     const [activeTab, setActiveTab] = useState<'categories' | 'panel'>('categories');
 
     return (
@@ -53,10 +55,12 @@ export function TicketDashboardClient({ guildId, userId, categories, guildConfig
                         guildId={guildId}
                         userId={userId}
                         categories={categories}
+                        userPlan={userPlan}
                     />
                 ) : (
                     <TicketConfigForm
                         guildId={guildId}
+                        userPlan={userPlan}
                         initialConfig={{
                             title: guildConfig.ticket_panel_title,
                             description: guildConfig.ticket_panel_description,
@@ -64,7 +68,8 @@ export function TicketDashboardClient({ guildId, userId, categories, guildConfig
                             color: guildConfig.ticket_panel_color,
                             buttonText: guildConfig.ticket_panel_button_text,
                             buttonEmoji: guildConfig.ticket_panel_button_emoji,
-                            footer: guildConfig.ticket_panel_footer
+                            footer: guildConfig.ticket_panel_footer,
+                            logsChannelId: guildConfig.ticket_logs_channel_id
                         }}
                     />
                 )}

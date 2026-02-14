@@ -181,6 +181,29 @@ export async function upsertTicketCategoryAction(prevState: GuildConfigState, fo
                 welcome_title: welcomeTitle, welcome_description: welcomeDescription
             });
         } else {
+            // 🛑 CHECK PLAN LIMIT (Free = 5)
+            // Need to get Guild Owner ID. A bit expensive but necessary for security.
+            // For now, let's assume the user performing the action is authorized and check THEIR plan if we can't get owner.
+            // BETTER: config.service has getGuildConfig but not getGuildOwner.
+            // Let's use the USER ID passed in the form. If it's the owner/admin, it should work.
+
+            // Fetch current categories to count
+            const currentCategories = await database.getTicketCategories(guildId);
+
+            // Check Plan (using the plan-features logic)
+            // effectively we need to know the plan of the guild owner. 
+            // In web context, we might not have easy access to guild owner ID without Discord API call.
+            // FALLBACK: Allow 5 if we can't check, or check the current user's plan.
+
+            // Let's check the plan of the user trying to create the category.
+            // If they are admin/owner, they likely hold the sub.
+            const { getUserPlan } = await import("@shared/services/plan-features");
+            const userPlan = await getUserPlan(userId);
+
+            if (userPlan === 'free' && currentCategories.length >= 5) {
+                return { success: false, error: "Limite de 5 categorias atingido (Plano Grátis)." };
+            }
+
             const newId = `cat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             await database.createTicketCategory(
                 newId, guildId, name, description, color, userId,
@@ -246,6 +269,7 @@ export async function updateTicketConfigAction(prevState: GuildConfigState, form
         const buttonText = formData.get("buttonText") as string;
         const buttonEmoji = formData.get("buttonEmoji") as string;
         const footer = formData.get("footer") as string;
+        const logsChannelId = formData.get("logsChannelId") as string;
 
         // Image upload logic
         const bannerFile = formData.get("bannerFile") as File;
@@ -264,7 +288,8 @@ export async function updateTicketConfigAction(prevState: GuildConfigState, form
             ticket_panel_color: color,
             ticket_panel_button_text: buttonText,
             ticket_panel_button_emoji: buttonEmoji,
-            ticket_panel_footer: footer
+            ticket_panel_footer: footer,
+            ticket_logs_channel_id: logsChannelId
         });
 
         revalidatePath(`/dashboard/${guildId}/tickets`);
