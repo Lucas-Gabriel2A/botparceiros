@@ -45,7 +45,10 @@ function SubmitButton() {
     );
 }
 
+import { useRouter } from "next/navigation";
+
 export function TicketConfigForm({ guildId, initialConfig, userPlan }: TicketConfigFormProps) {
+    const router = useRouter();
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
     const isPremium = userPlan !== 'free';
 
@@ -124,7 +127,7 @@ export function TicketConfigForm({ guildId, initialConfig, userPlan }: TicketCon
                             type="button"
                             variant="outline"
                             className="border-amber-500/30 text-amber-300 hover:bg-amber-500/10 hover:text-amber-200 hidden sm:flex"
-                            onClick={() => window.open('https://loja.botparceiros.com', '_blank')}
+                            onClick={() => router.push('/dashboard/billing')}
                         >
                             <Lock className="w-4 h-4 mr-2" />
                             Liberar Premium
@@ -333,10 +336,10 @@ export function TicketConfigForm({ guildId, initialConfig, userPlan }: TicketCon
                                             </div>
 
                                             {/* Banner */}
-                                            {(config.bannerUrl || "https://i.ibb.co/TDRDH2kq/nexstar.jpg") && (
+                                            {(config.bannerUrl || "https://placehold.co/1200x400/1e1e2e/ffffff.png?text=CoreBot+Tickets&font=montserrat") && (
                                                 <div className="rounded-lg overflow-hidden relative w-full aspect-2/1 bg-zinc-800 mt-2">
                                                     <img
-                                                        src={config.bannerUrl || "https://i.ibb.co/TDRDH2kq/nexstar.jpg"}
+                                                        src={config.bannerUrl || "https://placehold.co/1200x400/1e1e2e/ffffff.png?text=CoreBot+Tickets&font=montserrat"}
                                                         alt="Banner"
                                                         className="w-full h-full object-cover"
                                                         onError={(e) => {

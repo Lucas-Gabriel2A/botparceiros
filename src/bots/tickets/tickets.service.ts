@@ -6,6 +6,7 @@ import {
     ButtonBuilder,
     ButtonStyle,
     PermissionFlagsBits,
+    OverwriteType,
     ChannelType,
     GuildMember,
     Guild,
@@ -53,7 +54,7 @@ export const THEME = {
 const DEFAULT_COLORS = THEME.colors;
 const DEFAULT_EMOJIS = THEME.emojis;
 
-const DEFAULT_BANNER = null;
+const DEFAULT_BANNER = 'https://placehold.co/1200x400/1e1e2e/ffffff.png?text=CoreBot+Tickets&font=montserrat';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🧠 LÓGICA DE SERVIÇO (Implementação Baseada no Frontend)
@@ -76,11 +77,18 @@ export async function sendTicketPanel(channel: TextChannel, guildId: string): Pr
 
     // Apply DB Config (Matches TicketDashboardClient props)
     if (guildConfig) {
+        logger.info(`Sending Ticket Panel for ${guildId}`, {
+            db_banner: guildConfig.ticket_panel_banner_url,
+            db_title: guildConfig.ticket_panel_title
+        });
+
         if (guildConfig.ticket_panel_title) title = guildConfig.ticket_panel_title;
         if (guildConfig.ticket_panel_description) description = guildConfig.ticket_panel_description;
         if (guildConfig.ticket_panel_banner_url) banner = guildConfig.ticket_panel_banner_url;
         if (guildConfig.ticket_panel_color) color = guildConfig.ticket_panel_color;
         if (guildConfig.ticket_panel_footer) footerText = guildConfig.ticket_panel_footer;
+    } else {
+        logger.warn(`No GuildConfig found for ${guildId} when sending panel`);
     }
 
     const embed = new EmbedBuilder()
@@ -130,7 +138,7 @@ export async function sendTicketPanel(channel: TextChannel, guildId: string): Pr
  */
 export async function createTicketChannel(
     guild: Guild,
-    member: GuildMember,
+    member: GuildMember, 
     categoryId: string
 ): Promise<TextChannel | string> {
     const guildConfig = await getGuildConfig(guild.id);
@@ -157,24 +165,45 @@ export async function createTicketChannel(
 
         // 3. Permissões
         const permissionOverwrites: any[] = [
-            { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] }, // @everyone: Deny View
-            { id: member.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] } // Ticket Owner: Allow View/Send
+            {
+                id: guild.id,
+                deny: PermissionFlagsBits.ViewChannel,
+                type: OverwriteType.Role
+            },
+            {
+                id: member.id,
+                allow: PermissionFlagsBits.ViewChannel | PermissionFlagsBits.SendMessages | PermissionFlagsBits.ReadMessageHistory,
+                type: OverwriteType.Member
+            }
         ];
 
         if (staffRoleId) {
             permissionOverwrites.push({
                 id: staffRoleId,
-                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages]
+                allow: PermissionFlagsBits.ViewChannel | PermissionFlagsBits.SendMessages | PermissionFlagsBits.ReadMessageHistory | PermissionFlagsBits.ManageMessages,
+                type: OverwriteType.Role
             });
         }
 
         // Create Channel
-        const ticketChannel = await guild.channels.create({
+        // Fix lint: explicitly type options to satisfy create
+        // Check if parentCategory is a valid snowflake (17-20 digits)
+        const validParent = parentCategory && /^\d{17,20}$/.test(parentCategory) ? parentCategory : undefined;
+
+        const channelOptions: any = {
             name: `ticket-${member.user.username.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
             type: ChannelType.GuildText,
-            parent: parentCategory || undefined,
+            parent: validParent,
             permissionOverwrites
+        };
+
+        logger.info('Creating ticket channel', {
+            options: JSON.stringify(channelOptions, (_key, value) =>
+                typeof value === 'bigint' ? value.toString() : value
+            )
         });
+
+        const ticketChannel = await guild.channels.create(channelOptions) as TextChannel;
 
         // 4. Welcome Embed Customization (From TicketForm: Título e Descrição do Embed)
         const embedTitle = category.welcome_title || `Ticket Aberto: ${category.name}`;

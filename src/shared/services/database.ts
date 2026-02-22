@@ -207,6 +207,11 @@ CREATE TABLE IF NOT EXISTS guild_configs (
     leave_channel_id VARCHAR(20),
     logs_channel_id VARCHAR(20),
     staff_role_id VARCHAR(20),
+    welcome_message TEXT,
+    leave_message TEXT,
+    autorole_id VARCHAR(20),
+    welcome_font VARCHAR(50),
+    welcome_banner_url VARCHAR(255),
     ia_enabled BOOLEAN DEFAULT true,
     ia_channel_id VARCHAR(20),
     ia_system_prompt TEXT DEFAULT 'Você é a IA da CoreBot''s. Personalidade Única.',
@@ -417,6 +422,12 @@ export async function initializeSchema(): Promise<void> {
                 ADD COLUMN IF NOT EXISTS private_calls_allowed_roles TEXT[] DEFAULT '{}',
                 ADD COLUMN IF NOT EXISTS private_calls_manager_role VARCHAR(20),
                 
+                ADD COLUMN IF NOT EXISTS welcome_message TEXT,
+                ADD COLUMN IF NOT EXISTS leave_message TEXT,
+                ADD COLUMN IF NOT EXISTS autorole_id VARCHAR(20),
+                ADD COLUMN IF NOT EXISTS welcome_font VARCHAR(50),
+                ADD COLUMN IF NOT EXISTS welcome_banner_url VARCHAR(255),
+                
                 -- Ticket Panel Customization
                 ADD COLUMN IF NOT EXISTS ticket_panel_title VARCHAR(255),
                 ADD COLUMN IF NOT EXISTS ticket_panel_description TEXT,
@@ -434,7 +445,9 @@ export async function initializeSchema(): Promise<void> {
             // Ticket Migration
             await query(`
                 ALTER TABLE tickets 
-                ADD COLUMN IF NOT EXISTS claimed_by VARCHAR(20);
+                ADD COLUMN IF NOT EXISTS claimed_by VARCHAR(20),
+                ADD COLUMN IF NOT EXISTS category VARCHAR(50),
+                ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'open';
             `);
 
             // Ticket Category Migration

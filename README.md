@@ -1,6 +1,6 @@
-# 🤖 Nexstar Discord Bots
+# 🤖 CoreBot Discord Bots
 
-Bem-vindo ao repositório do projeto **Nexstar**. Este guia explica como iniciar todos os componentes do sistema em seu ambiente local.
+Bem-vindo ao repositório do projeto **CoreBot**. Este guia explica como iniciar todos os componentes do sistema em seu ambiente local.
 
 ## 📋 Pré-requisitos
 

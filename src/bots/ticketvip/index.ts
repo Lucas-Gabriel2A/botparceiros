@@ -78,7 +78,7 @@ const CORES = {
     INFO: '#3498db'
 } as const;
 
-const NEXSTAR_BANNER = 'https://i.ibb.co/TDRDH2kq/nexstar.jpg';
+const NEXSTAR_BANNER = 'https://img.freepik.com/vetores-gratis/paisagem-noturna-do-oceano-lua-cheia-e-estrelas-brilham_107791-7397.jpg?semt=ais_hybrid&w=740&q=80';
 
 const EMOJIS = {
     ESTRELA: '⭐',

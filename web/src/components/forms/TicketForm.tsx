@@ -46,7 +46,10 @@ function SubmitButton({ isEditing }: { isEditing?: boolean }) {
     );
 }
 
+import { useRouter } from "next/navigation";
+
 export function TicketForm({ guildId, userId, categories, userPlan }: TicketFormProps) {
+    const router = useRouter();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<TicketCategory | null>(null);
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
@@ -157,7 +160,7 @@ export function TicketForm({ guildId, userId, categories, userPlan }: TicketForm
                         <Button
                             variant="outline"
                             className="hidden sm:flex border-violet-500/30 text-violet-300 hover:bg-violet-500/10 hover:text-violet-200"
-                            onClick={() => window.open('https://loja.botparceiros.com', '_blank')}
+                            onClick={() => router.push('/dashboard/billing')}
                         >
                             Fazer Upgrade 🚀
                         </Button>

@@ -12,6 +12,11 @@ const nextConfig = {
     ],
   },
   // Configuração moderna para Next.js 15/16 (funciona com Turbopack)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: 10485760,
+    },
+  },
   serverExternalPackages: ['discord.js', '@discordjs/ws', 'zlib-sync', 'utf-8-validate', 'bufferutil'],
 
   webpack: (config: any, { isServer }: { isServer: boolean }) => {

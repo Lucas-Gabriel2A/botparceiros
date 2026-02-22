@@ -1,9 +1,3 @@
-/**
- * 🤖 NEXSTAR IA - BOT PRINCIPAL (TypeScript)
- * ═══════════════════════════════════════════════════════════════════════════
- * 
- * Versão modularizada e tipada do bot de IA.
- */
 
 import { 
     Client, 
