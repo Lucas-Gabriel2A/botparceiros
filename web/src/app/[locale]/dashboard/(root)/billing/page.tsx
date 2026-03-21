@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Check, ShieldCheck, Zap, CreditCard, Calendar, Clock, ArrowUpRight, MessageSquare, Server, Sparkles, Lock, Unlock, TrendingUp } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { SUBSCRIPTION_PLANS } from "@/config/subscription";
 
 interface SubscriptionData {
@@ -91,6 +92,12 @@ export default function BillingPage() {
                 body: JSON.stringify({ plan, interval: billingCycle })
             });
             const data = await res.json();
+            
+            if (res.status === 401) {
+                signIn('discord', { callbackUrl: window.location.href });
+                return;
+            }
+
             if (data.url) {
                 window.location.href = data.url;
             }
