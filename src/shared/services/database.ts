@@ -159,7 +159,7 @@ export async function query<T extends QueryResultRow = QueryResultRow>(
 
         return result;
     } catch (error: any) {
-        logger.error(`Erro na query: ${error.message}`);
+        logger.error(`Erro na query: `, { error: error.message || error });
         throw error;
     }
 }
@@ -179,7 +179,7 @@ export async function testConnection(): Promise<boolean> {
         logger.info(`✅ Conexão PostgreSQL OK: ${result.rows[0]?.now}`);
         return true;
     } catch (error: any) {
-        logger.error(`❌ Falha na conexão PostgreSQL: ${error.message}`);
+        logger.error(`❌ Falha na conexão PostgreSQL: `, { error: error.message || error });
         return false;
     }
 }

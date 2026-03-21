@@ -1275,8 +1275,8 @@ async function registerCommands(clientId: string) {
 // 🚀 INICIALIZAÇÃO
 // ═══════════════════════════════════════════════════════════════════════════
 
-client.once('ready', async () => {
-    logger.info(`🤖 Bot IA ${client.user?.tag} está online!`);
+client.once('clientReady', async () => {
+    logger.info(`🤖 NEXSTAR CORE BOT (Multifuncional) - ONLINE`);
 
     // Iniciar verificação de inatividade
     verificarInatividade();

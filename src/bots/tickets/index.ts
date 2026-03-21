@@ -139,7 +139,7 @@ const commands = [
 // 🎯 EVENTOS
 // ═══════════════════════════════════════════════════════════════════════════
 
-client.once('ready', async () => {
+client.once('clientReady', async () => {
     logger.info(`🌌 COREBOT TICKETS BOT - ONLINE`);
     logger.info(`Bot: ${client.user?.tag}`);
 
