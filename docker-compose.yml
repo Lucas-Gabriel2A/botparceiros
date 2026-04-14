@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:15
+    container_name: botparceiros-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: botparceiros
+    ports:
+      - "5435:5432"
+    volumes:
+      - botparceiros_data:/var/lib/postgresql/data
+
+volumes:
+  botparceiros_data:

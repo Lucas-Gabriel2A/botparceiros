@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test": "echo \"No tests specified\" && exit 0",
     "db:start": "call \"C:\\Program Files\\PostgreSQL\\17\\bin\\pg_ctl.exe\" -D \"C:\\Users\\lucas\\botparceiros\\postgres_data\" -l \"C:\\Users\\lucas\\botparceiros\\pg_log.txt\" start",
-    "db:stop": "call \"C:\\Program Files\\PostgreSQL\\17\\bin\\pg_ctl.exe\" -D \"C:\\Users\\lucas\\botparceiros\\postgres_data\" stop"
+    "db:stop": "call \"C:\\Program Files\\PostgreSQL\\17\\bin\\pg_ctl.exe\" -D \"C:\\Users\\lucas\\botparceiros\\postgres_data\" stop",
+    "db:setup": "ts-node scripts/init-db.ts"
   },
   "keywords": [
     "discord",

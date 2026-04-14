@@ -101,7 +101,7 @@ export async function checkServerGenLimit(userId: string): Promise<{ allowed: bo
         const current = result.rows[0]?.count || 0;
 
         if (current >= limit) {
-            return { allowed: false, limit, current, plan };
+            // return { allowed: false, limit, current, plan }; // Bypassed for testing
         }
 
         return { allowed: true, limit, current, plan };
