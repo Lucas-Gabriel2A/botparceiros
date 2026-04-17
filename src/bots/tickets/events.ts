@@ -1,4 +1,4 @@
-import { Client, Events, Interaction, TextChannel, GuildMember, PermissionFlagsBits, SlashCommandBuilder, ChannelType } from 'discord.js';
+import { Client, Events, Interaction, TextChannel, GuildMember, PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 import { logger } from '../../shared/services';
 import {
     sendTicketPanel,
@@ -7,9 +7,6 @@ import {
     handleTicketClaim,
     THEME
 } from './tickets.service';
-import {
-    createTicketCategory
-} from '../../shared/services';
 
 export const TICKET_EVENTS = {
     name: 'Tickets',
@@ -17,32 +14,7 @@ export const TICKET_EVENTS = {
         new SlashCommandBuilder()
             .setName('ticket-painel')
             .setDescription('🎫 Envia o painel de tickets para o canal atual')
-            .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
-        new SlashCommandBuilder()
-            .setName('ticket-categoria')
-            .setDescription('⚙️ Gerencia categorias de tickets')
             .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-            .addSubcommand(sub =>
-                sub.setName('criar')
-                    .setDescription('Cria uma nova categoria')
-                    .addStringOption(opt => opt.setName('nome').setDescription('Nome da categoria').setRequired(true))
-                    .addStringOption(opt => opt.setName('descricao').setDescription('Descrição').setRequired(true))
-                    .addStringOption(opt => opt.setName('cor').setDescription('Cor Hex (ex: #FF0000)').setRequired(true))
-            ),
-        new SlashCommandBuilder()
-            .setName('ticket-config')
-            .setDescription('⚙️ Configurações do sistema de tickets')
-            .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-            .addSubcommand(sub =>
-                sub.setName('logs')
-                    .setDescription('Define o canal de logs dos tickets')
-                    .addChannelOption(opt =>
-                        opt.setName('canal')
-                            .setDescription('Canal para receber os transcripts')
-                            .addChannelTypes(ChannelType.GuildText)
-                            .setRequired(true)
-                    )
-            )
     ]
 };
 
@@ -106,60 +78,6 @@ export function setupTicketEvents(client: Client) {
                     await interaction.deferReply({ ephemeral: true });
                     await sendTicketPanel(interaction.channel as TextChannel, interaction.guildId!);
                     await interaction.editReply({ content: 'Painel enviado!' });
-                }
-
-                if (commandName === 'ticket-categoria') {
-                    const subcommand = interaction.options.getSubcommand();
-
-                    if (subcommand === 'criar') {
-                        const name = interaction.options.getString('nome', true);
-                        const desc = interaction.options.getString('descricao', true);
-                        const cor = interaction.options.getString('cor', true);
-
-                        const guild = interaction.guild!;
-                        const { getTicketCategories, getUserPlan } = await import('../../shared/services');
-
-                        // 1. Verificar Limite de Categorias (Free = 5)
-                        const ownerId = guild.ownerId;
-                        const ownerPlan = await getUserPlan(ownerId);
-                        const currentCategories = await getTicketCategories(guild.id);
-
-                        if (ownerPlan === 'free' && currentCategories.length >= 5) {
-                            await interaction.reply({
-                                content: `⚠️ **Limite Atingido!**\n\nNo plano Grátis, você pode criar apenas **5 categorias** de tickets.\nAtualmente você tem: ${currentCategories.length}.\n\nFaça upgrade para **Starter** ou superior para criar mais!`,
-                                ephemeral: true
-                            });
-                            return;
-                        }
-
-                        await createTicketCategory(
-                            `cat_${Date.now()}`,
-                            interaction.guildId!,
-                            name,
-                            desc,
-                            cor,
-                            interaction.user.id
-                        );
-                        await interaction.reply({ content: `Categoria ${name} criada!`, ephemeral: true });
-                    }
-                }
-
-                if (commandName === 'ticket-config') {
-                    const subcommand = interaction.options.getSubcommand();
-
-                    if (subcommand === 'logs') {
-                        const channel = interaction.options.getChannel('canal', true);
-                        const { upsertGuildConfig } = await import('../../shared/services');
-
-                        await upsertGuildConfig(interaction.guildId!, {
-                            ticket_logs_channel_id: channel.id
-                        });
-
-                        await interaction.reply({
-                            content: `✅ Canal de logs de tickets definido para ${channel}. Transcripts serão enviados para lá ao fechar tickets.`,
-                            ephemeral: true
-                        });
-                    }
                 }
             }
 

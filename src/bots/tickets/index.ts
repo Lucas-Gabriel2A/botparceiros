@@ -87,52 +87,7 @@ const commands = [
         .setName('ticket-painel')
         .setDescription('Envia o painel de tickets no canal atual'),
 
-    new SlashCommandBuilder()
-        .setName('ticket-categoria')
-        .setDescription('Gerenciar categorias de tickets')
-        .addSubcommand(sub =>
-            sub.setName('criar')
-                .setDescription('Criar nova categoria de ticket')
-                .addStringOption(opt =>
-                    opt.setName('nome')
-                        .setDescription('Nome da categoria')
-                        .setRequired(true))
-                .addStringOption(opt =>
-                    opt.setName('descricao')
-                        .setDescription('Descrição da categoria')
-                        .setRequired(true))
-                .addStringOption(opt =>
-                    opt.setName('cor')
-                        .setDescription('Cor em hexadecimal (ex: #7B68EE)')
-                        .setRequired(true)))
-        .addSubcommand(sub =>
-            sub.setName('editar')
-                .setDescription('Editar categoria existente')
-                .addStringOption(opt =>
-                    opt.setName('categoria')
-                        .setDescription('ID da categoria para editar')
-                        .setRequired(true)
-                        .setAutocomplete(true))
-                .addStringOption(opt =>
-                    opt.setName('nome')
-                        .setDescription('Novo nome da categoria'))
-                .addStringOption(opt =>
-                    opt.setName('descricao')
-                        .setDescription('Nova descrição'))
-                .addStringOption(opt =>
-                    opt.setName('cor')
-                        .setDescription('Nova cor em hexadecimal')))
-        .addSubcommand(sub =>
-            sub.setName('excluir')
-                .setDescription('Excluir categoria de ticket')
-                .addStringOption(opt =>
-                    opt.setName('categoria')
-                        .setDescription('ID da categoria para excluir')
-                        .setRequired(true)
-                        .setAutocomplete(true)))
-        .addSubcommand(sub =>
-            sub.setName('listar')
-                .setDescription('Listar todas as categorias'))
+
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -241,71 +196,7 @@ client.on('interactionCreate', async (interaction) => {
                 await interaction.reply({ content: `${THEME.emojis.success} Painel enviado!`, ephemeral: true });
             }
 
-            if (commandName === 'ticket-categoria') {
-                if (!hasAdminPermission(member)) {
-                    await interaction.reply({ content: `${THEME.emojis.error} Sem permissão.`, ephemeral: true });
-                    return;
-                }
 
-                const sub = interaction.options.getSubcommand();
-
-                if (sub === 'criar') {
-                    const nome = interaction.options.getString('nome', true);
-                    const descricao = interaction.options.getString('descricao', true);
-                    const cor = interaction.options.getString('cor', true);
-
-                    if (!/^#[0-9A-Fa-f]{6}$/.test(cor)) {
-                        await interaction.reply({ content: 'Cor inválida.', ephemeral: true });
-                        return;
-                    }
-
-                    await createTicketCategory(generateCategoryId(), guildId, nome, descricao, cor, member.id);
-                    await interaction.reply({
-                        embeds: [new EmbedBuilder()
-                            .setColor(THEME.colors.success)
-                            .setTitle(`${THEME.emojis.success} Categoria Criada`)
-                            .setDescription(`**${nome}** criada com sucesso.`)]
-                        , ephemeral: true
-                    });
-                }
-
-                if (sub === 'editar') {
-                    const id = interaction.options.getString('categoria', true);
-                    const nome = interaction.options.getString('nome');
-                    const descricao = interaction.options.getString('descricao');
-                    const cor = interaction.options.getString('cor');
-
-                    const updates: any = {};
-                    if (nome) updates.name = nome;
-                    if (descricao) updates.description = descricao;
-                    if (cor) updates.color = cor;
-                    updates.updatedBy = member.id;
-
-                    await updateTicketCategory(id, updates);
-                    await interaction.reply({ content: `${THEME.emojis.edit} Categoria atualizada.`, ephemeral: true });
-                }
-
-                if (sub === 'excluir') {
-                    const id = interaction.options.getString('categoria', true);
-                    await deleteTicketCategory(id);
-                    await interaction.reply({ content: `${THEME.emojis.delete} Categoria excluída.`, ephemeral: true });
-                }
-
-                if (sub === 'listar') {
-                    const cats = await getTicketCategories(guildId);
-                    if (!cats.length) {
-                        await interaction.reply({ content: 'Nenhuma categoria.', ephemeral: true });
-                        return;
-                    }
-
-                    const embed = new EmbedBuilder()
-                        .setColor(THEME.colors.primary)
-                        .setTitle('Categorias')
-                        .setDescription(cats.map((c, i) => `${i + 1}. **${c.name}**`).join('\n'));
-
-                    await interaction.reply({ embeds: [embed], ephemeral: true });
-                }
-            }
         }
 
     } catch (error) {

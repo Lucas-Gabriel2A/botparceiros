@@ -1121,8 +1121,9 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     else if (interaction.commandName === 'ajuda-ia') {
+        const helpText = `🧠 **Inteligência Artificial - Ajuda**\n\nO sistema de configuração da IA (incluindo Módulos, Canais e AutoMod) foi movido para o nosso **Painel Dashboard Web**!\n\n**Comandos Locais Disponíveis:**\n\`/construir-servidor\` - Cria estrutura completa do servidor\n\`/ajustar-servidor\` - Modifica canais/cargos existentes`;
         await interaction.reply({
-            content: 'Use `/config-ia` para configurar o bot!\n\n**Comandos Disponíveis:**\n`/config-ia canal` - Define onde eu falo\n`/config-ia personalidade` - Define quem eu sou\n`/config-ia cargos` - Define quem manda em mim\n`/construir-servidor` - Cria estrutura completa\n`/ajustar-servidor` - Modifica servidor existente',
+            content: helpText,
             ephemeral: true
         });
     }

@@ -140,6 +140,16 @@ export class LLMService {
         if (apiKey) {
             this.client = new OpenAI({ apiKey, baseURL: this.baseUrl });
             logger.info(`LLM Service iniciado (${this.baseUrl}) modelo=${this.model} vision=${this.visionModel}`);
+            
+            // Garbage Collector para o Memory Leak
+            setInterval(() => {
+                const now = Date.now();
+                for (const [key, value] of this.cache.entries()) {
+                    if (value.expires <= now) {
+                        this.cache.delete(key);
+                    }
+                }
+            }, 600000); // 10 minutos
         } else {
             logger.warn('LLM Service: sem API key, modo mock ativado');
         }

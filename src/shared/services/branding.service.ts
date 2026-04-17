@@ -14,6 +14,16 @@ const BRANDING_FOOTER = '⚡ Powered by CoreBot';
 const cache = new Map<string, { plan: string | null; expires: number }>();
 const CACHE_TTL = 5 * 60 * 1000;
 
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of cache.entries()) {
+        if (value.expires <= now) {
+            cache.delete(key);
+        }
+    }
+}, CACHE_TTL);
+
+
 /**
  * Retorna o footer de branding para uma guild.
  * Se o owner tiver plano Pro/Ultimate, retorna null (sem marca).

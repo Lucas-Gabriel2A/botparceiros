@@ -4,6 +4,7 @@ import { database } from "@shared/services/database";
 import { revalidatePath } from "next/cache";
 import { uploadImage } from "@/lib/cloudinary";
 import { verifyUserGuildAccess } from "@/lib/discord-api";
+import { CoreBotActionSchema, AutoModActionSchema, TicketCategorySchema, WelcomeConfigSchema, PrivateCallsSchema, TicketPanelSchema } from "@/schemas/guild-config";
 
 export interface GuildConfigState {
     success?: boolean;
@@ -13,57 +14,30 @@ export interface GuildConfigState {
 
 export async function updateCoreBotConfig(prevState: GuildConfigState, formData: FormData): Promise<GuildConfigState> {
     try {
-        const guildId = formData.get("guildId") as string;
-        const iaEnabled = formData.get("iaEnabled") === "on";
-        const channelId = formData.get("channelId") as string;
-        const systemPrompt = formData.get("systemPrompt") as string;
+        const rawData = Object.fromEntries(formData.entries());
+        const parsed = CoreBotActionSchema.safeParse(rawData);
 
-        if (!guildId) {
-            return { success: false, error: "Guild ID missing" };
+        if (!parsed.success) {
+            console.error("Zod Validation Failed:", parsed.error.format());
+            return { success: false, error: "Dados inválidos enviados pelo formulário." };
         }
 
-        const hasAccess = await verifyUserGuildAccess(guildId);
+        const data = parsed.data;
+
+        const hasAccess = await verifyUserGuildAccess(data.guildId);
         if (!hasAccess) return { success: false, error: "Acesso Negado ou Sessão Inválida." };
 
-        const temperature = parseFloat(formData.get("iaTemperature") as string) || 0.7;
-        const ignoredChannelsJson = formData.get("iaIgnoredChannels") as string;
-        const ignoredRolesJson = formData.get("iaIgnoredRoles") as string;
-        const iaTriggersJson = formData.get("iaTriggers") as string; // Nova capture
-
-        let ignoredChannels: string[] = [];
-        let ignoredRoles: string[] = [];
-        let iaTriggers: string[] = [];
-
-        try { 
-            const parsed = JSON.parse(ignoredChannelsJson || "[]"); 
-            ignoredChannels = Array.isArray(parsed) ? parsed : [];
-        } catch { }
-        try { 
-            const parsed = JSON.parse(ignoredRolesJson || "[]"); 
-            ignoredRoles = Array.isArray(parsed) ? parsed : [];
-        } catch { }
-        try { 
-            // O Input virá como string separada por virgula ou array JSON.
-            // Para ser tolerante, vamos processar strings separadas por vírgula.
-            if (iaTriggersJson && !iaTriggersJson.startsWith('[')) {
-                iaTriggers = iaTriggersJson.split(',').map(s => s.trim()).filter(Boolean);
-            } else {
-                const parsed = JSON.parse(iaTriggersJson || "[]"); 
-                iaTriggers = Array.isArray(parsed) ? parsed : [];
-            }
-        } catch { }
-
-        await database.upsertGuildConfig(guildId, {
-            ia_enabled: iaEnabled,
-            ia_channel_id: channelId,
-            ia_system_prompt: systemPrompt,
-            ia_temperature: temperature,
-            ia_triggers: iaTriggers,
-            ia_ignored_channels: ignoredChannels,
-            ia_ignored_roles: ignoredRoles
+        await database.upsertGuildConfig(data.guildId, {
+            ia_enabled: data.iaEnabled,
+            ia_channel_id: data.channelId || null,
+            ia_system_prompt: data.systemPrompt || "",
+            ia_temperature: data.iaTemperature,
+            ia_triggers: data.iaTriggers,
+            ia_ignored_channels: data.iaIgnoredChannels,
+            ia_ignored_roles: data.iaIgnoredRoles
         });
 
-        revalidatePath(`/dashboard/${guildId}/corebot`);
+        revalidatePath(`/dashboard/${data.guildId}/corebot`);
 
         return { success: true, message: "Configurações salvas com sucesso!" };
     } catch (error) {
@@ -74,41 +48,34 @@ export async function updateCoreBotConfig(prevState: GuildConfigState, formData:
 
 export async function updateWelcomeConfig(prevState: GuildConfigState, formData: FormData): Promise<GuildConfigState> {
     try {
-        const guildId = formData.get("guildId") as string;
+        const rawData = Object.fromEntries(formData.entries());
+        const parsed = WelcomeConfigSchema.safeParse(rawData);
 
-        // Welcome/Leave
-        const welcomeMessage = formData.get("welcomeMessage") as string;
-        const leaveMessage = formData.get("leaveMessage") as string;
-        const welcomeChannelId = formData.get("welcomeChannelId") as string;
-        const leaveChannelId = formData.get("leaveChannelId") as string;
-        const autoroleId = formData.get("autoroleId") as string;
+        if (!parsed.success) {
+            console.error("Zod Validation Failed Welcome:", parsed.error.format());
+            return { success: false, error: "Dados inválidos." };
+        }
 
-        if (!guildId) return { success: false, error: "Guild ID missing" };
-        
-        const hasAccess = await verifyUserGuildAccess(guildId);
+        const data = parsed.data;
+
+        const hasAccess = await verifyUserGuildAccess(data.guildId);
         if (!hasAccess) return { success: false, error: "Acesso Negado ou Sessão Inválida." };
 
-        // Welcome Banner & Font
-        const welcomeFont = formData.get("welcome_font") as string;
+        // Welcome Banner File Extractor (File not naturally in Zod String Schema without custom interceptor, extract normally)
         const bannerFile = formData.get("welcome_banner") as File;
         let bannerUrl = null;
 
         if (bannerFile && bannerFile.size > 0) {
             bannerUrl = await uploadImage(bannerFile);
         }
-
-        const userId = formData.get("userId") as string;
         
-        // Carrega o config atual para ver a font e contador
-        const currentConfig = await database.getGuildConfig(guildId);
+        const currentConfig = await database.getGuildConfig(data.guildId);
         let fontChangesCount = currentConfig?.welcome_font_changes_count || 0;
 
-        if (currentConfig && welcomeFont && welcomeFont !== currentConfig.welcome_font) {
-            // A fonte foi alterada
+        if (currentConfig && data.welcome_font && data.welcome_font !== currentConfig.welcome_font) {
             if (fontChangesCount >= 1) {
-                // Checar plano
                 const { getUserPlan } = await import("@shared/services/plan-features");
-                const userPlan = await getUserPlan(userId);
+                const userPlan = await getUserPlan(data.userId);
                 
                 if (userPlan === 'free') {
                     return { success: false, error: "Limite grátis de alteração de fontes esgotado. Faça upgrade para Starter e altere livremente!" };
@@ -118,12 +85,12 @@ export async function updateWelcomeConfig(prevState: GuildConfigState, formData:
         }
 
         const updateData: any = {
-            welcome_message: welcomeMessage,
-            leave_message: leaveMessage,
-            welcome_channel_id: welcomeChannelId,
-            leave_channel_id: leaveChannelId,
-            autorole_id: autoroleId,
-            welcome_font: welcomeFont,
+            welcome_message: data.welcomeMessage || null,
+            leave_message: data.leaveMessage || null,
+            welcome_channel_id: data.welcomeChannelId || null,
+            leave_channel_id: data.leaveChannelId || null,
+            autorole_id: data.autoroleId || null,
+            welcome_font: data.welcome_font || null,
             welcome_font_changes_count: fontChangesCount
         };
 
@@ -131,9 +98,9 @@ export async function updateWelcomeConfig(prevState: GuildConfigState, formData:
             updateData.welcome_banner_url = bannerUrl;
         }
 
-        await database.upsertGuildConfig(guildId, updateData);
+        await database.upsertGuildConfig(data.guildId, updateData);
 
-        revalidatePath(`/dashboard/${guildId}/welcome`);
+        revalidatePath(`/dashboard/${data.guildId}/welcome`);
 
         return { success: true, message: "Configurações de Boas-vindas salvas!" };
     } catch (error) {
@@ -144,60 +111,35 @@ export async function updateWelcomeConfig(prevState: GuildConfigState, formData:
 
 export async function updateAutoModConfig(prevState: GuildConfigState, formData: FormData): Promise<GuildConfigState> {
     try {
-        const guildId = formData.get("guildId") as string;
+        const rawData = Object.fromEntries(formData.entries());
+        const parsed = AutoModActionSchema.safeParse(rawData);
 
-        // AutoMod
-        const automodLinks = formData.get("automodLinks") === "on";
-        const automodCaps = formData.get("automodCaps") === "on";
-        const automodSpam = formData.get("automodSpam") === "on";
-        const automodAiEnabled = formData.get("automodAiEnabled") === "on";
-
-        if (!guildId) return { success: false, error: "Guild ID missing" };
-
-        const hasAccess = await verifyUserGuildAccess(guildId);
-        if (!hasAccess) return { success: false, error: "Acesso Negado ou Sessão Inválida." };
-
-        const prohibitedWordsJson = formData.get("prohibitedWords") as string;
-        let prohibitedWords: string[] = [];
-
-        try {
-            if (prohibitedWordsJson) {
-                const parsed = JSON.parse(prohibitedWordsJson);
-                prohibitedWords = Array.isArray(parsed) ? parsed : [];
-            }
-        } catch (e) {
-            console.error("Error parsing prohibited words:", e);
+        if (!parsed.success) {
+            console.error("Zod Validation Failed AutoMod:", parsed.error.format());
+            return { success: false, error: "Dados inválidos." };
         }
 
-        const automodChannelId = formData.get("automodChannelId") as string;
+        const data = parsed.data;
 
-        const automodAction = formData.get("automodAction") as 'delete' | 'timeout' | 'kick' | 'ban' || 'delete';
-        const automodTimeoutDuration = parseInt(formData.get("automodTimeoutDuration") as string) || 0;
-        const automodLogChannel = formData.get("automodLogChannel") as string;
-        const automodBypassRolesJson = formData.get("automodBypassRoles") as string;
-
-        let automodBypassRoles: string[] = [];
-        try { 
-             const parsed = JSON.parse(automodBypassRolesJson || "[]"); 
-             automodBypassRoles = Array.isArray(parsed) ? parsed : [];
-        } catch { }
+        const hasAccess = await verifyUserGuildAccess(data.guildId);
+        if (!hasAccess) return { success: false, error: "Acesso Negado ou Sessão Inválida." };
 
         const updateData: any = {
-            automod_links_enabled: automodLinks,
-            automod_caps_enabled: automodCaps,
-            automod_spam_enabled: automodSpam,
-            prohibited_words: prohibitedWords,
-            automod_channel: automodChannelId || null,
-            automod_action: automodAction,
-            automod_timeout_duration: automodTimeoutDuration,
-            automod_log_channel: automodLogChannel || null,
-            automod_bypass_roles: automodBypassRoles,
-            automod_ai_enabled: automodAiEnabled
+            automod_links_enabled: data.automodLinks,
+            automod_caps_enabled: data.automodCaps,
+            automod_spam_enabled: data.automodSpam,
+            prohibited_words: data.prohibitedWords,
+            automod_channel: data.automodChannelId || null,
+            automod_action: data.automodAction,
+            automod_timeout_duration: data.automodTimeoutDuration,
+            automod_log_channel: data.automodLogChannel || null,
+            automod_bypass_roles: data.automodBypassRoles,
+            automod_ai_enabled: data.automodAiEnabled
         };
 
-        await database.upsertGuildConfig(guildId, updateData);
+        await database.upsertGuildConfig(data.guildId, updateData);
 
-        revalidatePath(`/dashboard/${guildId}/automod`);
+        revalidatePath(`/dashboard/${data.guildId}/automod`);
 
         return { success: true, message: "Configurações de AutoMod salvas!" };
     } catch (error) {
@@ -208,54 +150,29 @@ export async function updateAutoModConfig(prevState: GuildConfigState, formData:
 
 export async function upsertTicketCategoryAction(prevState: GuildConfigState, formData: FormData): Promise<GuildConfigState> {
     try {
-        const guildId = formData.get("guildId") as string;
-        const categoryId = formData.get("categoryId") as string; // Optional, for update
-        const name = formData.get("name") as string;
-        const description = formData.get("description") as string;
-        const color = formData.get("color") as string;
-        const userId = formData.get("userId") as string;
+        const rawData = Object.fromEntries(formData.entries());
+        const parsed = TicketCategorySchema.safeParse(rawData);
 
-        // New fields
-        const emoji = formData.get("emoji") as string;
-        const ticketChannelCategoryId = formData.get("ticketChannelCategoryId") as string;
-        const supportRoleId = formData.get("supportRoleId") as string;
-        const welcomeTitle = formData.get("welcomeTitle") as string;
-        const welcomeDescription = formData.get("welcomeDescription") as string;
-
-        console.log("Upsert Ticket Category Debug:", { guildId, name, userId, categoryId, emoji });
-
-        if (!guildId || !name || !userId) {
-            return { success: false, error: "Dados incompletos." };
+        if (!parsed.success) {
+            console.error("Zod Validation Failed Ticket Category:", parsed.error.format());
+            return { success: false, error: "Dados da Categoria Inválidos." };
         }
 
-        const hasAccess = await verifyUserGuildAccess(guildId);
+        const data = parsed.data;
+
+        const hasAccess = await verifyUserGuildAccess(data.guildId);
         if (!hasAccess) return { success: false, error: "Acesso Negado ou Sessão Inválida." };
 
-        if (categoryId) {
-            await database.updateTicketCategory(categoryId, {
-                name, description, color,
-                emoji, ticket_channel_category_id: ticketChannelCategoryId, support_role_id: supportRoleId,
-                welcome_title: welcomeTitle, welcome_description: welcomeDescription
+        if (data.categoryId) {
+            await database.updateTicketCategory(data.categoryId, {
+                name: data.name, description: data.description || null, color: data.color || null,
+                emoji: data.emoji || null, ticket_channel_category_id: data.ticketChannelCategoryId || null, support_role_id: data.supportRoleId || null,
+                welcome_title: data.welcomeTitle || null, welcome_description: data.welcomeDescription || null
             });
         } else {
-            // 🛑 CHECK PLAN LIMIT (Free = 5)
-            // Need to get Guild Owner ID. A bit expensive but necessary for security.
-            // For now, let's assume the user performing the action is authorized and check THEIR plan if we can't get owner.
-            // BETTER: config.service has getGuildConfig but not getGuildOwner.
-            // Let's use the USER ID passed in the form. If it's the owner/admin, it should work.
-
-            // Fetch current categories to count
-            const currentCategories = await database.getTicketCategories(guildId);
-
-            // Check Plan (using the plan-features logic)
-            // effectively we need to know the plan of the guild owner. 
-            // In web context, we might not have easy access to guild owner ID without Discord API call.
-            // FALLBACK: Allow 5 if we can't check, or check the current user's plan.
-
-            // Let's check the plan of the user trying to create the category.
-            // If they are admin/owner, they likely hold the sub.
+            const currentCategories = await database.getTicketCategories(data.guildId);
             const { getUserPlan } = await import("@shared/services/plan-features");
-            const userPlan = await getUserPlan(userId);
+            const userPlan = await getUserPlan(data.userId);
 
             if (userPlan === 'free' && currentCategories.length >= 5) {
                 return { success: false, error: "Limite de 5 categorias atingido (Plano Grátis)." };
@@ -263,13 +180,13 @@ export async function upsertTicketCategoryAction(prevState: GuildConfigState, fo
 
             const newId = `cat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             await database.createTicketCategory(
-                newId, guildId, name, description, color, userId,
-                emoji, ticketChannelCategoryId, supportRoleId, welcomeTitle, welcomeDescription
+                newId, data.guildId, data.name, data.description || "", data.color || "", data.userId,
+                data.emoji || undefined, data.ticketChannelCategoryId || undefined, data.supportRoleId || undefined, data.welcomeTitle || undefined, data.welcomeDescription || undefined
             );
         }
 
-        revalidatePath(`/dashboard/${guildId}/tickets`);
-        return { success: true, message: categoryId ? "Categoria atualizada!" : "Categoria criada!" };
+        revalidatePath(`/dashboard/${data.guildId}/tickets`);
+        return { success: true, message: data.categoryId ? "Categoria atualizada!" : "Categoria criada!" };
     } catch (error) {
         console.error("Ticket Category Upsert Error:", error);
         return { success: false, error: "Erro ao salvar categoria." };
@@ -294,31 +211,27 @@ export async function deleteTicketCategoryAction(categoryId: string, guildId: st
 
 export async function updatePrivateCallsConfig(prevState: GuildConfigState, formData: FormData): Promise<GuildConfigState> {
     try {
-        const guildId = formData.get("guildId") as string;
-        const enabled = formData.get("privateCallsEnabled") === "true";
-        const categoryId = formData.get("privateCallsCategoryId") as string;
-        const managerRole = formData.get("privateCallsManagerRole") as string;
-        const allowedRolesJson = formData.get("privateCallsAllowedRoles") as string;
+        const rawData = Object.fromEntries(formData.entries());
+        const parsed = PrivateCallsSchema.safeParse(rawData);
 
-        if (!guildId) return { success: false, error: "Guild ID missing" };
+        if (!parsed.success) {
+            console.error("Zod Validation Failed Private Calls:", parsed.error.format());
+            return { success: false, error: "Dados inválidos." };
+        }
 
-        const hasAccess = await verifyUserGuildAccess(guildId);
+        const data = parsed.data;
+
+        const hasAccess = await verifyUserGuildAccess(data.guildId);
         if (!hasAccess) return { success: false, error: "Acesso Negado ou Sessão Inválida." };
 
-        let allowedRoles: string[] = [];
-        try { 
-             const parsed = JSON.parse(allowedRolesJson || "[]"); 
-             allowedRoles = Array.isArray(parsed) ? parsed : [];
-        } catch { }
-
-        await database.upsertGuildConfig(guildId, {
-            private_calls_enabled: enabled,
-            private_calls_category_id: categoryId || null,
-            private_calls_manager_role: managerRole || null,
-            private_calls_allowed_roles: allowedRoles
+        await database.upsertGuildConfig(data.guildId, {
+            private_calls_enabled: data.privateCallsEnabled,
+            private_calls_category_id: data.privateCallsCategoryId || null,
+            private_calls_manager_role: data.privateCallsManagerRole || null,
+            private_calls_allowed_roles: data.privateCallsAllowedRoles
         });
 
-        revalidatePath(`/dashboard/${guildId}/private-calls`);
+        revalidatePath(`/dashboard/${data.guildId}/private-calls`);
 
         return { success: true, message: "Configurações de Calls Privadas salvas!" };
     } catch (error) {
@@ -330,40 +243,38 @@ export async function updatePrivateCallsConfig(prevState: GuildConfigState, form
 
 export async function updateTicketConfigAction(prevState: GuildConfigState, formData: FormData): Promise<GuildConfigState> {
     try {
-        const guildId = formData.get("guildId") as string;
-        const title = formData.get("title") as string;
-        const description = formData.get("description") as string;
-        const color = formData.get("color") as string;
-        const buttonText = formData.get("buttonText") as string;
-        const buttonEmoji = formData.get("buttonEmoji") as string;
-        const footer = formData.get("footer") as string;
-        const logsChannelId = formData.get("logsChannelId") as string;
+        const rawData = Object.fromEntries(formData.entries());
+        const parsed = TicketPanelSchema.safeParse(rawData);
 
-        // Image upload logic
-        const bannerFile = formData.get("bannerFile") as File;
-        let bannerUrl = formData.get("bannerUrl") as string; // Keep existing URL if no new file
-
-        if (bannerFile && bannerFile.size > 0) {
-            bannerUrl = await uploadImage(bannerFile);
+        if (!parsed.success) {
+            console.error("Zod Validation Failed Ticket Config:", parsed.error.format());
+            return { success: false, error: "Dados inválidos." };
         }
 
-        if (!guildId) return { success: false, error: "Guild ID missing" };
+        const data = parsed.data;
 
-        const hasAccess = await verifyUserGuildAccess(guildId);
+        const hasAccess = await verifyUserGuildAccess(data.guildId);
         if (!hasAccess) return { success: false, error: "Acesso Negado ou Sessão Inválida." };
 
-        await database.upsertGuildConfig(guildId, {
-            ticket_panel_title: title,
-            ticket_panel_description: description,
-            ticket_panel_banner_url: bannerUrl,
-            ticket_panel_color: color,
-            ticket_panel_button_text: buttonText,
-            ticket_panel_button_emoji: buttonEmoji,
-            ticket_panel_footer: footer,
-            ticket_logs_channel_id: logsChannelId
+        const bannerFile = formData.get("bannerFile") as File;
+        let finalBannerUrl = data.bannerUrl || null; 
+
+        if (bannerFile && bannerFile.size > 0) {
+            finalBannerUrl = await uploadImage(bannerFile);
+        }
+
+        await database.upsertGuildConfig(data.guildId, {
+            ticket_panel_title: data.title || null,
+            ticket_panel_description: data.description || null,
+            ticket_panel_banner_url: finalBannerUrl,
+            ticket_panel_color: data.color || null,
+            ticket_panel_button_text: data.buttonText || null,
+            ticket_panel_button_emoji: data.buttonEmoji || null,
+            ticket_panel_footer: data.footer || null,
+            ticket_logs_channel_id: data.logsChannelId || null
         });
 
-        revalidatePath(`/dashboard/${guildId}/tickets`);
+        revalidatePath(`/dashboard/${data.guildId}/tickets`);
         return { success: true, message: "Configurações do Painel salvas!" };
     } catch (error) {
         console.error("Ticket Config Update Error:", error);

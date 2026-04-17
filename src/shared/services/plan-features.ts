@@ -56,6 +56,15 @@ export type Feature = keyof typeof FEATURE_PLAN_MAP;
 const planCache = new Map<string, { plan: PlanTier; expires: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 min
 
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of planCache.entries()) {
+        if (value.expires <= now) {
+            planCache.delete(key);
+        }
+    }
+}, CACHE_TTL);
+
 /**
  * Retorna o plano do owner de uma guild.
  * Se não tiver assinatura ativa, retorna 'free'.
