@@ -214,120 +214,180 @@ export default function Home() {
                     </motion.div>
                 </main>
 
-                {/* Features Section - Bento Grid Style */}
-                <section id="features" className="py-32 border-t border-white/5 relative z-10">
+                {/* Features Section - Modern Pro Style */}
+                <section id="features" className="py-32 border-t border-white/5 relative z-10 overflow-hidden">
+                    {/* Subtle ambient glows */}
+                    <div className="absolute top-10 left-[20%] w-[600px] h-[300px] bg-purple-500/10 blur-[150px] rounded-full pointer-events-none"></div>
+                    
                     <div className="max-w-7xl mx-auto px-8">
-                        <div className="mb-20">
-                            <h2 className="text-4xl md:text-5xl font-serif mb-6 leading-tight">
-                                {t('features.title')} <br />
-                                <span className="text-zinc-600">{t('features.subtitle')}</span>
+                        <motion.div 
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.8 }}
+                            className="mb-20 text-left"
+                        >
+                            <h2 className="text-5xl md:text-6xl font-serif text-white font-medium tracking-tight mb-6 leading-tight">
+                                {t('features.title')}<br />
+                                <span className="bg-clip-text text-transparent bg-linear-to-r from-zinc-400 to-zinc-600">{t('features.subtitle')}</span>
                             </h2>
-                            <p className="text-zinc-500 max-w-xl text-lg">{t('features.desc')}</p>
-                        </div>
+                            <p className="text-lg text-zinc-400 max-w-xl">
+                                {t('features.desc')}
+                            </p>
+                        </motion.div>
 
-                        <div className="grid md:grid-cols-3 gap-6 auto-rows-[300px]">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[340px]">
 
                             {/* Card 1: AI Builder (Large) */}
-                            <div className="md:col-span-2 row-span-1 bg-[#0A0A0C] border border-purple-500/30 rounded-3xl p-10 relative overflow-hidden group hover:border-purple-500/30 transition-all">
-                                <div className="relative z-10 max-w-sm">
-                                    <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform bg-linear-to-br from-purple-500/20 to-blue-500/20">
-                                        <Bot className="text-white w-6 h-6" />
+                            <motion.div 
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.5, delay: 0.1 }}
+                                className="md:col-span-2 row-span-1 bg-[#0A0A0C] border border-white/5 hover:border-purple-500/30 transition-all duration-500 rounded-[20px] p-8 relative overflow-hidden group shadow-lg hover:shadow-purple-500/10 flex flex-col justify-between"
+                            >
+                                <div className="absolute inset-0 bg-linear-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                                
+                                <div className="relative z-10 max-w-[300px] pt-2">
+                                    <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-[12px] flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-purple-500/20 group-hover:border-purple-500/40 transition-all duration-500">
+                                        <Bot className="text-zinc-300 group-hover:text-purple-400 w-6 h-6 transition-colors" />
                                     </div>
-                                    <h3 className="text-2xl font-medium mb-3 group-hover:text-purple-300 transition-colors">{t('features.items.ai_builder.title')}</h3>
-                                    <p className="text-zinc-500 leading-relaxed">{t('features.items.ai_builder.desc')}</p>
+                                    <h3 className="text-xl font-semibold text-white mb-3 group-hover:text-purple-50 transition-colors">{t('features.items.ai_builder.title')}</h3>
+                                    <p className="text-[15px] text-zinc-400 leading-relaxed">{t('features.items.ai_builder.desc')}</p>
                                 </div>
 
-                                {/* Visual for AI */}
-                                <div className="absolute right-0 bottom-0 top-0 w-1/2 bg-linear-to-l from-purple-900/10 to-transparent">
-                                    <div className="absolute top-[20%] right-[10%] w-64 h-full bg-[#1A1A1E] rounded-t-xl border-l border-t border-white/10 p-6 opacity-80 group-hover:translate-y-[-20px] transition-transform duration-700 shadow-2xl">
-                                        <div className="space-y-3">
-                                            <div className="flex gap-2"><div className="w-2 h-2 rounded-full bg-red-500/50"></div><div className="w-2 h-2 rounded-full bg-yellow-500/50"></div></div>
-                                            <div className="h-2 w-20 bg-white/10 rounded"></div>
-                                            <div className="h-2 w-32 bg-white/5 rounded"></div>
-                                            <motion.div
-                                                animate={{ opacity: [0.5, 1, 0.5] }}
-                                                transition={{ duration: 2, repeat: Infinity }}
-                                                className="h-16 w-full bg-purple-500/5 rounded mt-4 border border-dashed border-purple-500/20 flex items-center justify-center text-[10px] text-purple-300 font-mono"
-                                            >
-                                                Generating Server...
-                                            </motion.div>
+                                <div className="absolute right-[32px] top-[32px] bottom-[32px] w-1/2 flex items-center justify-end">
+                                    <div className="w-full max-w-[340px] h-[180px] bg-[#050505] border border-white/10 rounded-[12px] flex items-center justify-center shadow-2xl relative translate-x-4 group-hover:translate-x-0 transition-transform duration-700 ease-out overflow-hidden">
+                                        <div className="absolute inset-0 bg-linear-to-tr from-white/5 to-transparent opacity-50"></div>
+                                        
+                                        <div className="absolute top-0 left-0 right-0 h-10 flex items-center px-4 gap-2 border-b border-white/5 bg-white/[0.02]">
+                                            <div className="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
+                                            <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
+                                            <div className="w-2.5 h-2.5 rounded-full bg-green-500/80"></div>
                                         </div>
+                                        
+                                        <motion.span 
+                                            animate={{ opacity: [1, 0.5, 1] }}
+                                            transition={{ duration: 2, repeat: Infinity }}
+                                            className="font-mono text-[13px] text-purple-400 mt-6 drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]"
+                                        >
+                                            Generating server...<span className="animate-pulse">_</span>
+                                        </motion.span>
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
 
                             {/* Card 2: AutoMod (Tall) */}
-                            <div className="md:col-span-1 row-span-1 bg-[#0A0A0C] border border-red-500/30 rounded-3xl p-8 relative overflow-hidden group hover:border-red-500/30 transition-all">
-                                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center mb-6 group-hover:bg-red-500/10 transition-colors">
-                                    <Shield className="text-white w-5 h-5 group-hover:text-red-400" />
-                                </div>
-                                <h3 className="text-xl font-medium mb-2">{t('features.items.automod.title')}</h3>
-                                <p className="text-sm text-zinc-500">{t('features.items.automod.desc')}</p>
+                            <motion.div 
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.5, delay: 0.2 }}
+                                className="md:col-span-1 row-span-1 bg-[#0A0A0C] border border-white/5 hover:border-red-500/30 transition-all duration-500 rounded-[20px] p-8 relative overflow-hidden group shadow-lg hover:shadow-red-500/10"
+                            >
+                                <div className="absolute inset-0 bg-linear-to-br from-red-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
 
-                                <div className="absolute bottom-6 right-6 opacity-20 group-hover:opacity-40 transition-opacity">
-                                    <Shield className="w-32 h-32 text-white blur-[2px] rotate-12 group-hover:rotate-0 transition-transform duration-500" />
+                                <div className="relative z-10 w-full pt-2">
+                                    <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-[12px] flex items-center justify-center mb-6 group-hover:bg-red-500/20 group-hover:border-red-500/40 transition-all duration-500">
+                                        <Shield className="text-zinc-300 group-hover:text-red-400 w-6 h-6 transition-colors" />
+                                    </div>
+                                    <h3 className="text-xl font-semibold text-white mb-3">{t('features.items.automod.title')}</h3>
+                                    <p className="text-[15px] text-zinc-400 leading-relaxed">{t('features.items.automod.desc')}</p>
                                 </div>
-                                {/* Scan Effect */}
-                                <motion.div
-                                    animate={{ top: ['0%', '100%'] }}
-                                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                                    className="absolute left-0 right-0 h-[2px] bg-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.5)] opacity-0 group-hover:opacity-100"
+
+                                <div className="absolute bottom-[-10%] right-[-10%] opacity-20 group-hover:opacity-60 transition-all duration-700 pointer-events-none">
+                                    <Shield className="w-56 h-56 text-red-500 blur-lg group-hover:blur-xl transition-all duration-700" strokeWidth={0.5} style={{ fill: 'none' }} />
+                                    <Shield className="w-56 h-56 text-red-400 absolute inset-0" strokeWidth={1} style={{ fill: 'none' }} />
+                                </div>
+                                
+                                {/* Scan line animation on hover */}
+                                <motion.div 
+                                    className="absolute left-0 right-0 h-[1px] bg-linear-to-r from-transparent via-red-500/80 to-transparent opacity-0 group-hover:opacity-100 drop-shadow-[0_0_5px_rgba(239,68,68,0.8)]"
+                                    animate={{ top: ["10%", "90%", "10%"] }}
+                                    transition={{ duration: 3, ease: "linear", repeat: Infinity }}
                                 />
-                            </div>
+                            </motion.div>
 
                             {/* Card 3: Tickets (Normal) */}
-                            <div className="md:col-span-1 row-span-1 bg-[#0A0A0C] border border-blue-500/30 rounded-3xl p-8 relative overflow-hidden group hover:border-blue-500/30 transition-all">
-                                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center mb-6 group-hover:bg-blue-500/10 transition-colors">
-                                    <Zap className="text-white w-5 h-5 group-hover:text-blue-400" />
-                                </div>
-                                <h3 className="text-xl font-medium mb-2">{t('features.items.tickets.title')}</h3>
-                                <p className="text-sm text-zinc-500">{t('features.items.tickets.desc')}</p>
+                            <motion.div 
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.5, delay: 0.3 }}
+                                className="md:col-span-1 row-span-1 bg-[#0A0A0C] border border-white/5 hover:border-blue-500/30 transition-all duration-500 rounded-[20px] p-8 relative overflow-hidden group shadow-lg hover:shadow-blue-500/10 flex flex-col justify-between"
+                            >
+                                <div className="absolute inset-0 bg-linear-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
 
-                                {/* Visual Tickets */}
-                                <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-black/50 to-transparent">
-                                    <motion.div
-                                        whileHover={{ y: -5 }}
-                                        className="absolute bottom-4 left-6 right-6 h-12 bg-white/5 border border-white/5 rounded flex items-center px-4 gap-3 backdrop-blur-md"
+                                <div className="relative z-10 w-full pt-2">
+                                    <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-[12px] flex items-center justify-center mb-6 group-hover:bg-blue-500/20 group-hover:border-blue-500/40 transition-all duration-500">
+                                        <Zap className="text-zinc-300 group-hover:text-blue-400 w-6 h-6 transition-colors" />
+                                    </div>
+                                    <h3 className="text-xl font-semibold text-white mb-3">{t('features.items.tickets.title')}</h3>
+                                    <p className="text-[15px] text-zinc-400 leading-relaxed">{t('features.items.tickets.desc')}</p>
+                                </div>
+                                
+                                <div className="absolute bottom-8 left-8 right-8">
+                                    <motion.div 
+                                        whileHover={{ y: -6 }}
+                                        className="bg-[#141416] border border-white/10 rounded-[14px] p-3 flex  items-center gap-4 shadow-2xl backdrop-blur-md relative"
                                     >
-                                        <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-[10px] text-indigo-400">#</div>
-                                        <div className="h-2 w-20 bg-white/10 rounded"></div>
-                                        <div className="ml-auto w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                                       <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-sm font-bold text-blue-400">#</div>
+                                       <div className="flex-1 h-2 rounded-full bg-zinc-800"></div>
+                                       <motion.div 
+                                           animate={{ scale: [1, 1.3, 1] }} 
+                                           transition={{ duration: 2, repeat: Infinity }}
+                                           className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]"
+                                       ></motion.div>
                                     </motion.div>
                                 </div>
-                            </div>
+                            </motion.div>
 
                             {/* Card 4: Dashboard (Wide) */}
-                            <div className="md:col-span-2 row-span-1 bg-[#0A0A0C] border border-green-500/30 rounded-3xl p-10 relative overflow-hidden group hover:border-green-500/30 transition-all flex flex-col justify-between">
-                                <div className="relative z-10 max-w-sm">
-                                    <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center mb-6 group-hover:bg-green-500/10 transition-colors">
-                                        <Server className="text-white w-6 h-6 group-hover:text-green-400" />
-                                    </div>
-                                    <h3 className="text-2xl font-medium mb-3">{t('features.items.dashboard.title')}</h3>
-                                    <p className="text-zinc-500 leading-relaxed">{t('features.items.dashboard.desc')}</p>
-                                </div>
+                            <motion.div 
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.5, delay: 0.4 }}
+                                className="md:col-span-2 row-span-1 bg-[#0A0A0C] border border-white/5 hover:border-emerald-500/30 transition-all duration-500 rounded-[20px] p-8 relative overflow-hidden group shadow-lg hover:shadow-emerald-500/10"
+                            >
+                                <div className="absolute inset-0 bg-linear-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
 
-                                {/* Visual Dashboard */}
-                                <div className="absolute top-8 right-8 w-64 h-64 bg-[#141416] border border-white/10 rounded-xl p-4 rotate-3 opacity-60 group-hover:rotate-0 group-hover:opacity-100 transition-all duration-500 shadow-2xl group-hover:shadow-green-900/10 group-hover:scale-105">
-                                    <div className="flex justify-between items-center mb-6">
-                                        <div className="h-3 w-20 bg-white/10 rounded"></div>
-                                        <div className="h-6 w-16 bg-green-500/20 rounded-full flex items-center justify-center text-[10px] text-green-400 font-bold tracking-wider">ONLINE</div>
+                                <div className="relative z-10 max-w-[300px] pt-2">
+                                    <div className="w-12 h-12 bg-white/5 border border-white/10 rounded-[12px] flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 group-hover:border-emerald-500/40 transition-all duration-500">
+                                        <Server className="text-zinc-300 group-hover:text-emerald-400 w-6 h-6 transition-colors" />
                                     </div>
-                                    <div className="space-y-3">
-                                        <div className="flex gap-2 items-end h-20 w-full bg-white/5 rounded border border-white/5 p-2 overflow-hidden">
-                                            {[30, 50, 40, 70, 60, 80, 50, 70].map((h, i) => (
-                                                <motion.div
-                                                    key={i}
-                                                    initial={{ height: '10%' }}
-                                                    animate={{ height: `${h}%` }}
-                                                    transition={{ duration: 1, delay: i * 0.1, repeat: Infinity, repeatType: "reverse" }}
-                                                    className="flex-1 bg-green-500/20 rounded-t-sm"
-                                                />
-                                            ))}
-                                        </div>
-                                        <div className="h-20 w-full bg-white/5 rounded border border-white/5"></div>
-                                    </div>
+                                    <h3 className="text-xl font-semibold text-white mb-3">{t('features.items.dashboard.title')}</h3>
+                                    <p className="text-[15px] text-zinc-400 leading-relaxed">{t('features.items.dashboard.desc')}</p>
                                 </div>
-                            </div>
+                                
+                                <div className="absolute right-[32px] top-[32px] bottom-[32px] w-1/2 flex items-center justify-end">
+                                     <div className="w-full max-w-[340px] h-full bg-[#050505] border border-white/10 rounded-[12px] p-5 flex flex-col justify-between shadow-2xl relative translate-y-4 group-hover:translate-y-0 transition-transform duration-700 ease-out">
+                                         <div className="absolute inset-0 bg-linear-to-b from-white/5 to-transparent opacity-20 pointer-events-none rounded-xl"></div>
+                                         
+                                         <div className="flex justify-between items-center relative z-10">
+                                            <div className="h-2 w-16 bg-zinc-800 rounded-full"></div>
+                                            <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] uppercase font-bold px-2 py-1 rounded-[6px] flex items-center gap-1.5">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                                ONLINE
+                                            </div>
+                                         </div>
+                                         <div className="h-[75px] bg-[#111] rounded-lg border border-white/5 p-3 flex items-end justify-between gap-1.5 relative z-10">
+                                            {[40, 70, 50, 90, 60, 30, 80, 45, 60, 100].map((h, i) => (
+                                                <motion.div 
+                                                    key={i} 
+                                                    initial={{ height: '30%' }}
+                                                    whileInView={{ height: `${h}%` }}
+                                                    transition={{ duration: 1, delay: i * 0.1, type: "spring" }}
+                                                    className="w-full bg-emerald-500/30 group-hover:bg-emerald-400/80 rounded-t-sm transition-colors duration-500" 
+                                                ></motion.div>
+                                            ))}
+                                         </div>
+                                         <div className="h-8 bg-[#111] border border-white/5 rounded-lg relative z-10 flex items-center px-4">
+                                            <div className="w-1/2 h-1.5 bg-zinc-800 rounded-full"></div>
+                                         </div>
+                                     </div>
+                                </div>
+                            </motion.div>
                         </div>
                     </div>
                 </section>

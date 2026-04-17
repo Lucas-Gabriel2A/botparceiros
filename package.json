@@ -1,11 +1,18 @@
 {
-  "name": "nexstar-discord-bots",
+  "name": "coreia-discord-bots",
   "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "web"
+  ],
   "main": "bottickets.js",
   "scripts": {
-    "start": "ts-node src/bots/CoreIA/index.ts",
-    "dev": "nodemon --exec ts-node src/bots/CoreIA/index.ts",
-    "build": "tsc",
+    "start": "concurrently \"ts-node src/bots/CoreIA/index.ts\" \"npm run start --workspace=web\"",
+    "dev": "concurrently -n \"BOT,WEB\" -c \"magenta,blue\" \"npm run dev:bot\" \"npm run dev:web\"",
+    "dev:bot": "nodemon --exec ts-node src/bots/CoreIA/index.ts",
+    "dev:web": "npm run dev --workspace=web",
+    "build": "npm run build --workspace=web && tsc",
+    "web:install": "npm install --workspace=web",
     "typecheck": "tsc --noEmit",
     "test": "echo \"No tests specified\" && exit 0",
     "db:start": "call \"C:\\Program Files\\PostgreSQL\\17\\bin\\pg_ctl.exe\" -D \"C:\\Users\\lucas\\botparceiros\\postgres_data\" -l \"C:\\Users\\lucas\\botparceiros\\pg_log.txt\" start",
@@ -20,7 +27,7 @@
     "calls",
     "core"
   ],
-  "author": "Nexstar",
+  "author": "CoreIA",
   "license": "MIT",
   "description": "bot inteligente para gerenciamento de servidores do discord",
   "dependencies": {
@@ -30,7 +37,6 @@
     "@vitalets/google-translate-api": "^9.2.1",
     "axios": "^1.12.2",
     "canvas": "^3.1.0",
-    "concurrently": "^8.2.2",
     "discord.js": "^14.21.0",
     "dotenv": "^17.2.1",
     "express": "^4.18.2",
@@ -51,6 +57,7 @@
     "@types/express": "^5.0.6",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^25.2.0",
+    "concurrently": "^9.2.1",
     "nodemon": "^3.0.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"

@@ -5,14 +5,15 @@ import { getAnalytics, getAnalyticsSummary } from '@shared/services/analytics.se
 
 export async function GET(
     request: Request,
-    { params }: { params: { guildId: string } }
+    { params }: { params: Promise<{ guildId: string }> }
 ) {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { guildId } = params;
+    const resolvedParams = await params;
+    const { guildId } = resolvedParams;
     const { searchParams } = new URL(request.url);
     const period = parseInt(searchParams.get('period') || '7');
 

@@ -1,4 +1,4 @@
-# Railway Configuration for Nexstar Discord Bots
+# Railway Configuration for CoreIA Discord Bots
 
 ## 🎯 Quick Deploy Links
 

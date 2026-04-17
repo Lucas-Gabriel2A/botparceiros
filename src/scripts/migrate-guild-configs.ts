@@ -13,7 +13,7 @@ async function migrate() {
         const queries = [
             `ALTER TABLE guild_configs ADD COLUMN IF NOT EXISTS ia_enabled BOOLEAN DEFAULT true;`,
             `ALTER TABLE guild_configs ADD COLUMN IF NOT EXISTS ia_channel_id VARCHAR(20);`,
-            `ALTER TABLE guild_configs ADD COLUMN IF NOT EXISTS ia_system_prompt TEXT DEFAULT 'Você é a IA da Nexstar. Personalidade Única.';`,
+            `ALTER TABLE guild_configs ADD COLUMN IF NOT EXISTS ia_system_prompt TEXT DEFAULT 'Você é a IA da CoreIA. Personalidade Única.';`,
             `ALTER TABLE guild_configs ADD COLUMN IF NOT EXISTS ia_admin_roles TEXT[] DEFAULT '{}';`,
             `ALTER TABLE guild_configs ADD COLUMN IF NOT EXISTS ia_voice_enabled BOOLEAN DEFAULT true;`
         ];
@@ -24,7 +24,7 @@ async function migrate() {
         }
 
         logger.info("✅ Migration completed successfully!");
-    } catch (error) {
+    } catch (error:any) {
         logger.error("❌ Migration failed:", error);
     } finally {
         await database.closePool();

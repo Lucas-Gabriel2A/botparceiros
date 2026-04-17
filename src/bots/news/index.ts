@@ -170,7 +170,7 @@ class SpaceNewsBot {
             .setDescription(`\`\`\`ansi\n\u001b[0;35m╔══════════════════════════════════════╗\n\u001b[0;36m   ${category}\n\u001b[0;35m╚══════════════════════════════════════╝\n\`\`\`\n${description}`)
             .setTimestamp()
             .setFooter({
-                text: footer || '🌌 Observatório Nexstar • Explorando o cosmos'
+                text: footer || '🌌 Observatório CoreIA • Explorando o cosmos'
             });
 
         if (thumbnail) embed.setThumbnail(thumbnail);
@@ -452,7 +452,7 @@ class SpaceNewsBot {
             title: '💫 CURIOSIDADE CÓSMICA',
             description: `### ${EMOJIS.galaxy} Você Sabia?\n\n> ${fact}\n\n*O universo está cheio de mistérios esperando para serem descobertos!*`,
             color: COLORS.CURIOSITY,
-            category: 'NEXSTAR KNOWLEDGE BASE',
+            category: 'COREIA KNOWLEDGE BASE',
             footer: '🌟 Fatos Espaciais Incríveis'
         });
 

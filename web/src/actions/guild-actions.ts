@@ -3,6 +3,7 @@
 import { database } from "@shared/services/database";
 import { revalidatePath } from "next/cache";
 import { uploadImage } from "@/lib/cloudinary";
+import { verifyUserGuildAccess } from "@/lib/discord-api";
 
 export interface GuildConfigState {
     success?: boolean;
@@ -21,21 +22,43 @@ export async function updateCoreBotConfig(prevState: GuildConfigState, formData:
             return { success: false, error: "Guild ID missing" };
         }
 
+        const hasAccess = await verifyUserGuildAccess(guildId);
+        if (!hasAccess) return { success: false, error: "Acesso Negado ou Sessão Inválida." };
+
         const temperature = parseFloat(formData.get("iaTemperature") as string) || 0.7;
         const ignoredChannelsJson = formData.get("iaIgnoredChannels") as string;
         const ignoredRolesJson = formData.get("iaIgnoredRoles") as string;
+        const iaTriggersJson = formData.get("iaTriggers") as string; // Nova capture
 
         let ignoredChannels: string[] = [];
         let ignoredRoles: string[] = [];
+        let iaTriggers: string[] = [];
 
-        try { ignoredChannels = JSON.parse(ignoredChannelsJson || "[]"); } catch { }
-        try { ignoredRoles = JSON.parse(ignoredRolesJson || "[]"); } catch { }
+        try { 
+            const parsed = JSON.parse(ignoredChannelsJson || "[]"); 
+            ignoredChannels = Array.isArray(parsed) ? parsed : [];
+        } catch { }
+        try { 
+            const parsed = JSON.parse(ignoredRolesJson || "[]"); 
+            ignoredRoles = Array.isArray(parsed) ? parsed : [];
+        } catch { }
+        try { 
+            // O Input virá como string separada por virgula ou array JSON.
+            // Para ser tolerante, vamos processar strings separadas por vírgula.
+            if (iaTriggersJson && !iaTriggersJson.startsWith('[')) {
+                iaTriggers = iaTriggersJson.split(',').map(s => s.trim()).filter(Boolean);
+            } else {
+                const parsed = JSON.parse(iaTriggersJson || "[]"); 
+                iaTriggers = Array.isArray(parsed) ? parsed : [];
+            }
+        } catch { }
 
         await database.upsertGuildConfig(guildId, {
             ia_enabled: iaEnabled,
             ia_channel_id: channelId,
             ia_system_prompt: systemPrompt,
             ia_temperature: temperature,
+            ia_triggers: iaTriggers,
             ia_ignored_channels: ignoredChannels,
             ia_ignored_roles: ignoredRoles
         });
@@ -60,6 +83,11 @@ export async function updateWelcomeConfig(prevState: GuildConfigState, formData:
         const leaveChannelId = formData.get("leaveChannelId") as string;
         const autoroleId = formData.get("autoroleId") as string;
 
+        if (!guildId) return { success: false, error: "Guild ID missing" };
+        
+        const hasAccess = await verifyUserGuildAccess(guildId);
+        if (!hasAccess) return { success: false, error: "Acesso Negado ou Sessão Inválida." };
+
         // Welcome Banner & Font
         const welcomeFont = formData.get("welcome_font") as string;
         const bannerFile = formData.get("welcome_banner") as File;
@@ -69,7 +97,25 @@ export async function updateWelcomeConfig(prevState: GuildConfigState, formData:
             bannerUrl = await uploadImage(bannerFile);
         }
 
-        if (!guildId) return { success: false, error: "Guild ID missing" };
+        const userId = formData.get("userId") as string;
+        
+        // Carrega o config atual para ver a font e contador
+        const currentConfig = await database.getGuildConfig(guildId);
+        let fontChangesCount = currentConfig?.welcome_font_changes_count || 0;
+
+        if (currentConfig && welcomeFont && welcomeFont !== currentConfig.welcome_font) {
+            // A fonte foi alterada
+            if (fontChangesCount >= 1) {
+                // Checar plano
+                const { getUserPlan } = await import("@shared/services/plan-features");
+                const userPlan = await getUserPlan(userId);
+                
+                if (userPlan === 'free') {
+                    return { success: false, error: "Limite grátis de alteração de fontes esgotado. Faça upgrade para Starter e altere livremente!" };
+                }
+            }
+            fontChangesCount += 1;
+        }
 
         const updateData: any = {
             welcome_message: welcomeMessage,
@@ -77,7 +123,8 @@ export async function updateWelcomeConfig(prevState: GuildConfigState, formData:
             welcome_channel_id: welcomeChannelId,
             leave_channel_id: leaveChannelId,
             autorole_id: autoroleId,
-            welcome_font: welcomeFont
+            welcome_font: welcomeFont,
+            welcome_font_changes_count: fontChangesCount
         };
 
         if (bannerUrl) {
@@ -107,12 +154,16 @@ export async function updateAutoModConfig(prevState: GuildConfigState, formData:
 
         if (!guildId) return { success: false, error: "Guild ID missing" };
 
+        const hasAccess = await verifyUserGuildAccess(guildId);
+        if (!hasAccess) return { success: false, error: "Acesso Negado ou Sessão Inválida." };
+
         const prohibitedWordsJson = formData.get("prohibitedWords") as string;
         let prohibitedWords: string[] = [];
 
         try {
             if (prohibitedWordsJson) {
-                prohibitedWords = JSON.parse(prohibitedWordsJson);
+                const parsed = JSON.parse(prohibitedWordsJson);
+                prohibitedWords = Array.isArray(parsed) ? parsed : [];
             }
         } catch (e) {
             console.error("Error parsing prohibited words:", e);
@@ -126,7 +177,10 @@ export async function updateAutoModConfig(prevState: GuildConfigState, formData:
         const automodBypassRolesJson = formData.get("automodBypassRoles") as string;
 
         let automodBypassRoles: string[] = [];
-        try { automodBypassRoles = JSON.parse(automodBypassRolesJson || "[]"); } catch { }
+        try { 
+             const parsed = JSON.parse(automodBypassRolesJson || "[]"); 
+             automodBypassRoles = Array.isArray(parsed) ? parsed : [];
+        } catch { }
 
         const updateData: any = {
             automod_links_enabled: automodLinks,
@@ -173,6 +227,9 @@ export async function upsertTicketCategoryAction(prevState: GuildConfigState, fo
         if (!guildId || !name || !userId) {
             return { success: false, error: "Dados incompletos." };
         }
+
+        const hasAccess = await verifyUserGuildAccess(guildId);
+        if (!hasAccess) return { success: false, error: "Acesso Negado ou Sessão Inválida." };
 
         if (categoryId) {
             await database.updateTicketCategory(categoryId, {
@@ -221,6 +278,11 @@ export async function upsertTicketCategoryAction(prevState: GuildConfigState, fo
 
 export async function deleteTicketCategoryAction(categoryId: string, guildId: string): Promise<GuildConfigState> {
     try {
+        if (!guildId) return { success: false, error: "Guild ID info missing" };
+
+        const hasAccess = await verifyUserGuildAccess(guildId);
+        if (!hasAccess) return { success: false, error: "Acesso Negado ou Sessão Inválida." };
+
         await database.deleteTicketCategory(categoryId);
         revalidatePath(`/dashboard/${guildId}/tickets`);
         return { success: true, message: "Categoria removida!" };
@@ -240,8 +302,14 @@ export async function updatePrivateCallsConfig(prevState: GuildConfigState, form
 
         if (!guildId) return { success: false, error: "Guild ID missing" };
 
+        const hasAccess = await verifyUserGuildAccess(guildId);
+        if (!hasAccess) return { success: false, error: "Acesso Negado ou Sessão Inválida." };
+
         let allowedRoles: string[] = [];
-        try { allowedRoles = JSON.parse(allowedRolesJson || "[]"); } catch { }
+        try { 
+             const parsed = JSON.parse(allowedRolesJson || "[]"); 
+             allowedRoles = Array.isArray(parsed) ? parsed : [];
+        } catch { }
 
         await database.upsertGuildConfig(guildId, {
             private_calls_enabled: enabled,
@@ -280,6 +348,9 @@ export async function updateTicketConfigAction(prevState: GuildConfigState, form
         }
 
         if (!guildId) return { success: false, error: "Guild ID missing" };
+
+        const hasAccess = await verifyUserGuildAccess(guildId);
+        if (!hasAccess) return { success: false, error: "Acesso Negado ou Sessão Inválida." };
 
         await database.upsertGuildConfig(guildId, {
             ticket_panel_title: title,

@@ -52,7 +52,8 @@ export default function BillingPage() {
 
     // Buscar assinatura ativa
     useEffect(() => {
-        fetch("/api/user/subscription")
+        // Adicionamos _t para forçar break cache do navegador/next router
+        fetch(`/api/user/subscription?_t=${Date.now()}`)
             .then((res) => res.json())
             .then((data) => {
                 if (data.subscription) {
@@ -65,7 +66,8 @@ export default function BillingPage() {
 
     // Buscar uso do plano
     useEffect(() => {
-        fetch("/api/user/usage")
+        // Envia refresh=true para limpar o planCache no backend e puxar o fresquinho!
+        fetch(`/api/user/usage?refresh=true&_t=${Date.now()}`)
             .then((res) => res.json())
             .then((data) => {
                 if (!data.error) {
@@ -264,96 +266,117 @@ export default function BillingPage() {
                     ];
 
                     return (
-                        <div className="mb-12 p-6 rounded-2xl bg-[#0A0A0C] border border-white/10 relative overflow-hidden">
-                            <div className={`absolute inset-0 bg-gradient-to-br from-${accent}-500/5 via-transparent to-transparent pointer-events-none`} />
-
-                            <div className="relative z-10">
+                        <div className="mb-12 rounded-3xl bg-[#09090b] border border-white/5 relative overflow-hidden shadow-2xl backdrop-blur-3xl transition-all duration-300 hover:border-white/10 group">
+                            <div className={`absolute inset-0 bg-gradient-to-br from-${accent}-500/10 via-transparent to-transparent pointer-events-none opacity-50 group-hover:opacity-100 transition-opacity duration-700`} />
+                            
+                            <div className="relative z-10 p-8">
                                 {/* Header */}
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-xl bg-${accent}-500/10 border border-${accent}-500/20`}>
-                                            <TrendingUp className={`w-5 h-5 text-${accent}-400`} />
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`p-3 rounded-2xl bg-${accent}-500/10 border border-${accent}-500/20 shadow-[0_0_15px_rgba(255,255,255,0.05)]`}>
+                                            <TrendingUp className={`w-6 h-6 text-${accent}-400`} />
                                         </div>
                                         <div>
-                                            <h2 className="text-lg font-bold text-white">Uso do Plano</h2>
-                                            <p className="text-xs text-zinc-500">Acompanhe seus limites e recursos disponíveis</p>
+                                            <h2 className="text-2xl font-bold text-white tracking-tight">Utilização & Benefícios</h2>
+                                            <p className="text-sm text-zinc-400 mt-1">Monitore e desfrute do plano <span className={`text-${accent}-400 font-semibold capitalize`}>{currentPlan}</span></p>
                                         </div>
                                     </div>
-                                    <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-${accent}-500/10 text-${accent}-400 border border-${accent}-500/20`}>
-                                        {currentPlan}
-                                    </span>
+                                    <div className={`flex items-center gap-2 px-5 py-2.5 rounded-full bg-${accent}-500/10 border border-${accent}-500/30 text-${accent}-400 shadow-[0_0_20px_rgba(var(--${accent}-500-rgb),0.1)]`}>
+                                        <div className={`w-2 h-2 rounded-full bg-${accent}-400 animate-pulse`} />
+                                        <span className="text-sm font-bold uppercase tracking-widest">{currentPlan}</span>
+                                    </div>
                                 </div>
 
                                 {/* Usage Bars */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                                     {/* AI Messages */}
-                                    <div className="bg-zinc-900/60 p-4 rounded-xl border border-white/5">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <div className="flex items-center gap-2">
-                                                <MessageSquare className="w-4 h-4 text-cyan-400" />
-                                                <span className="text-sm font-medium text-white">Mensagens IA</span>
+                                    <div className="bg-zinc-950 p-6 rounded-2xl border border-white/5 relative overflow-hidden group/bar">
+                                        <div className="absolute inset-0 bg-linear-to-b from-transparent to-cyan-500/5 opacity-0 group-hover/bar:opacity-100 transition-opacity" />
+                                        <div className="flex items-center justify-between mb-4 relative z-10">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-cyan-500/10 rounded-lg">
+                                                    <MessageSquare className="w-5 h-5 text-cyan-400" />
+                                                </div>
+                                                <span className="text-base font-semibold text-zinc-200">Mensagens IA</span>
                                             </div>
-                                            <span className="text-xs text-zinc-500">
-                                                {aiUnlimited
-                                                    ? '∞ / dia'
-                                                    : `${usage.aiMessages.current} / ${usage.aiMessages.limit} por dia`
-                                                }
-                                            </span>
+                                            <div className="text-right">
+                                                <span className="text-sm font-bold text-white">
+                                                    {aiUnlimited ? 'Ilimitado' : usage.aiMessages.current}
+                                                </span>
+                                                <span className="text-xs text-zinc-500 font-medium ml-1">
+                                                    {aiUnlimited ? '∞/dia' : `/ ${usage.aiMessages.limit} diário`}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div className="w-full h-2.5 bg-zinc-800 rounded-full overflow-hidden">
+                                        <div className="w-full h-3 bg-black rounded-full overflow-hidden border border-white/5 relative z-10">
                                             <div
-                                                className={`h-full rounded-full transition-all duration-1000 ease-out ${aiUnlimited ? 'bg-gradient-to-r from-purple-500 to-cyan-400' : aiPct >= 90 ? 'bg-gradient-to-r from-red-500 to-orange-500' : aiPct >= 60 ? 'bg-gradient-to-r from-amber-500 to-yellow-400' : 'bg-gradient-to-r from-emerald-500 to-emerald-400'}`}
+                                                className={`h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(255,255,255,0.2)] ${aiUnlimited ? 'bg-gradient-to-r from-purple-500 via-cyan-400 to-emerald-400 bg-[length:200%_auto] animate-gradient' : aiPct >= 90 ? 'bg-gradient-to-r from-red-500 to-orange-500' : aiPct >= 60 ? 'bg-gradient-to-r from-amber-500 to-yellow-400' : 'bg-gradient-to-r from-cyan-500 to-blue-400'}`}
                                                 style={{ width: `${aiUnlimited ? 100 : aiPct}%` }}
                                             />
                                         </div>
-                                        {aiUnlimited && (
-                                            <p className="text-[10px] text-purple-400 mt-1.5">✨ Ilimitado no seu plano</p>
-                                        )}
-                                        {!aiUnlimited && aiPct >= 80 && (
-                                            <p className="text-[10px] text-amber-400 mt-1.5">⚠️ Quase no limite diário</p>
-                                        )}
+                                        <div className="relative z-10">
+                                            {aiUnlimited && (
+                                                <p className="text-[11px] font-medium text-purple-400 mt-2 flex items-center gap-1.5"><Sparkles className="w-3 h-3"/> Ilimitado no seu plano</p>
+                                            )}
+                                            {!aiUnlimited && aiPct >= 80 && (
+                                                <p className="text-[11px] font-medium text-amber-400 mt-2 flex items-center gap-1.5">⚠️ Aproximando-se do limite</p>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* Server Builds */}
-                                    <div className="bg-zinc-900/60 p-4 rounded-xl border border-white/5">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <div className="flex items-center gap-2">
-                                                <Server className="w-4 h-4 text-blue-400" />
-                                                <span className="text-sm font-medium text-white">Gerações de Servidor</span>
+                                    <div className="bg-zinc-950 p-6 rounded-2xl border border-white/5 relative overflow-hidden group/bar">
+                                        <div className="absolute inset-0 bg-linear-to-b from-transparent to-blue-500/5 opacity-0 group-hover/bar:opacity-100 transition-opacity" />
+                                        <div className="flex items-center justify-between mb-4 relative z-10">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-blue-500/10 rounded-lg">
+                                                    <Server className="w-5 h-5 text-blue-400" />
+                                                </div>
+                                                <span className="text-base font-semibold text-zinc-200">Geração Premium</span>
                                             </div>
-                                            <span className="text-xs text-zinc-500">
-                                                {sgUnlimited
-                                                    ? '∞ / mês'
-                                                    : `${usage.serverBuilds.current} / ${usage.serverBuilds.limit} por mês`
-                                                }
-                                            </span>
+                                            <div className="text-right">
+                                                <span className="text-sm font-bold text-white">
+                                                    {sgUnlimited ? 'Ilimitado' : usage.serverBuilds.current}
+                                                </span>
+                                                <span className="text-xs text-zinc-500 font-medium ml-1">
+                                                    {sgUnlimited ? '∞/mês' : `/ ${usage.serverBuilds.limit} mensal`}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div className="w-full h-2.5 bg-zinc-800 rounded-full overflow-hidden">
+                                        <div className="w-full h-3 bg-black rounded-full overflow-hidden border border-white/5 relative z-10">
                                             <div
-                                                className={`h-full rounded-full transition-all duration-1000 ease-out ${sgUnlimited ? 'bg-gradient-to-r from-purple-500 to-cyan-400' : sgPct >= 90 ? 'bg-gradient-to-r from-red-500 to-orange-500' : sgPct >= 60 ? 'bg-gradient-to-r from-amber-500 to-yellow-400' : 'bg-gradient-to-r from-blue-500 to-blue-400'}`}
+                                                className={`h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(255,255,255,0.2)] ${sgUnlimited ? 'bg-gradient-to-r from-purple-500 via-cyan-400 to-emerald-400 bg-[length:200%_auto] animate-gradient' : sgPct >= 90 ? 'bg-gradient-to-r from-red-500 to-orange-500' : sgPct >= 60 ? 'bg-gradient-to-r from-amber-500 to-yellow-400' : 'bg-gradient-to-r from-blue-500 to-indigo-400'}`}
                                                 style={{ width: `${sgUnlimited ? 100 : sgPct}%` }}
                                             />
                                         </div>
-                                        {sgUnlimited && (
-                                            <p className="text-[10px] text-purple-400 mt-1.5">✨ Ilimitado no seu plano</p>
-                                        )}
-                                        {!sgUnlimited && sgPct >= 80 && (
-                                            <p className="text-[10px] text-amber-400 mt-1.5">⚠️ Quase no limite mensal</p>
-                                        )}
+                                        <div className="relative z-10">
+                                            {sgUnlimited && (
+                                                <p className="text-[11px] font-medium text-purple-400 mt-2 flex items-center gap-1.5"><Sparkles className="w-3 h-3"/> Ilimitado no seu plano</p>
+                                            )}
+                                            {!sgUnlimited && sgPct >= 80 && (
+                                                <p className="text-[11px] font-medium text-amber-400 mt-2 flex items-center gap-1.5">⚠️ Aproximando-se do limite</p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Feature Access */}
-                                <div className="bg-zinc-900/40 p-4 rounded-xl border border-white/5 mb-4">
-                                    <h3 className="text-xs uppercase tracking-wider text-zinc-500 mb-3 font-medium">Recursos do Plano</h3>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                {/* Feature Access Modular */}
+                                <div className="bg-zinc-950 p-6 rounded-2xl border border-white/5">
+                                    <h3 className="text-sm font-semibold text-zinc-300 mb-5 flex items-center gap-2">
+                                        <Zap className="w-4 h-4 text-amber-400" />
+                                        Módulos Desbloqueados
+                                    </h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                         {featureList.map((f) => (
-                                            <div key={f.label} className={`flex items-center gap-2 p-2 rounded-lg ${f.enabled ? 'bg-emerald-500/5 border border-emerald-500/10' : 'bg-zinc-900/50 border border-white/5 opacity-50'}`}>
-                                                {f.enabled
-                                                    ? <Unlock className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                                                    : <Lock className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
-                                                }
-                                                <span className={`text-xs ${f.enabled ? 'text-white' : 'text-zinc-500'}`}>{f.label}</span>
+                                            <div key={f.label} className={`relative overflow-hidden flex items-center gap-3 p-4 rounded-xl transition-all duration-300 ${f.enabled ? 'bg-zinc-900 border border-emerald-500/30 hover:border-emerald-500/60 shadow-[0_4px_20px_-10px_rgba(16,185,129,0.3)] hover:-translate-y-1' : 'bg-zinc-900/40 border border-white/5 opacity-60 grayscale'}`}>
+                                                {f.enabled && <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl translate-x-8 -translate-y-8 pointer-events-none" />}
+                                                <div className={`p-2 rounded-lg shrink-0 ${f.enabled ? 'bg-emerald-500/10' : 'bg-black'}`}>
+                                                    {f.enabled
+                                                        ? <f.icon className="w-4 h-4 text-emerald-400" />
+                                                        : <Lock className="w-4 h-4 text-zinc-600" />
+                                                    }
+                                                </div>
+                                                <span className={`text-sm tracking-tight ${f.enabled ? 'text-white font-medium' : 'text-zinc-500 font-normal'}`}>{f.label}</span>
                                             </div>
                                         ))}
                                     </div>

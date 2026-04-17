@@ -1,9 +1,11 @@
 import { ChatInputCommandInteraction, TextChannel, GuildMember, ApplicationCommandOptionType, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { logger } from '../../shared/services';
 import { gifService } from '../../shared/services/gif.service';
+import { apiBridgeService } from '../../shared/services/api-bridge.service';
+import { trackEvent } from '../../shared/services/analytics.service';
 
 interface Action {
-    type: 'REPLY' | 'ADD_ROLE' | 'REMOVE_ROLE' | 'SEND_DM' | 'SEND_CHANNEL' | 'KICK' | 'BAN' | 'RANDOM_IMAGE' | 'SET_NICKNAME';
+    type: 'REPLY' | 'ADD_ROLE' | 'REMOVE_ROLE' | 'SEND_DM' | 'SEND_CHANNEL' | 'KICK' | 'BAN' | 'RANDOM_IMAGE' | 'SET_NICKNAME' | 'EXTERNAL_API';
     [key: string]: any;
 }
 
@@ -61,6 +63,10 @@ export class CommandEngine {
                 await interaction.deleteReply().catch(() => { });
             }
 
+            if (interaction.guildId) {
+                trackEvent(interaction.guildId, 'command_used').catch(() => {});
+            }
+
         } catch (error) {
             logger.error('Erro ao executar comando personalizado:', { error });
             const errorMessage = '❌ Erro ao executar comando.';
@@ -103,9 +109,15 @@ export class CommandEngine {
     // Helper to reuse interpolation logic
     private interpolate(text: string, params: Record<string, any>) {
         if (!text) return text;
-        return text.replace(/\{(\w+)\}/g, (_, key) => {
+        let result = text.replace(/\{(\w+)\}/g, (_, key) => {
             return params[key] !== undefined ? String(params[key]) : `{${key}}`;
         });
+        
+        // Limpa menções duplas acidentais geradas pela IA ou usuário (ex: <@<@123>> vira <@123>)
+        result = result.replace(/<@<@(!?\&?\d+)>>/g, '<@$1>');
+        result = result.replace(/<#<#(\d+)>>/g, '<#$1>');
+        
+        return result;
     }
 
     private async executeAction(
@@ -206,7 +218,7 @@ export class CommandEngine {
                         if (targetUserId) {
                             row.addComponents(
                                 new ButtonBuilder()
-                                    .setCustomId(`gif_retribuir:${cleanCat}:${interaction.user.id}`)
+                                    .setCustomId(`gif_retribuir:${cleanCat}:${interaction.user.id}:${targetUserId}`)
                                     .setLabel(`Retribuir ${theme.emoji}`)
                                     .setStyle(ButtonStyle.Primary)
                             );
@@ -216,7 +228,7 @@ export class CommandEngine {
                         if (cleanCat !== 'slap') {
                             row.addComponents(
                                 new ButtonBuilder()
-                                    .setCustomId(`gif_action:slap:${interaction.user.id}`)
+                                    .setCustomId(`gif_action:slap:${interaction.user.id}:${targetUserId || 'none'}`)
                                     .setLabel('Dar Tapa 👋')
                                     .setStyle(ButtonStyle.Danger)
                             );
@@ -224,7 +236,7 @@ export class CommandEngine {
                         if (cleanCat !== 'hug') {
                             row.addComponents(
                                 new ButtonBuilder()
-                                    .setCustomId(`gif_action:hug:${interaction.user.id}`)
+                                    .setCustomId(`gif_action:hug:${interaction.user.id}:${targetUserId || 'none'}`)
                                     .setLabel('Abraçar 🤗')
                                     .setStyle(ButtonStyle.Success)
                             );
@@ -232,7 +244,7 @@ export class CommandEngine {
                         if (cleanCat !== 'kiss' && cleanCat !== 'slap') {
                             row.addComponents(
                                 new ButtonBuilder()
-                                    .setCustomId(`gif_action:kiss:${interaction.user.id}`)
+                                    .setCustomId(`gif_action:kiss:${interaction.user.id}:${targetUserId || 'none'}`)
                                     .setLabel('Beijar 💋')
                                     .setStyle(ButtonStyle.Secondary)
                             );
@@ -253,6 +265,50 @@ export class CommandEngine {
                         return true;
                     }
                     return false;
+                }
+                case 'EXTERNAL_API': {
+                    const provider = action.provider || 'nasa_apod';
+                    // Extracts a param mapped dynamically if the action specifies a query key
+                    const queryKey = action.query_key || 'query';
+                    const queryParam = params[queryKey] || interpolate(action.query || '');
+
+                    logger.info(`[CommandEngine] EXTERNAL_API for provider: ${provider} | Query: ${queryParam}`);
+                    
+                    const result = await apiBridgeService.fetchApi(provider, queryParam);
+
+                    if (result) {
+                        const embed = new EmbedBuilder()
+                            .setAuthor({
+                                name: `${interaction.user.displayName}`,
+                                iconURL: interaction.user.displayAvatarURL({ size: 32 })
+                            });
+
+                        if (result.title) embed.setTitle(result.title);
+                        if (result.description) embed.setDescription(result.description);
+                        if (result.image) embed.setImage(result.image);
+                        if (result.color) {
+                            try { embed.setColor(result.color as any); } catch { embed.setColor('#99AAB5'); }
+                        }
+                        
+                        embed.setFooter({ text: `${provider.toUpperCase()} • Integração CoreBot` }).setTimestamp();
+
+                        const messagePayload: any = { embeds: [embed], content: null };
+
+                        if (!firstResponseSent && interaction.deferred) {
+                            await interaction.editReply(messagePayload);
+                        } else {
+                            await interaction.followUp(messagePayload);
+                        }
+                        return true;
+                    } else {
+                        const errMsg = `⚠️ Não foi possível obter dados da API externa (${provider}).`;
+                        if (!firstResponseSent && interaction.deferred) {
+                            await interaction.editReply(errMsg);
+                        } else {
+                            await interaction.followUp({ content: errMsg, ephemeral: true });
+                        }
+                        return true;
+                    }
                 }
 
                 case 'ADD_ROLE': {

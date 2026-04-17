@@ -39,20 +39,37 @@ export async function POST(req: NextRequest) {
             const paymentClient = new Payment(client);
             const payment = await paymentClient.get({ id });
 
-            // Se for um pagamento de assinatura, o metadata costuma ter info, 
-            // ou payment.external_reference pode ser o ID da assinatura se configurarmos assim.
-            // Por padrão, o MP nem sempre linka direto no json simples, mas vamos tentar achar o payment.
-
-            // Em assinaturas, geralmente vinculamos via `order.id` ou `subscription.id` se disponível.
-            // Para simplificar agora, vamos apenas logar o pagamento se conseguirmos identificar.
-
-            // ATENÇÃO: Pagamentos de assinatura automatica as vezes vem sem external_reference claro do nosso lado
-            // mas o objeto payment tem `metadata`.
-
             console.log(`💰 Pagamento recebido: ${payment.id} - Status: ${payment.status}`);
 
-            // TODO: Implementar lógica de salvar pagamento na tabela `payments`
-            // Por enquanto, focar apenas em ativar a assinatura
+            // Tenta obter o ID da assinatura atrelada (PreApproval)
+            let subscriptionId = payment.metadata?.preapproval_id || null;
+
+            // Se o pagamento veio de uma assinatura, o external_reference herda o user_id originado no checkout
+            const userId = payment.external_reference;
+
+            if (!subscriptionId && userId) {
+                // Buscar a assinatura ativa mais recente deste usuário para fazer o vinculo (já que MP costuma omitir preapproval_id diretamente)
+                const userSub = await database.getSubscriptionByUser(userId);
+                if (userSub) {
+                    subscriptionId = userSub.id;
+                }
+            }
+
+            if (subscriptionId) {
+                try {
+                    await database.createPayment(
+                        Number(payment.id),
+                        String(subscriptionId),
+                        Number(payment.transaction_amount || 0),
+                        String(payment.status)
+                    );
+                    console.log(`✅ Pagamento ${payment.id} salvo na tabela payments vinculado à assinatura ${subscriptionId}`);
+                } catch (dbError) {
+                    console.warn(`⚠️ Erro ao salvar log do pagamento (verifique restrições no banco de dados):`, dbError);
+                }
+            } else {
+                console.log(`ℹ️ Pagamento ${payment.id} ignorado para a tabela payments (Sem subscription_id ou user_id mapeável encontrado)`);
+            }
         }
 
         return NextResponse.json({ message: "OK" });

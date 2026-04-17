@@ -28,6 +28,7 @@ export interface GuildConfig extends QueryResultRow {
     welcome_message?: string | null;
     leave_message?: string | null;
     autorole_id?: string | null;
+    welcome_font_changes_count?: number;
 
     // Configurações AutoMod
     automod_links_enabled?: boolean;
@@ -39,10 +40,11 @@ export interface GuildConfig extends QueryResultRow {
     automod_bypass_roles?: string[];
     automod_ai_enabled?: boolean;
 
-    // Configurações NexstarIA (SaaS)
+    // Configurações CoreIA (SaaS)
     ia_enabled?: boolean;
     ia_channel_id?: string | null;
     ia_system_prompt?: string | null;
+    ia_triggers?: string[] | null;
     ia_admin_roles?: string[];
     ia_voice_enabled?: boolean;
     ia_temperature?: number;
@@ -214,7 +216,7 @@ CREATE TABLE IF NOT EXISTS guild_configs (
     welcome_banner_url VARCHAR(255),
     ia_enabled BOOLEAN DEFAULT true,
     ia_channel_id VARCHAR(20),
-    ia_system_prompt TEXT DEFAULT 'Você é a IA da CoreBot''s. Personalidade Única.',
+    ia_system_prompt TEXT DEFAULT 'Você é a IA da CoreIA. Personalidade Única.',
     ia_admin_roles TEXT[] DEFAULT '{}',
     ia_voice_enabled BOOLEAN DEFAULT true,
     ia_temperature DECIMAL(3, 2) DEFAULT 0.7,
@@ -427,6 +429,7 @@ export async function initializeSchema(): Promise<void> {
                 ADD COLUMN IF NOT EXISTS autorole_id VARCHAR(20),
                 ADD COLUMN IF NOT EXISTS welcome_font VARCHAR(50),
                 ADD COLUMN IF NOT EXISTS welcome_banner_url VARCHAR(255),
+                ADD COLUMN IF NOT EXISTS welcome_font_changes_count INTEGER DEFAULT 0,
                 
                 -- Ticket Panel Customization
                 ADD COLUMN IF NOT EXISTS ticket_panel_title VARCHAR(255),
@@ -439,6 +442,7 @@ export async function initializeSchema(): Promise<void> {
                 ADD COLUMN IF NOT EXISTS ticket_logs_channel_id VARCHAR(20),
                 ADD COLUMN IF NOT EXISTS automod_ai_enabled BOOLEAN DEFAULT false,
                 ADD COLUMN IF NOT EXISTS whitelabel_name VARCHAR(32),
+                ADD COLUMN IF NOT EXISTS ia_triggers TEXT[] DEFAULT '{}',
                 ADD COLUMN IF NOT EXISTS whitelabel_avatar_url VARCHAR(255);
             `);
 
@@ -501,10 +505,10 @@ export async function getGuildConfig(guildId: string): Promise<GuildConfig | nul
 const GUILD_CONFIG_COLUMNS = new Set([
     'automod_channel', 'prohibited_words', 'vip_category_id', 'vip_role_id',
     'welcome_channel_id', 'leave_channel_id', 'logs_channel_id', 'staff_role_id',
-    'welcome_message', 'leave_message', 'autorole_id',
+    'welcome_message', 'leave_message', 'autorole_id', 'welcome_font', 'welcome_banner_url', 'welcome_font_changes_count',
     'automod_links_enabled', 'automod_caps_enabled', 'automod_spam_enabled',
     'automod_action', 'automod_timeout_duration', 'automod_log_channel', 'automod_bypass_roles',
-    'ia_enabled', 'ia_channel_id', 'ia_system_prompt', 'ia_admin_roles',
+    'ia_enabled', 'ia_channel_id', 'ia_system_prompt', 'ia_admin_roles', 'ia_triggers',
     'ia_voice_enabled', 'ia_temperature', 'ia_ignored_channels', 'ia_ignored_roles',
     'private_calls_enabled', 'private_calls_category_id', 'private_calls_allowed_roles', 'private_calls_manager_role',
     'ticket_panel_title', 'ticket_panel_description', 'ticket_panel_banner_url',

@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- 🗄️ NEXSTAR DISCORD BOTS - DATABASE SCHEMA
+-- 🗄️ COREIA DISCORD BOTS - DATABASE SCHEMA
 -- PostgreSQL (Railway)
 -- ═══════════════════════════════════════════════════════════════════════════
 
@@ -25,10 +25,10 @@ CREATE TABLE IF NOT EXISTS guild_configs (
     automod_caps_enabled BOOLEAN DEFAULT false,
     automod_spam_enabled BOOLEAN DEFAULT false,
     
-    -- Configurações NexstarIA (SaaS)
+    -- Configurações CoreIA (SaaS)
     ia_enabled BOOLEAN DEFAULT true,
     ia_channel_id VARCHAR(20),
-    ia_system_prompt TEXT DEFAULT 'Você é a IA da Nexstar. Personalidade Única.',
+    ia_system_prompt TEXT DEFAULT 'Você é a IA da CoreIA. Personalidade Única.',
     ia_admin_roles TEXT[] DEFAULT '{}',
     ia_voice_enabled BOOLEAN DEFAULT true,
     

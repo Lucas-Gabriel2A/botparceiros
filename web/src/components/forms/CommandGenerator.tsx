@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { clsx } from 'clsx';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 interface CommandGeneratorProps {
     guildId: string;
@@ -24,6 +25,7 @@ export function CommandGenerator({ guildId, userId, existingCommands }: CommandG
     const [isGenerating, setIsGenerating] = useState(false);
     const [generatedCommand, setGeneratedCommand] = useState<any>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [commandToDelete, setCommandToDelete] = useState<string | null>(null);
     const router = useRouter();
 
     async function handleGenerate() {
@@ -73,15 +75,20 @@ export function CommandGenerator({ guildId, userId, existingCommands }: CommandG
         }
     }
 
-    async function handleDelete(id: string) {
-        if (!confirm('Tem certeza que deseja excluir este comando?')) return;
-        const result = await deleteCustomCommandAction(id, guildId);
+    function handleDelete(id: string) {
+        setCommandToDelete(id);
+    }
+
+    async function confirmDelete() {
+        if (!commandToDelete) return;
+        const result = await deleteCustomCommandAction(commandToDelete, guildId);
         if (result.success) {
             toast.success('Comando excluído.');
             router.refresh();
         } else {
             toast.error('Erro ao excluir.');
         }
+        setCommandToDelete(null);
     }
 
     async function handleToggle(id: string, currentStatus: boolean) {
@@ -94,6 +101,14 @@ export function CommandGenerator({ guildId, userId, existingCommands }: CommandG
 
     return (
         <div className="space-y-6 w-full max-w-4xl mx-auto font-sans">
+            <ConfirmDialog 
+                isOpen={!!commandToDelete}
+                title="Excluir Comando"
+                description="Tem certeza que deseja apagar este comando personalizado da memória da inteligência artificial? Essa ação é irreversível."
+                confirmLabel="Apagar Comando"
+                onConfirm={confirmDelete}
+                onCancel={() => setCommandToDelete(null)}
+            />
 
             {/* ════════════════════════════════════════════════════
                 AI GENERATOR SECTION

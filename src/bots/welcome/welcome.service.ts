@@ -2,6 +2,8 @@ import { GuildMember } from 'discord.js';
 import { createCanvas, loadImage, CanvasRenderingContext2D } from 'canvas';
 import fs from 'fs-extra';
 import https from 'https';
+import os from 'os';
+import path from 'path';
 import { URL } from 'url';
 import { logger } from '../../shared/services';
 
@@ -11,14 +13,14 @@ import { logger } from '../../shared/services';
 
 const PREFERRED_FONT = 'sans-serif';
 
-async function fetchWithTimeout(url: string, timeout = 5000): Promise<Response> {
+async function fetchWithTimeout(url: string, timeout = 5000, headers: Record<string, string> = { 'User-Agent': 'DiscordBot/1.0' }): Promise<Response> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
         const response = await fetch(url, {
             signal: controller.signal,
-            headers: { 'User-Agent': 'DiscordBot/1.0' }
+            headers
         });
         clearTimeout(timeoutId);
         return response;
@@ -26,6 +28,44 @@ async function fetchWithTimeout(url: string, timeout = 5000): Promise<Response> 
         clearTimeout(timeoutId);
         throw error;
     }
+}
+
+const registeredFonts = new Set<string>();
+
+async function loadAndRegisterGoogleFont(fontFamily: string): Promise<string> {
+    if (registeredFonts.has(fontFamily)) return fontFamily;
+
+    try {
+        const url = `https://fonts.googleapis.com/css?family=${fontFamily.replace(/ /g, '+')}`;
+        // Forçar um User-Agent bem antigo faz o Google Fonts API retornar um arquivo .ttf purão em vez de woff2!
+        const cssResp = await fetchWithTimeout(url, 4000, { 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; rv:2.0.1) Gecko/20100101 Firefox/4.0.1' });
+        
+        if (!cssResp.ok) return PREFERRED_FONT;
+        
+        const css = await cssResp.text();
+        const match = css.match(/url\((https:\/\/[^)]+\.ttf)\)/);
+        
+        if (match && match[1]) {
+            const fontUrl = match[1];
+            const fontResp = await fetchWithTimeout(fontUrl, 5000);
+            const arrayBuffer = await fontResp.arrayBuffer();
+            
+            const fontPath = path.join(os.tmpdir(), `${fontFamily.replace(/ /g, '_')}_coreia.ttf`);
+            fs.writeFileSync(fontPath, Buffer.from(arrayBuffer));
+
+            const { registerFont } = await import('canvas');
+            registerFont(fontPath, { family: fontFamily });
+            registeredFonts.add(fontFamily);
+            logger.info(`🎨 Fonte ${fontFamily} injetada dinamicamente pelo Google Fonts!`);
+            return fontFamily;
+        } else {
+            logger.warn(`Não foi possível extrair um link TTF para a fonte: ${fontFamily}`);
+        }
+    } catch (e: any) {
+        logger.error(`Falha no Google Fonts (${fontFamily}):`, e.message);
+    }
+    
+    return PREFERRED_FONT; // Fallback
 }
 
 
@@ -146,21 +186,23 @@ function drawCosmicBackground(ctx: CanvasRenderingContext2D, width: number, heig
 // 🖼️ GERADOR DE BANNER (Stateless)
 // ═══════════════════════════════════════════════════════════════════════════
 
-export async function generateBanner(member: GuildMember, text: string, backgroundPath: string | null = null): Promise<Buffer> {
+export async function generateBanner(member: GuildMember, text: string, backgroundPath: string | null = null, font: string | null = null): Promise<Buffer> {
     const username = member.user?.username || member.displayName || 'Usuário';
     logger.info(`Gerando banner para ${username}`);
 
     const canvas = createCanvas(800, 600);
     const ctx = canvas.getContext('2d');
+    const selectedFont = font ? await loadAndRegisterGoogleFont(font) : PREFERRED_FONT;
 
     // Fundo
     let backgroundImage = null;
 
-    if (backgroundPath && fs.existsSync(backgroundPath)) {
+    if (backgroundPath) {
         try {
+            // loadImage aceita tanto URLs (http/https) quanto caminhos locais
             backgroundImage = await loadImage(backgroundPath);
         } catch (error) {
-            logger.warn('Erro ao carregar background customizado');
+            logger.warn(`Erro ao carregar background customizado: ${backgroundPath}`);
         }
     }
 
@@ -235,7 +277,7 @@ export async function generateBanner(member: GuildMember, text: string, backgrou
         ctx.stroke();
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = `bold 48px ${PREFERRED_FONT}, sans-serif`;
+        ctx.font = `bold 48px "${selectedFont}", sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(username.charAt(0).toUpperCase(), avatarCenterX, avatarCenterY);
@@ -251,7 +293,7 @@ export async function generateBanner(member: GuildMember, text: string, backgrou
 
     // Subtítulo
     ctx.save();
-    ctx.font = `bold 18px ${PREFERRED_FONT}, sans-serif`;
+    ctx.font = `bold 18px "${selectedFont}", sans-serif`;
     ctx.shadowColor = '#00ffff';
     ctx.shadowBlur = 15;
     ctx.fillStyle = '#00ffff';
@@ -260,7 +302,7 @@ export async function generateBanner(member: GuildMember, text: string, backgrou
 
     // Nome com neon
     ctx.save();
-    ctx.font = `bold 52px ${PREFERRED_FONT}, sans-serif`;
+    ctx.font = `bold 52px "${selectedFont}", sans-serif`;
 
     const textGrad = ctx.createLinearGradient(100, mainY - 30, 700, mainY + 30);
     textGrad.addColorStop(0, '#00ffff');
@@ -282,14 +324,14 @@ export async function generateBanner(member: GuildMember, text: string, backgrou
     const counterY = mainY + 70;
     ctx.shadowColor = '#00ffff';
     ctx.shadowBlur = 8;
-    ctx.font = `bold 20px ${PREFERRED_FONT}, sans-serif`;
+    ctx.font = `bold 20px "${selectedFont}", sans-serif`;
     ctx.fillStyle = '#ffffff';
     ctx.fillText(`⭐ MEMBRO #${memberCount} ⭐`, 400, counterY);
     ctx.restore();
 
     // Rodapé
     ctx.save();
-    ctx.font = `16px ${PREFERRED_FONT}, sans-serif`;
+    ctx.font = `16px "${selectedFont}", sans-serif`;
     ctx.fillStyle = 'rgba(200, 200, 255, 0.7)';
     ctx.fillText('━━━━━━━━━━ ✦ COREBOT ✦ ━━━━━━━━━━', 400, 550);
     ctx.restore();
@@ -297,11 +339,12 @@ export async function generateBanner(member: GuildMember, text: string, backgrou
     return canvas.toBuffer();
 }
 
-export async function generateBannerFast(member: GuildMember, text: string, backgroundPath: string | null = null): Promise<Buffer> {
+export async function generateBannerFast(member: GuildMember, text: string, backgroundPath: string | null = null, font: string | null = null): Promise<Buffer> {
     const username = member?.user?.username || member?.displayName || 'Usuário';
 
     const canvas = createCanvas(800, 600);
     const ctx = canvas.getContext('2d');
+    const selectedFont = font ? await loadAndRegisterGoogleFont(font) : PREFERRED_FONT;
 
     // Fundo simples
     let backgroundImage = null;
@@ -348,7 +391,7 @@ export async function generateBannerFast(member: GuildMember, text: string, back
     ctx.stroke();
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = `bold 72px ${PREFERRED_FONT}, sans-serif`;
+    ctx.font = `bold 72px "${selectedFont}", sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(username.charAt(0).toUpperCase(), avatarCenterX, avatarCenterY);
@@ -360,7 +403,7 @@ export async function generateBannerFast(member: GuildMember, text: string, back
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = `bold 56px ${PREFERRED_FONT}, sans-serif`;
+    ctx.font = `bold 56px "${selectedFont}", sans-serif`;
 
     const gradFast = ctx.createLinearGradient(200, mainYFast - 40, 600, mainYFast + 40);
     gradFast.addColorStop(0, '#ffd54f');

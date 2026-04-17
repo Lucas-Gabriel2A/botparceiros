@@ -1,6 +1,7 @@
 import { Client, GuildMember, TextChannel, AttachmentBuilder, PermissionFlagsBits } from 'discord.js';
 import { getGuildConfig, logger } from '../../shared/services';
 import { generateBanner, generateBannerFast } from './welcome.service';
+import { trackEvent } from '../../shared/services/analytics.service';
 
 export function setupWelcomeEvents(client: Client) {
     logger.info('🌌 Módulo Welcome: Eventos inicializados');
@@ -10,6 +11,8 @@ export function setupWelcomeEvents(client: Client) {
         if (member.user.bot) return;
 
         const guildId = member.guild.id;
+        trackEvent(guildId, 'member_join').catch(() => {});
+
         try {
             const config = await getGuildConfig(guildId);
             if (!config || !config.welcome_channel_id) return;
@@ -29,14 +32,12 @@ export function setupWelcomeEvents(client: Client) {
             const messageText = config.welcome_message || 'Bem-vindo {user} ao servidor!';
             let buffer: Buffer;
 
-            // Tenta gerar o banner
+            // Tenta gerar o banner passando url e fonte do config
             try {
-                // Background customizado ainda não temos no DB (schema), vamos usar padrão ou verificar se implementamos upload depois
-                // Por enquanto passa null para usar o cósmico padrão
-                buffer = await generateBanner(member, messageText, null);
+                buffer = await generateBanner(member, messageText, config.welcome_banner_url, config.welcome_font);
             } catch (error) {
                 logger.warn('Banner completo falhou, tentando versão rápida', { error });
-                buffer = await generateBannerFast(member, messageText, null);
+                buffer = await generateBannerFast(member, messageText, config.welcome_banner_url);
             }
 
             const attachment = new AttachmentBuilder(buffer, { name: 'welcome.png' });
@@ -51,9 +52,9 @@ export function setupWelcomeEvents(client: Client) {
                 }
             }
 
-            // Envia a mensagem (pode ser vazia se for só imagem, mas geralmente vem com texto de menção)
-            // O bot original enviava apenas o arquivo. Vamos enviar uma menção + arquivo.
-            const content = `Olá ${member}, seja bem-vindo!`;
+            // O texto real agora é o configurado pelo form, mas a img ja tem o texto.
+            // Para não duplicar, podemos mandar apenas uma menção simples no corpo:
+            const content = `${member}`; // Só a marcação para pingar o usuário. A arte visual já possui a mensagem!
 
             await channel.send({
                 content: content,
@@ -73,6 +74,8 @@ export function setupWelcomeEvents(client: Client) {
         if (guildMember.user.bot) return;
 
         const guildId = guildMember.guild.id;
+        trackEvent(guildId, 'member_leave').catch(() => {});
+
         try {
             const config = await getGuildConfig(guildId);
             if (!config || !config.leave_channel_id) return;

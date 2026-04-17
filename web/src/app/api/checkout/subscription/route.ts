@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { MercadoPagoConfig, PreApproval } from "mercadopago";
 import { SUBSCRIPTION_PLANS, PlanId } from "@/config/subscription";
+import { database } from "@shared/services/database";
 
 const client = new MercadoPagoConfig({
     accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN || ''
@@ -59,6 +60,16 @@ export async function POST(req: Request) {
                 status: "pending"
             }
         });
+
+        // 🎯 Gravar assinatura incial no banco de dados com status pending
+        if (response.id) {
+            await database.createSubscription(
+                response.id,
+                session.user.id,
+                plan,
+                "pending"
+            );
+        }
 
         return NextResponse.json({ url: response.init_point });
     } catch (error) {

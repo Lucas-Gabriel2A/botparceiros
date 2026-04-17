@@ -71,7 +71,7 @@ const CORES = {
     ROXO_ESPACIAL: '#6B5B95'
 } as const;
 
-const NEXSTAR_ICON = 'https://i.ibb.co/TDRDH2kq/nexstar.jpg';
+const COREIA_ICON = 'https://i.ibb.co/TDRDH2kq/nexstar.jpg';
 
 const EMOJIS = {
     ANIME: '🎌',
@@ -370,13 +370,13 @@ async function buscarFilmeAleatorio(): Promise<FilmeData> {
 // 🔧 HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function criarEmbedNexstar(options: EmbedOptions = {}): EmbedBuilder {
+function criarEmbedCoreIA(options: EmbedOptions = {}): EmbedBuilder {
     const embed = new EmbedBuilder()
         .setColor(parseInt((options.cor || CORES.ROXO_ESPACIAL).replace('#', ''), 16))
         .setTimestamp()
         .setFooter({ 
-            text: options.footer || `${EMOJIS.ESTRELA} Nexstar Indica`, 
-            iconURL: NEXSTAR_ICON 
+            text: options.footer || `${EMOJIS.ESTRELA} CoreIA Indica`, 
+            iconURL: COREIA_ICON 
         });
 
     if (options.titulo) embed.setTitle(options.titulo);
@@ -399,7 +399,7 @@ async function enviarRecomendacaoAnime(canal: TextChannel): Promise<void> {
         
         const embed = new EmbedBuilder()
             .setColor(parseInt(CORES.ANIME.replace('#', ''), 16))
-            .setAuthor({ name: `${EMOJIS.ANIME} RECOMENDAÇÃO DE ANIME`, iconURL: NEXSTAR_ICON })
+            .setAuthor({ name: `${EMOJIS.ANIME} RECOMENDAÇÃO DE ANIME`, iconURL: COREIA_ICON })
             .setTitle(`${EMOJIS.FOGO} ${anime.titulo}`)
             .setURL(anime.url || null as unknown as string)
             .setDescription(`>>> ${anime.sinopse}`)
@@ -411,7 +411,7 @@ async function enviarRecomendacaoAnime(canal: TextChannel): Promise<void> {
                 { name: `${EMOJIS.ANO} Ano`, value: `${anime.ano}`, inline: true },
                 { name: `${EMOJIS.TV} Tipo`, value: anime.tipo || 'TV', inline: true }
             ])
-            .setFooter({ text: `${EMOJIS.ESTRELA} Nexstar Indica • Fonte: MyAnimeList`, iconURL: NEXSTAR_ICON })
+            .setFooter({ text: `${EMOJIS.ESTRELA} CoreIA Indica • Fonte: MyAnimeList`, iconURL: COREIA_ICON })
             .setTimestamp();
 
         if (anime.poster) embed.setThumbnail(anime.poster);
@@ -457,7 +457,7 @@ async function enviarRecomendacaoFilme(canal: TextChannel): Promise<void> {
         
         const embed = new EmbedBuilder()
             .setColor(parseInt(CORES.FILME.replace('#', ''), 16))
-            .setAuthor({ name: `${EMOJIS.FILME} RECOMENDAÇÃO DE FILME`, iconURL: NEXSTAR_ICON })
+            .setAuthor({ name: `${EMOJIS.FILME} RECOMENDAÇÃO DE FILME`, iconURL: COREIA_ICON })
             .setTitle(`${EMOJIS.CLAPPERBOARD} ${filme.titulo}`)
             .setDescription(`>>> ${filme.sinopse}`)
             .addFields([
@@ -468,7 +468,7 @@ async function enviarRecomendacaoFilme(canal: TextChannel): Promise<void> {
                 { name: `🎬 Diretor`, value: filme.diretor || 'N/A', inline: true },
                 { name: `🎭 Elenco`, value: filme.atores ? filme.atores.substring(0, 50) : 'N/A', inline: true }
             ])
-            .setFooter({ text: `${EMOJIS.ESTRELA} Nexstar Indica • Fonte: IMDB/OMDb`, iconURL: NEXSTAR_ICON })
+            .setFooter({ text: `${EMOJIS.ESTRELA} CoreIA Indica • Fonte: IMDB/OMDb`, iconURL: COREIA_ICON })
             .setTimestamp();
 
         if (filme.poster) {
@@ -583,13 +583,13 @@ client.on('messageCreate', async (message: Message) => {
 
         const embed = new EmbedBuilder()
             .setColor(parseInt(cor.replace('#', ''), 16))
-            .setAuthor({ name: `${emoji} Criar Sessão de ${tipoTexto}`, iconURL: NEXSTAR_ICON })
+            .setAuthor({ name: `${emoji} Criar Sessão de ${tipoTexto}`, iconURL: COREIA_ICON })
             .setDescription(
                 `${message.author}, clique no botão abaixo para criar sua **call privada**! ${EMOJIS.PIPOCA}\n\n` +
                 `> ${EMOJIS.CALL} Configure o nome do ${tipo} e o limite de pessoas.`
             )
             .setThumbnail(message.author.displayAvatarURL({ size: 128 }))
-            .setFooter({ text: `${EMOJIS.ESTRELA} Nexstar Sessões`, iconURL: NEXSTAR_ICON });
+            .setFooter({ text: `${EMOJIS.ESTRELA} CoreIA Sessões`, iconURL: COREIA_ICON });
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder()
@@ -748,7 +748,7 @@ async function handleModal(interaction: ModalSubmitInteraction): Promise<void> {
 
             const cor = tipo === 'anime' ? CORES.ANIME : CORES.FILME;
 
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: cor,
                 autor: { name: `${EMOJIS.SUCESSO} Sessão Criada com Sucesso!`, iconURL: interaction.user.displayAvatarURL() },
                 descricao: `Sua sessão privada está pronta! ${EMOJIS.PIPOCA}\n\n` +
@@ -758,7 +758,7 @@ async function handleModal(interaction: ModalSubmitInteraction): Promise<void> {
                     `${EMOJIS.PRIVADO} **Status:** Privado`,
                 thumbnail: interaction.user.displayAvatarURL({ size: 256 }),
                 campos: [{ name: `${EMOJIS.NOTA} Como convidar amigos`, value: '>>> Clique com o botão direito no canal e selecione "Convidar para Canal".', inline: false }],
-                footer: `${EMOJIS.ESTRELA} Nexstar Sessões • A call será deletada quando você sair`
+                footer: `${EMOJIS.ESTRELA} CoreIA Sessões • A call será deletada quando você sair`
             });
 
             await interaction.editReply({ embeds: [embed] });
@@ -766,7 +766,7 @@ async function handleModal(interaction: ModalSubmitInteraction): Promise<void> {
 
         } catch (error) {
             logger.error('Erro ao criar sessão');
-            const embedErro = criarEmbedNexstar({
+            const embedErro = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Erro ao Criar Sessão`,
                 descricao: 'Ocorreu um erro ao criar sua sessão.'

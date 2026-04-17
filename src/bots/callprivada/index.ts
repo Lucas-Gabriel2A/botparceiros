@@ -90,8 +90,8 @@ const CORES = {
     ROXO_CONVITE: '#9b59b6' as ColorResolvable
 };
 
-const NEXSTAR_BANNER = 'https://i.ibb.co/TDRDH2kq/nexstar.jpg';
-const NEXSTAR_ICON = 'https://i.ibb.co/TDRDH2kq/nexstar.jpg';
+const COREIA_BANNER = 'https://i.ibb.co/TDRDH2kq/nexstar.jpg';
+const COREIA_ICON = 'https://i.ibb.co/TDRDH2kq/nexstar.jpg';
 
 const EMOJIS = {
     ESTRELA: '⭐',
@@ -211,13 +211,13 @@ function logMemoryUsage(): void {
 // 🔧 FUNÇÕES UTILITÁRIAS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function criarEmbedNexstar(options: EmbedOptions): EmbedBuilder {
+function criarEmbedCoreIA(options: EmbedOptions): EmbedBuilder {
     const embed = new EmbedBuilder()
         .setColor(options.cor || CORES.DOURADO_VIP)
         .setTimestamp()
         .setFooter({
             text: options.footer || `${EMOJIS.ESTRELA} CoreBot VIP`,
-            iconURL: NEXSTAR_ICON
+            iconURL: COREIA_ICON
         });
 
     if (options.titulo) embed.setTitle(options.titulo);
@@ -259,7 +259,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
     // ═══════════════════════════════════════════════════════════════
     if (commandName === 'criar-call') {
         if (!ehVIP(member)) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Acesso Negado`,
                 descricao: `Apenas membros **VIP** ${EMOJIS.VIP} podem criar salas privadas.`,
@@ -271,7 +271,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 
         const callExistente = encontrarCallDoUsuario(interaction.user.id);
         if (callExistente) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.AVISO,
                 titulo: `${EMOJIS.AVISO} Sala já existe`,
                 descricao: `Você já possui uma sala privada ativa!\n\n> Use \`/painel\` para gerenciá-la.`,
@@ -288,7 +288,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
             const category = guild.channels.cache.get(ID_CATEGORIA_CALLS);
 
             if (!category) {
-                const embed = criarEmbedNexstar({
+                const embed = criarEmbedCoreIA({
                     cor: CORES.ERRO,
                     titulo: `${EMOJIS.ERRO} Configuração Inválida`,
                     descricao: `Categoria de calls não encontrada.`
@@ -337,7 +337,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
                 memberLimit: null
             }, interaction.guild!.id);
 
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.SUCESSO,
                 autor: {
                     name: `${EMOJIS.SUCESSO} Sala VIP Criada com Sucesso!`,
@@ -348,7 +348,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
                     `${EMOJIS.COROA} **Proprietário:** ${interaction.user}\n` +
                     `${EMOJIS.CADEADO_ABERTO} **Status:** Aberta para convites`,
                 thumbnail: interaction.user.displayAvatarURL({ size: 256 }),
-                imagem: NEXSTAR_BANNER,
+                imagem: COREIA_BANNER,
                 campos: [
                     {
                         name: `${EMOJIS.PAINEL} Comandos Disponíveis`,
@@ -377,7 +377,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 
         } catch (error: any) {
             logger.error('Erro ao criar call');
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Erro ao Criar Sala`,
                 descricao: `Ocorreu um erro inesperado.\n\n> \`${error.message}\``
@@ -396,7 +396,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         const userVoiceChannel = member.voice?.channel as VoiceChannel | null;
 
         if (!userVoiceChannel) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Você não está em uma sala`,
                 descricao: `Entre na sua sala de voz privada para convidar membros.`
@@ -407,7 +407,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 
         const callData = privateCallOwners.get(userVoiceChannel.id);
         if (!callData || callData.ownerId !== interaction.user.id) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Sem Permissão`,
                 descricao: `Você só pode convidar pessoas para sua **própria** sala privada.`
@@ -417,7 +417,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         }
 
         if (!callData.isOpen) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.AVISO,
                 titulo: `${EMOJIS.CADEADO} Sala Fechada`,
                 descricao: `Sua sala está fechada para convites.\n\n> Use \`/abrir\` para permitir novos convites.`
@@ -427,7 +427,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         }
 
         if (!memberToInvite) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Membro não encontrado`,
                 descricao: `Não foi possível encontrar o membro mencionado.`
@@ -437,7 +437,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         }
 
         if (memberToInvite.id === interaction.user.id) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.AVISO,
                 titulo: `${EMOJIS.AVISO} Ação Inválida`,
                 descricao: `Você não pode se convidar!`
@@ -458,7 +458,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
                 reason: `Convite VIP de ${interaction.user.tag} para ${memberToInvite.user.tag}`
             });
 
-            const dmEmbed = criarEmbedNexstar({
+            const dmEmbed = criarEmbedCoreIA({
                 cor: CORES.ROXO_CONVITE,
                 autor: {
                     name: `${EMOJIS.CONVITE} Convite VIP Recebido!`,
@@ -468,7 +468,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
                     `>>> ${EMOJIS.TELEFONE} **Sala:** ${userVoiceChannel.name}\n` +
                     `${EMOJIS.ESTRELA} **Servidor:** ${interaction.guild.name}`,
                 thumbnail: interaction.user.displayAvatarURL({ size: 256 }),
-                imagem: NEXSTAR_BANNER,
+                imagem: COREIA_BANNER,
                 footer: `${EMOJIS.AVISO} Este convite expira em 5 minutos`
             });
 
@@ -488,7 +488,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
                 dmSent = false;
             }
 
-            const confirmEmbed = criarEmbedNexstar({
+            const confirmEmbed = criarEmbedCoreIA({
                 cor: CORES.SUCESSO,
                 autor: {
                     name: `${EMOJIS.SUCESSO} Convite Enviado!`,
@@ -505,7 +505,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 
         } catch (error: any) {
             logger.error('Erro ao convidar');
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Erro ao Convidar`,
                 descricao: `Ocorreu um erro ao processar o convite.\n\n> \`${error.message}\``
@@ -522,7 +522,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         const userVoiceChannel = member.voice?.channel as VoiceChannel | null;
 
         if (!userVoiceChannel) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Você não está em uma sala`,
                 descricao: `Entre na sua sala de voz privada primeiro.`
@@ -533,7 +533,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 
         const callData = privateCallOwners.get(userVoiceChannel.id);
         if (!callData || callData.ownerId !== interaction.user.id) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Sem Permissão`,
                 descricao: `Você só pode expulsar pessoas da sua **própria** sala.`
@@ -543,7 +543,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         }
 
         if (!memberToKick || memberToKick.id === interaction.user.id) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Ação Inválida`,
                 descricao: `Membro não encontrado ou você não pode se expulsar.`
@@ -559,7 +559,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
                 await memberToKick.voice.disconnect('Expulso da sala privada');
             }
 
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.SUCESSO,
                 autor: {
                     name: `${EMOJIS.EXPULSAR} Membro Removido`,
@@ -573,7 +573,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 
         } catch (error: any) {
             logger.error('Erro ao expulsar');
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Erro ao Expulsar`,
                 descricao: `Ocorreu um erro.\n\n> \`${error.message}\``
@@ -590,7 +590,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         const userVoiceChannel = member.voice?.channel as VoiceChannel | null;
 
         if (!userVoiceChannel) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Você não está em uma sala`,
                 descricao: `Entre na sua sala de voz privada primeiro.`
@@ -601,7 +601,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 
         const callData = privateCallOwners.get(userVoiceChannel.id);
         if (!callData || callData.ownerId !== interaction.user.id) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Sem Permissão`,
                 descricao: `Você só pode alterar o limite da sua **própria** sala.`
@@ -614,7 +614,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
             await userVoiceChannel.setUserLimit(limite);
             callData.memberLimit = limite === 0 ? null : limite;
 
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.SUCESSO,
                 titulo: `${EMOJIS.LIMITE} Limite Atualizado`,
                 descricao: limite === 0
@@ -630,7 +630,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 
         } catch (error: any) {
             logger.error('Erro ao definir limite');
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Erro ao Definir Limite`,
                 descricao: `Ocorreu um erro.\n\n> \`${error.message}\``
@@ -647,7 +647,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         const userVoiceChannel = member.voice?.channel as VoiceChannel | null;
 
         if (!userVoiceChannel) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Você não está em uma sala`,
                 descricao: `Entre na sua sala de voz privada primeiro.`
@@ -658,7 +658,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 
         const callData = privateCallOwners.get(userVoiceChannel.id);
         if (!callData || callData.ownerId !== interaction.user.id) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Sem Permissão`,
                 descricao: `Você só pode renomear sua **própria** sala.`
@@ -671,7 +671,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
             const nomeFormatado = `${EMOJIS.TELEFONE} ${novoNome}`;
             await userVoiceChannel.setName(nomeFormatado);
 
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.SUCESSO,
                 titulo: `${EMOJIS.RENOMEAR} Sala Renomeada`,
                 descricao: `Sua sala agora se chama **${nomeFormatado}**`
@@ -681,7 +681,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 
         } catch (error: any) {
             logger.error('Erro ao renomear');
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Erro ao Renomear`,
                 descricao: `Ocorreu um erro.\n\n> \`${error.message}\``
@@ -697,7 +697,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         const userVoiceChannel = member.voice?.channel as VoiceChannel | null;
 
         if (!userVoiceChannel) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Você não está em uma sala`,
                 descricao: `Entre na sua sala de voz privada primeiro.`
@@ -708,7 +708,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 
         const callData = privateCallOwners.get(userVoiceChannel.id);
         if (!callData || callData.ownerId !== interaction.user.id) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Sem Permissão`,
                 descricao: `Você só pode fechar sua **própria** sala.`
@@ -718,7 +718,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         }
 
         if (!callData.isOpen) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.AVISO,
                 titulo: `${EMOJIS.AVISO} Sala já está fechada`,
                 descricao: `Sua sala já está fechada para novos convites.`
@@ -729,7 +729,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 
         callData.isOpen = false;
 
-        const embed = criarEmbedNexstar({
+        const embed = criarEmbedCoreIA({
             cor: CORES.INFO,
             titulo: `${EMOJIS.CADEADO} Sala Fechada`,
             descricao: `Sua sala agora está **fechada** para novos convites.\n\n> Use \`/abrir\` quando quiser.`
@@ -745,7 +745,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         const userVoiceChannel = member.voice?.channel as VoiceChannel | null;
 
         if (!userVoiceChannel) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Você não está em uma sala`,
                 descricao: `Entre na sua sala de voz privada primeiro.`
@@ -756,7 +756,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 
         const callData = privateCallOwners.get(userVoiceChannel.id);
         if (!callData || callData.ownerId !== interaction.user.id) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Sem Permissão`,
                 descricao: `Você só pode abrir sua **própria** sala.`
@@ -766,7 +766,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         }
 
         if (callData.isOpen) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.AVISO,
                 titulo: `${EMOJIS.AVISO} Sala já está aberta`,
                 descricao: `Sua sala já está aberta para convites.`
@@ -777,7 +777,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 
         callData.isOpen = true;
 
-        const embed = criarEmbedNexstar({
+        const embed = criarEmbedCoreIA({
             cor: CORES.SUCESSO,
             titulo: `${EMOJIS.CADEADO_ABERTO} Sala Aberta`,
             descricao: `Sua sala agora está **aberta** para novos convites.`
@@ -794,7 +794,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         const userVoiceChannel = member.voice?.channel as VoiceChannel | null;
 
         if (!userVoiceChannel) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Você não está em uma sala`,
                 descricao: `Entre na sua sala de voz privada primeiro.`
@@ -805,7 +805,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 
         const callData = privateCallOwners.get(userVoiceChannel.id);
         if (!callData || callData.ownerId !== interaction.user.id) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Sem Permissão`,
                 descricao: `Você só pode transferir sua **própria** sala.`
@@ -815,7 +815,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         }
 
         if (!newOwner || newOwner.id === interaction.user.id) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Ação Inválida`,
                 descricao: `Membro não encontrado ou você já é o dono.`
@@ -825,7 +825,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         }
 
         if (!ehVIP(newOwner)) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Membro não é VIP`,
                 descricao: `Você só pode transferir para membros **VIP** ${EMOJIS.VIP}.`
@@ -858,7 +858,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
             const nomeFormatado = `${EMOJIS.TELEFONE} ${newOwner.displayName}`;
             await userVoiceChannel.setName(nomeFormatado);
 
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.SUCESSO,
                 autor: {
                     name: `${EMOJIS.TRANSFERIR} Propriedade Transferida`,
@@ -872,7 +872,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 
         } catch (error: any) {
             logger.error('Erro ao transferir');
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Erro ao Transferir`,
                 descricao: `Ocorreu um erro.\n\n> \`${error.message}\``
@@ -888,7 +888,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         const userVoiceChannel = member.voice?.channel as VoiceChannel | null;
 
         if (!userVoiceChannel) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Você não está em uma sala`,
                 descricao: `Entre na sua sala de voz privada para acessar o painel.`
@@ -899,7 +899,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 
         const callData = privateCallOwners.get(userVoiceChannel.id);
         if (!callData || callData.ownerId !== interaction.user.id) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Sem Permissão`,
                 descricao: `Você só pode abrir o painel da sua **própria** sala.`
@@ -913,7 +913,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         const status = callData.isOpen ? `${EMOJIS.CADEADO_ABERTO} Aberta` : `${EMOJIS.CADEADO} Fechada`;
         const tempoAtiva = Math.floor((Date.now() - callData.createdAt.getTime()) / 60000);
 
-        const embed = criarEmbedNexstar({
+        const embed = criarEmbedCoreIA({
             cor: CORES.DOURADO_VIP,
             autor: {
                 name: `${EMOJIS.PAINEL} Painel de Controle`,
@@ -928,7 +928,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
                 { name: `${EMOJIS.COROA} Proprietário`, value: `${interaction.user}`, inline: true },
                 { name: `⏱️ Tempo Ativa`, value: `${tempoAtiva} min`, inline: true },
             ],
-            imagem: NEXSTAR_BANNER
+            imagem: COREIA_BANNER
         });
 
         const row1 = new ActionRowBuilder<ButtonBuilder>()
@@ -979,7 +979,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
 
     if (customId.startsWith('painel_')) {
         if (!userVoiceChannel) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Você não está em uma sala`,
                 descricao: `Entre na sua sala de voz privada primeiro.`
@@ -990,7 +990,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
 
         const callData = privateCallOwners.get(userVoiceChannel.id);
         if (!callData || callData.ownerId !== interaction.user.id) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Sem Permissão`,
                 descricao: `Você só pode controlar sua **própria** sala.`
@@ -1001,7 +1001,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
 
         if (customId === 'painel_toggle_status') {
             callData.isOpen = !callData.isOpen;
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: callData.isOpen ? CORES.SUCESSO : CORES.INFO,
                 titulo: callData.isOpen ? `${EMOJIS.CADEADO_ABERTO} Sala Aberta` : `${EMOJIS.CADEADO} Sala Fechada`,
                 descricao: callData.isOpen
@@ -1049,7 +1049,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
                 .map(m => `${m.id === callData.ownerId ? EMOJIS.COROA : '•'} ${m.displayName}`)
                 .join('\n') || 'Ninguém na sala';
 
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.INFO,
                 titulo: `${EMOJIS.LIMITE} Membros na Sala`,
                 descricao: `**${userVoiceChannel.name}**\n\n${membros}`,
@@ -1065,14 +1065,14 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
                 await userVoiceChannel.delete('Encerrada pelo proprietário');
                 privateCallOwners.delete(userVoiceChannel.id);
 
-                const embed = criarEmbedNexstar({
+                const embed = criarEmbedCoreIA({
                     cor: CORES.SUCESSO,
                     titulo: `${EMOJIS.SUCESSO} Sala Encerrada`,
                     descricao: `A sala **${channelName}** foi deletada com sucesso.`
                 });
                 await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
             } catch (error: any) {
-                const embed = criarEmbedNexstar({
+                const embed = criarEmbedCoreIA({
                     cor: CORES.ERRO,
                     titulo: `${EMOJIS.ERRO} Erro`,
                     descricao: `Não foi possível encerrar a sala.\n\n> \`${error.message}\``
@@ -1082,7 +1082,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
         }
     }
     else if (customId === 'btn_abrir_painel') {
-        const embed = criarEmbedNexstar({
+        const embed = criarEmbedCoreIA({
             cor: CORES.INFO,
             titulo: `${EMOJIS.PAINEL} Abrir Painel`,
             descricao: `Use o comando \`/painel\` para acessar o painel de controle.`
@@ -1090,7 +1090,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
         await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     }
     else if (customId === 'btn_convidar_rapido') {
-        const embed = criarEmbedNexstar({
+        const embed = criarEmbedCoreIA({
             cor: CORES.INFO,
             titulo: `${EMOJIS.CONVITE} Como Convidar`,
             descricao: `Use o comando:\n\n\`/convidar @membro\`\n\nPara enviar um convite privado.`
@@ -1109,7 +1109,7 @@ async function handleModal(interaction: ModalSubmitInteraction): Promise<void> {
     const userVoiceChannel = member.voice?.channel as VoiceChannel | null;
 
     if (!userVoiceChannel) {
-        const embed = criarEmbedNexstar({
+        const embed = criarEmbedCoreIA({
             cor: CORES.ERRO,
             titulo: `${EMOJIS.ERRO} Você não está em uma sala`,
             descricao: `Entre na sua sala de voz privada primeiro.`
@@ -1120,7 +1120,7 @@ async function handleModal(interaction: ModalSubmitInteraction): Promise<void> {
 
     const callData = privateCallOwners.get(userVoiceChannel.id);
     if (!callData || callData.ownerId !== interaction.user.id) {
-        const embed = criarEmbedNexstar({
+        const embed = criarEmbedCoreIA({
             cor: CORES.ERRO,
             titulo: `${EMOJIS.ERRO} Sem Permissão`,
             descricao: `Você só pode controlar sua **própria** sala.`
@@ -1134,7 +1134,7 @@ async function handleModal(interaction: ModalSubmitInteraction): Promise<void> {
         const limite = parseInt(limiteStr);
 
         if (isNaN(limite) || limite < 0 || limite > 99) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Valor Inválido`,
                 descricao: `Digite um número entre 0 e 99.`
@@ -1147,7 +1147,7 @@ async function handleModal(interaction: ModalSubmitInteraction): Promise<void> {
             await userVoiceChannel.setUserLimit(limite);
             callData.memberLimit = limite === 0 ? null : limite;
 
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.SUCESSO,
                 titulo: `${EMOJIS.LIMITE} Limite Atualizado`,
                 descricao: limite === 0
@@ -1156,7 +1156,7 @@ async function handleModal(interaction: ModalSubmitInteraction): Promise<void> {
             });
             await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
         } catch (error: any) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Erro`,
                 descricao: `Não foi possível definir o limite.\n\n> \`${error.message}\``
@@ -1171,14 +1171,14 @@ async function handleModal(interaction: ModalSubmitInteraction): Promise<void> {
             const nomeFormatado = `${EMOJIS.TELEFONE} ${novoNome}`;
             await userVoiceChannel.setName(nomeFormatado);
 
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.SUCESSO,
                 titulo: `${EMOJIS.RENOMEAR} Sala Renomeada`,
                 descricao: `Sua sala agora se chama **${nomeFormatado}**`
             });
             await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
         } catch (error: any) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Erro`,
                 descricao: `Não foi possível renomear a sala.\n\n> \`${error.message}\``
@@ -1237,7 +1237,7 @@ client.on('voiceStateUpdate', (oldState, _newState) => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 client.once('ready', async () => {
-    logger.info(`${EMOJIS.FOGUETE} Bot Nexstar Calls ${client.user?.tag} está online!`);
+    logger.info(`${EMOJIS.FOGUETE} Bot CoreIA Calls ${client.user?.tag} está online!`);
     logMemoryUsage();
     setInterval(logMemoryUsage, 300000);
 

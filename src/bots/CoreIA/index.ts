@@ -197,13 +197,16 @@ AÇÕES DISPONÍVEIS:
 - reminder: Criar lembrete. Params: duration (min), message
 - partnership_add: Adicionar parceria. Params: partnerGuildId, partnerGuildName, invite?, description?
 - partnership_list: Listar parcerias
+- create_custom_command: Criar ou registrar comando novo slash. Params: commandName, description, actions (um array com objeto das ações contendo provider/category se aplicavel)
 - partnership_remove: Remover parceria. Params: partnerGuildId
 - none: Não é comando admin
 
 REGRAS:
 1. Converta duração para minutos (5 min, 1 hora, etc.)
 2. Se não for comando admin, action: "none"
-3. SEMPRE retorne JSON válido
+3. SEJA INTELIGENTE PRO USUÁRIO LEIGO: Se pedirem "cria um comando de abraçar", "bater" ou "dar pizza", deduza automaticamente. Se a intenção envolver interação social entre membros ou sentimentos, INCLUA OBRIGATORIAMENTE uma ação com type: "RANDOM_IMAGE" mapeando para a "category" em inglês. Categorias suportadas: baka, bite, blush, bored, cry, cuddle, dance, facepalm, feed (dar comida/dar pizza/alimentar), happy, highfive, hug (abraçar), kiss (beijar), laugh, neko, pat (fazer carinho), poke, pout, shrug, slap (bater/tapa), sleep, smile, smug, stare, think, thumbsup, tickle (cócegas), wave, wink, yeet. 
+4. Para APIs EXTERNAS (NASA, CLIMA), se o usuário leigo pedir "comando para ver o clima", você deduz type: "EXTERNAL_API" e usa o provider correto (ex: nasa_apod, movies, clima).
+5. SEMPRE retorne JSON válido
 
 Responda APENAS com JSON: {"action": "nome_acao", "params": {...}}`;
 
@@ -545,6 +548,27 @@ async function executeAdminAction(message: Message, action: string, params: Reco
                 return removed ? '✅ Parceria removida.' : '❌ Parceria não encontrada.';
             }
 
+            case 'create_custom_command': {
+                if (!params.commandName || !params.actions) return '❌ Preciso do commandName e array de actions.';
+                // Passa as ações recebidas pro Core de Custom Commands
+                
+                try {
+                    await customCommandService.create(
+                        guild.id,
+                        params.commandName,
+                        params.description || 'Comando criado pela CoreIA',
+                        null,
+                        Array.isArray(params.actions) ? params.actions : [params.actions],
+                        message.author.id,
+                        []
+                    );
+                    return `✨ Comando **/${params.commandName}** criado dinamicamente com sucesso e já está disponível no servidor!`;
+                } catch (error: any) {
+                    logger.error('Erro no create_custom_command via IA', error);
+                    return `❌ Falha ao criar comando personalizado: ${error.message}`;
+                }
+            }
+
             default:
                 return null;
         }
@@ -583,14 +607,12 @@ async function runChatGeralLogic(message: Message): Promise<void> {
     const guildId = message.guild!.id;
     const config = await getGuildConfig(guildId);
 
-    // Se não tiver canal configurado, ignora
-    if (!config?.ia_channel_id) return;
-
-    // Verifica se é o canal correto
-    if (message.channel.id !== config.ia_channel_id) {
+    // Verifica se é o canal correto (se configurado)
+    if (config?.ia_channel_id && message.channel.id !== config.ia_channel_id) {
         // Se mencionou o bot fora do canal oficial, avisa
         if (message.mentions.has(client.user!)) {
-            await message.reply(`Please talk to me in <#${config.ia_channel_id}>`);
+            const channelName = message.guild!.channels.cache.get(config.ia_channel_id)?.name || 'chat-ia';
+            await message.reply(`Apenas respondo a menções no canal <#${config.ia_channel_id}> (\`${channelName}\`)!`);
         }
         return;
     }
@@ -607,8 +629,16 @@ async function runChatGeralLogic(message: Message): Promise<void> {
         }
     }
 
+    const customTriggers = config?.ia_triggers || [];
+    const contentLower = message.content.toLowerCase();
+    
+    // Verifica gatilhos do painel (ex: "Oi IA", "Core")
+    const hasCustomTrigger = customTriggers.length > 0
+        ? customTriggers.some(trigger => contentLower.startsWith(trigger.toLowerCase()))
+        : /\b(coreia|ia|bot)\b/i.test(contentLower); // Traz o padrão antigo caso não preencham nada no painel
+
     if (message.mentions.has(client.user!) ||
-        /\b(nexstar|ia|bot)\b/i.test(message.content.toLowerCase()) ||
+        hasCustomTrigger ||
         (message.reference && (await message.channel.messages.fetch(message.reference.messageId!).catch(() => null))?.author.id === client.user?.id) ||
         (conversasAtivas.has(message.author.id) && Date.now() - conversasAtivas.get(message.author.id)! < 60000)) {
         deveResponder = true;
@@ -652,12 +682,12 @@ async function runChatGeralLogic(message: Message): Promise<void> {
             const member = message.member as GuildMember;
             let contextoUsuario = "Membro Comum";
             // Check roles dynamically if needed, for now keep logic simple
-            if (config.ia_admin_roles && config.ia_admin_roles.some(roleId => member.roles.cache.has(roleId))) {
+            if (config?.ia_admin_roles && config.ia_admin_roles.some(roleId => member.roles.cache.has(roleId))) {
                 contextoUsuario = "ADMINISTRADOR";
             }
 
             // SaaS: Personalidade Dinâmica
-            const promptSistema = config.ia_system_prompt || `Você é a IA do CoreBot. Personalidade ÁCIDA. Usuario: ${contextoUsuario}`;
+            const promptSistema = config?.ia_system_prompt || `Você é a IA do CoreBot. Personalidade ÁCIDA. Usuario: ${contextoUsuario}`;
 
             const resposta = await llmService.gerarResposta(historicoContexto, promptSistema, imageUrl);
 
@@ -672,7 +702,7 @@ async function runChatGeralLogic(message: Message): Promise<void> {
             const respostaFinal = applyBranding(resposta, brandingFooter);
 
             // Whitelabel: Se configurado, usar webhook com nome/avatar customizado
-            if (config.whitelabel_name) {
+            if (config?.whitelabel_name) {
                 try {
                     const channel = message.channel as TextChannel;
                     const webhooks = await channel.fetchWebhooks();
@@ -682,8 +712,8 @@ async function runChatGeralLogic(message: Message): Promise<void> {
                     }
                     await webhook.send({
                         content: respostaFinal,
-                        username: config.whitelabel_name,
-                        avatarURL: config.whitelabel_avatar_url || undefined
+                        username: config?.whitelabel_name,
+                        avatarURL: config?.whitelabel_avatar_url || undefined
                     });
                 } catch {
                     // Fallback: responder normalmente se webhook falhar
@@ -759,6 +789,11 @@ async function runChatPrivadoLogic(message: Message): Promise<void> {
 
 client.on('messageCreate', async (message: Message) => {
     if (message.author.bot) return;
+    
+    // Rastrear tráfego de mensagens nativas
+    if (message.guild) {
+        trackEvent(message.guild.id, 'message').catch(() => {});
+    }
 
     const conteudoLower = message.content.toLowerCase();
 
@@ -828,15 +863,20 @@ client.on('interactionCreate', async (interaction) => {
         const actionType = parts[0]; // gif_retribuir or gif_action
         const category = parts[1]; // kiss, slap, hug, etc.
         const originalUserId = parts[2]; // who triggered the original command
+        const targetUserId = parts[3]; // who received the original command
 
-        // For "Retribuir", only the target can click it
-        if (actionType === 'gif_retribuir') {
-            // The target is the person who was mentioned, not the original sender
-            // Only they should retribuir
-            if (interaction.user.id === originalUserId) {
-                await interaction.editReply({ content: '❌ Você não pode retribuir a si mesmo!' });
-                return;
+        // Security Validation: Em qualquer botão de GIF, quem clica TEM que ser o Receptor.
+        // E o emissor original nunca pode autoretribuir a si próprio caso ele tenha sido o receptor de si mesmo.
+        if (targetUserId && targetUserId !== 'none') {
+            if (interaction.user.id !== targetUserId) {
+                 await interaction.editReply({ content: '❌ Ei! Apenas a pessoa que recebeu pode clicar neste botão!' });
+                 return;
             }
+        }
+
+        if (interaction.user.id === originalUserId) {
+            await interaction.editReply({ content: '❌ Você não pode interagir consigo mesmo!' });
+            return;
         }
 
         const { gifService } = await import('../../shared/services/gif.service');
@@ -1276,7 +1316,7 @@ async function registerCommands(clientId: string) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 client.once('clientReady', async () => {
-    logger.info(`🤖 NEXSTAR CORE BOT (Multifuncional) - ONLINE`);
+    logger.info(`🤖 COREIA CORE BOT (Multifuncional) - ONLINE`);
 
     // Iniciar verificação de inatividade
     verificarInatividade();
@@ -1361,7 +1401,7 @@ client.login(TOKEN).catch(error => {
 });
 
 process.on('SIGINT', async () => {
-    logger.info('Encerrando NexstarIA...');
+    logger.info('Encerrando CoreIA...');
     await closePool();
     client.destroy();
     process.exit(0);

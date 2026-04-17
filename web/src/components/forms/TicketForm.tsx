@@ -14,9 +14,10 @@ import {
     Trash2,
     Edit,
     Palette,
-    X,
-    Check
+    X
 } from "lucide-react";
+import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface TicketCategory {
     id: string;
@@ -52,7 +53,7 @@ export function TicketForm({ guildId, userId, categories, userPlan }: TicketForm
     const router = useRouter();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<TicketCategory | null>(null);
-    const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+    const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
     const modalRef = useRef<HTMLDivElement>(null);
 
     // Limit Logic
@@ -60,57 +61,57 @@ export function TicketForm({ guildId, userId, categories, userPlan }: TicketForm
     const canCreate = categories.length < limit;
 
     async function handleSubmit(formData: FormData) {
-        setFeedback(null);
         const res = await upsertTicketCategoryAction({} as any, formData);
         if (res.success) {
-            setFeedback({ type: 'success', message: res.message || "Sucesso!" });
+            toast.success(res.message || "Sucesso!");
             setIsDialogOpen(false);
             setEditingCategory(null);
-            setTimeout(() => setFeedback(null), 3000);
         } else {
-            setFeedback({ type: 'error', message: res.error || "Erro ao salvar." });
-            // Keep dialog open on error
+            toast.error(res.error || "Erro ao salvar.");
         }
     }
 
-    async function handleDelete(categoryId: string) {
-        if (!confirm("Tem certeza que deseja excluir esta categoria?")) return;
+    function handleDelete(categoryId: string) {
+        setCategoryToDelete(categoryId);
+    }
 
-        const res = await deleteTicketCategoryAction(categoryId, guildId);
+    async function confirmDelete() {
+        if (!categoryToDelete) return;
+        const res = await deleteTicketCategoryAction(categoryToDelete, guildId);
         if (res.success) {
-            setFeedback({ type: 'success', message: "Categoria removida!" });
-            setTimeout(() => setFeedback(null), 3000);
+            toast.success("Categoria removida!");
         } else {
-            setFeedback({ type: 'error', message: res.error || "Erro ao remover." });
+            toast.error(res.error || "Erro ao remover.");
         }
+        setCategoryToDelete(null);
     }
 
     const openCreate = () => {
         if (!canCreate) {
-            alert("Limite de categorias atingido! Faça upgrade para criar mais.");
+            toast.warning("Limite de categorias atingido!", {
+                description: "Faça upgrade para criar mais categorias.",
+            });
             return;
         }
         setEditingCategory(null);
-        setFeedback(null);
         setIsDialogOpen(true);
     };
 
     const openEdit = (cat: TicketCategory) => {
         setEditingCategory(cat);
-        setFeedback(null);
         setIsDialogOpen(true);
     };
 
     return (
         <div className="space-y-8 max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 relative font-hind">
-            {/* Feedback Toast (Custom) */}
-            {feedback && (
-                <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium animate-in slide-in-from-bottom-5 fade-in duration-300 ${feedback.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
-                    }`}>
-                    {feedback.type === 'success' ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
-                    {feedback.message}
-                </div>
-            )}
+            <ConfirmDialog 
+                isOpen={!!categoryToDelete}
+                title="Excluir Categoria"
+                description="Tem certeza que deseja excluir esta categoria permanentemente? Esta ação não pode ser desfeita e os canais ativos poderão perder o escopo."
+                confirmLabel="Excluir Categoria"
+                onConfirm={confirmDelete}
+                onCancel={() => setCategoryToDelete(null)}
+            />
 
             {/* Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -250,12 +251,6 @@ export function TicketForm({ guildId, userId, categories, userPlan }: TicketForm
                             <input type="hidden" name="guildId" value={guildId} />
                             <input type="hidden" name="userId" value={userId} />
                             {editingCategory && <input type="hidden" name="categoryId" value={editingCategory.id} />}
-
-                            {feedback && feedback.type === 'error' && (
-                                <div className="bg-red-900/20 border border-red-900/50 text-red-200 text-xs p-3 rounded-lg">
-                                    {feedback.message}
-                                </div>
-                            )}
 
                             <div className="space-y-2">
                                 <Label htmlFor="name" className="text-zinc-300">Nome da Categoria</Label>

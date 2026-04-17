@@ -4,6 +4,9 @@ import { authOptions } from "@/lib/auth-options";
 import { checkAiLimit, checkServerGenLimit } from "@shared/services/ai-limit.service";
 import { config } from "@shared/services/config.service";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(
     request: Request,
     { params }: { params: { guildId: string } }
@@ -38,9 +41,10 @@ export async function GET(
         const ownerId = guildData.owner_id;
 
         // 2. Check Limits
+        // Force ignoreCache = true to ensure real-time plan status for the dashboard
         const [messageLimit, serverGenLimit] = await Promise.all([
-            checkAiLimit(userId, guildId, ownerId),
-            checkServerGenLimit(userId)
+            checkAiLimit(userId, guildId, ownerId, true),
+            checkServerGenLimit(userId, true)
         ]);
 
         return NextResponse.json({

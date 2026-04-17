@@ -1,5 +1,5 @@
 /**
- * 🎫 BOT NEXSTAR TICKETS - Sistema de Tickets com Categorias TypeScript
+ * 🎫 BOT COREIA TICKETS - Sistema de Tickets com Categorias TypeScript
  * ═══════════════════════════════════════════════════════════════════════════
  */
 

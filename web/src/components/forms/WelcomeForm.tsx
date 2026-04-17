@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { updateWelcomeConfig } from "@/actions/guild-actions";
 import { Textarea } from "@/components/ui/textarea";
-import { Hand, ShieldAlert, Type, UserPlus, LogOut, ShieldCheck, Image as ImageIcon, Sparkles, Save, Link, MessageSquare, CloudUpload } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Hand, ShieldAlert, Type, UserPlus, LogOut, ShieldCheck, Image as ImageIcon, Sparkles, Save, Link, MessageSquare, CloudUpload, ChevronDown, Check } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 
 interface AutoModConfig {
     guild_id: string;
@@ -49,6 +49,20 @@ function SubmitButton() {
 }
 
 
+const GOOGLE_FONTS = [
+    "Abel", "Acme", "Aleo", "Amatic SC", "Anton", "Archivo", "Arimo", "Arvo", "Asap", "Assistant",
+    "Barlow", "Bebas Neue", "Bitter", "Bungee", "Cabin", "Cairo", "Caveat", "Changa", "Cinzel", "Comfortaa",
+    "Cormorant", "Courgette", "Crimson Text", "Cutive Mono", "DM Sans", "Dancing Script", "Domine", "Dosis", "EB Garamond", "Exo 2",
+    "Fascinate", "Fira Code", "Fira Sans", "Fjalla One", "Fredoka One", "Heebo", "Hind", "IBM Plex Sans", "IBM Plex Serif", "Inconsolata",
+    "Inter", "Josefin Sans", "Jost", "Kanit", "Karla", "Kumbh Sans", "Lato", "Lexend", "Libre Baskerville", "Lobster",
+    "Lora", "Macondo", "Manrope", "Maven Pro", "Merriweather", "Merriweather Sans", "Montserrat", "Mukta", "Mulish", "Nanum Gothic",
+    "Noto Sans", "Noto Serif", "Nunito", "Nunito Sans", "Open Sans", "Orbitron", "Oswald", "Outfit", "Overpass", "Oxygen",
+    "PT Sans", "PT Serif", "Pacifico", "Permanent Marker", "Play", "Playfair Display", "Poppins", "Prompt", "Public Sans", "Questrial",
+    "Quicksand", "Rajdhani", "Raleway", "Righteous", "Roboto", "Roboto Condensed", "Roboto Mono", "Roboto Slab", "Rowdies", "Rubik",
+    "Saira", "Sen", "Signika", "Signika Negative", "Slabo 27px", "Sora", "Source Code Pro", "Source Sans Pro", "Space Grotesk", "Space Mono",
+    "Teko", "Titillium Web", "Ubuntu", "Varela Round", "Work Sans", "Yanone Kaffeesatz", "Zilla Slab"
+].sort();
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ✨ FORM COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
@@ -62,10 +76,26 @@ export function WelcomeForm({ config, guildId, user, plan = 'free' }: { config: 
     const [selectedFont, setSelectedFont] = useState(config?.welcome_font || 'Inter');
     const [welcomeMessage, setWelcomeMessage] = useState(config?.welcome_message || "Bem-vindo {user} ao servidor!");
     const [bannerPreview, setBannerPreview] = useState(config?.welcome_banner_url || null);
+    
+    // Dropdown state
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        if (isDropdownOpen) document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [isDropdownOpen]);
 
     // Limits
     const isFree = plan === 'free';
     const canCustomizeMessage = !isFree;
+    const fontChangesCount = config?.welcome_font_changes_count || 0;
+    const isFontLocked = isFree && fontChangesCount >= 1;
 
     const previewUser = {
         name: user?.name || "Usuário",
@@ -86,6 +116,7 @@ export function WelcomeForm({ config, guildId, user, plan = 'free' }: { config: 
     return (
         <form action={formAction} className="space-y-6 w-full max-w-4xl mx-auto font-sans">
             <input type="hidden" name="guildId" value={guildId} />
+            <input type="hidden" name="userId" value={user?.id || ""} />
 
             <div className="grid grid-cols-1 gap-6">
                 {/* ════════════════════════════════════════════════════
@@ -170,20 +201,10 @@ export function WelcomeForm({ config, guildId, user, plan = 'free' }: { config: 
                                             id="welcome-msg"
                                             name="welcomeMessage"
                                             placeholder="Bem-vindo {user} ao servidor!"
-                                            disabled={!canCustomizeMessage}
                                             value={welcomeMessage}
                                             onChange={(e) => setWelcomeMessage(e.target.value)}
-                                            className={`bg-black/50 border-white/10 text-white rounded-xl focus:border-blue-500/50 min-h-[100px] resize-none p-3 text-sm transition-all group-hover/input:border-white/20 ${!canCustomizeMessage ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            className="bg-black/50 border-white/10 text-white rounded-xl focus:border-blue-500/50 min-h-[100px] resize-none p-3 text-sm transition-all group-hover/input:border-white/20"
                                         />
-                                        {!canCustomizeMessage && (
-                                            <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-[1px] rounded-xl border border-white/5">
-                                                <div className="text-center p-4">
-                                                    <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block mb-1">Recurso Premium</span>
-                                                    <p className="text-[10px] text-zinc-400">Mensagens personalizadas requerem plano Starter.</p>
-                                                    <a href="/dashboard/billing" className="text-[10px] text-blue-400 hover:text-blue-300 underline mt-1 block">Fazer Upgrade</a>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                     <p className="text-[10px] text-zinc-500">
                                         Variáveis: <span className="text-blue-400">{"{user}"}</span>, <span className="text-blue-400">{"{server}"}</span>
@@ -247,20 +268,57 @@ export function WelcomeForm({ config, guildId, user, plan = 'free' }: { config: 
                                         Fonte da Mensagem
                                     </Label>
 
-                                    <select
-                                        id="welcome-font"
-                                        name="welcome_font"
-                                        value={selectedFont}
-                                        onChange={(e) => setSelectedFont(e.target.value)}
-                                        className="w-full bg-black/50 border border-white/10 rounded-lg p-2.5 text-zinc-100 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all font-sans text-sm appearance-none"
-                                    >
-                                        <option value="Inter">Inter (Padrão)</option>
-                                        <option value="Roboto">Roboto</option>
-                                        <option value="Poppins">Poppins</option>
-                                        <option value="Montserrat">Montserrat</option>
-                                        <option value="Open Sans">Open Sans</option>
-                                        <option value="Lato">Lato</option>
-                                    </select>
+                                    <div className="relative group/select" ref={dropdownRef}>
+                                        {/* Input Oculto para o Form */}
+                                        <input type="hidden" name="welcome_font" value={selectedFont} />
+                                        
+                                        {/* Botão de Trigger */}
+                                        <button
+                                            type="button"
+                                            disabled={isFontLocked}
+                                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                            className={`w-full bg-black/50 border border-white/10 rounded-lg p-3 text-zinc-100 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all text-sm flex items-center justify-between shadow-xs ${isFontLocked ? 'opacity-50 cursor-not-allowed' : 'hover:border-white/20'}`}
+                                        >
+                                            <span style={{ fontFamily: selectedFont }}>{selectedFont}</span>
+                                            <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                                        </button>
+                                        
+                                        {/* Dropdown Menu Animado para BAIXO */}
+                                        {isDropdownOpen && !isFontLocked && (
+                                            <div className="absolute top-full left-0 right-0 mt-2 bg-[#0A0A0C] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden max-h-[250px] overflow-y-auto custom-scrollbar animate-in slide-in-from-top-2 fade-in duration-200">
+                                                {GOOGLE_FONTS.map(font => (
+                                                    <div 
+                                                        key={font} 
+                                                        onClick={() => {
+                                                            setSelectedFont(font);
+                                                            setIsDropdownOpen(false);
+                                                        }}
+                                                        className={`px-4 py-3 cursor-pointer text-sm transition-colors flex items-center justify-between border-b last:border-0 border-white/5 ${selectedFont === font ? 'bg-purple-500/20 text-purple-400 font-bold' : 'text-zinc-300 hover:bg-white/5 hover:text-white'}`}
+                                                    >
+                                                        <span style={{ fontFamily: font }}>{font}</span>
+                                                        {selectedFont === font && <Check className="w-4 h-4" />}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        
+                                        {/* Trava (Lock do free tire) */}
+                                        {isFontLocked && (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-[1px] rounded-lg border border-white/5 z-10 pointer-events-auto transition-all">
+                                                <div className="text-center p-2">
+                                                    <span className="text-[10px] font-bold text-amber-400 uppercase flex items-center justify-center gap-1">
+                                                        <ShieldAlert className="w-3 h-3" /> Limite Atingido
+                                                    </span>
+                                                    <a href="/dashboard/billing" className="text-[9px] text-blue-400 hover:text-blue-300 underline mt-0.5 block">Starter: Trocas Ilimitadas</a>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {fontChangesCount === 0 && isFree && (
+                                            <p className="text-[10px] text-amber-500 mt-2 font-medium flex items-center gap-1">
+                                                Você possui 1 troca grátis.
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Banner Upload moved here for better use of space */}

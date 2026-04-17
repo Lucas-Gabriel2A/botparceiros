@@ -43,6 +43,32 @@ export function checkLinks(content: string): boolean {
     return linkRegex.test(content);
 }
 
+export function checkFlood(content: string): boolean {
+    // Detecta se a mesma letra ou caractere (ex: AAAAAA ou kkkkkkkk) se repete mais de 9 vezes seguidas
+    const floodRegex = /(.)\1{9,}/i;
+    return floodRegex.test(content);
+}
+
+// Map: guildId:userId -> array de timestamps (Date.now())
+const userMessageLogs = new Map<string, number[]>();
+const SPAM_LIMIT = 5; // max 5 mensagens
+const SPAM_WINDOW = 5000; // em 5 segundos
+
+export function checkSpam(userId: string, guildId: string): boolean {
+    const key = `${guildId}:${userId}`;
+    const now = Date.now();
+    let timestamps = userMessageLogs.get(key) || [];
+    
+    // Limpar timestamps antigos fora da janela temporal
+    timestamps = timestamps.filter(t => now - t < SPAM_WINDOW);
+    timestamps.push(now);
+    
+    userMessageLogs.set(key, timestamps);
+    
+    // Se o usuário mandou mais que o limite dentro dos 5 segundos
+    return timestamps.length > SPAM_LIMIT;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // 🤖 AUTOMOD IA — Detecção por Inteligência Artificial
 // ═══════════════════════════════════════════════════════════════════════════

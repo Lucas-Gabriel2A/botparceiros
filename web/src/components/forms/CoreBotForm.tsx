@@ -147,6 +147,28 @@ export function CoreBotForm({ config, guildId }: { config: any, guildId: string 
                         </p>
                     </div>
 
+                    {/* AI Triggers */}
+                    <div className="space-y-4">
+                        <Label htmlFor="iaTriggers" className="text-base font-medium text-zinc-300 flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-white/5">
+                                <Sparkles className="w-4 h-4 text-purple-400" />
+                            </div>
+                            Gatilhos de Ativação
+                        </Label>
+                        <div className="relative group/input">
+                            <Input
+                                id="iaTriggers"
+                                name="iaTriggers"
+                                placeholder="Core,, Oi IA,, Oi Core (separados por vírgula)"
+                                defaultValue={config?.ia_triggers?.join(", ") || ''}
+                                className="bg-black/50 border-white/10 text-white rounded-xl focus:border-purple-500/50 py-6 pl-4 transition-all group-hover/input:border-white/20"
+                            />
+                        </div>
+                        <p className="text-xs text-zinc-500 pl-1">
+                            * Se preenchido, a IA também responderá automaticamente se a mensagem começar com qualquer um desses textos (além de responder quando mencionada).
+                        </p>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-white/5 pt-6">
                         <div className="space-y-4">
                             <Label htmlFor="iaTemperature" className="text-base font-medium text-zinc-300">

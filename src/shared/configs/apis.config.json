@@ -1,0 +1,32 @@
+{
+    "nasa_apod": {
+        "url": "https://api.nasa.gov/planetary/apod?api_key={API_KEY}",
+        "method": "GET",
+        "embedMapping": {
+            "title": "🌌 {title}",
+            "description": "{explanation}",
+            "image": "{url}",
+            "color": "#0B3D91"
+        }
+    },
+    "movies": {
+        "url": "https://www.omdbapi.com/?t={query}&apikey={API_KEY}",
+        "method": "GET",
+        "embedMapping": {
+            "title": "🎬 {Title} ({Year})",
+            "description": "⭐ **IMDb:** {imdbRating}\n📜 **Enredo:** {Plot}\n🍿 **Gênero:** {Genre}",
+            "image": "{Poster}",
+            "color": "#F5C518"
+        }
+    },
+    "clima": {
+        "url": "https://api.weatherapi.com/v1/current.json?key={API_KEY}&q={query}&lang=pt",
+        "method": "GET",
+        "embedMapping": {
+            "title": "🌤️ Clima em {location.name}, {location.country}",
+            "description": "🌡️ **Temperatura:** {current.temp_c}°C\n༄️ **Sensação:** {current.feelslike_c}°C\n☁️ **Condição:** {current.condition.text}",
+            "image": "https:{current.condition.icon}",
+            "color": "#81D4FA"
+        }
+    }
+}

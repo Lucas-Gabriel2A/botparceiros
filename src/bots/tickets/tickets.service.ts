@@ -22,6 +22,7 @@ import {
     logAudit,
     logger
 } from '../../shared/services';
+import { trackEvent } from '../../shared/services/analytics.service';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🎨 CONSTANTES & DEFAULTS
@@ -218,27 +219,33 @@ export async function createTicketChannel(
 
         const ticketEmbed = new EmbedBuilder()
             .setColor(category.color ? (category.color.startsWith('#') ? parseInt(category.color.replace('#', ''), 16) : DEFAULT_COLORS.primary) : DEFAULT_COLORS.primary)
-            .setTitle(embedTitle)
-            .setDescription(embedDesc)
+            .setAuthor({ 
+                name: `${guild.name} • Suporte ao Cliente`, 
+                iconURL: guild.iconURL({ extension: 'png', size: 128 }) || undefined 
+            })
+            .setTitle(`🎫 ${embedTitle}`)
+            .setDescription(`${embedDesc}\n\n>>> 💡 *Para agilizar o seu atendimento, por favor, detalhe o seu problema ou dúvida da forma mais completa possível.*`)
             .addFields(
-                { name: `${DEFAULT_EMOJIS.user} Aberto por`, value: `${member.user.tag}`, inline: true },
-                { name: `${DEFAULT_EMOJIS.ticket} Categoria`, value: category.name, inline: true }
+                { name: `👤 Emitente`, value: `${member.user}`, inline: true },
+                { name: `🏷️ Departamento`, value: `\`${category.name.toUpperCase()}\``, inline: true },
+                { name: `\u200B`, value: `\u200B`, inline: false } // space break
             )
-            .setTimestamp()
-            .setFooter({ text: 'Ticket System' });
+            .setThumbnail(member.user.displayAvatarURL({ extension: 'png', size: 256 }))
+            .setFooter({ text: 'Sistema de Tickets Seguro' })
+            .setTimestamp();
 
         // Buttons
         const closeButton = new ButtonBuilder()
             .setCustomId(`close_ticket_${member.id}_${category.name}`)
-            .setLabel('Fechar Ticket')
-            .setStyle(ButtonStyle.Danger)
+            .setLabel('Encerrar Atendimento')
+            .setStyle(ButtonStyle.Secondary)
             .setEmoji(DEFAULT_EMOJIS.close);
 
         const claimButton = new ButtonBuilder()
             .setCustomId(`claim_ticket`)
-            .setLabel('Assumir Ticket')
-            .setStyle(ButtonStyle.Success)
-            .setEmoji(DEFAULT_EMOJIS.claim);
+            .setLabel('Assumir Chamado')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('👋');
 
         const row = new ActionRowBuilder<ButtonBuilder>().addComponents(closeButton, claimButton);
 
@@ -256,6 +263,8 @@ export async function createTicketChannel(
             category: category.name,
             channel_name: ticketChannel.name
         });
+
+        trackEvent(guild.id, 'ticket_open').catch(() => {});
 
         return ticketChannel;
     } catch (error) {
@@ -352,7 +361,12 @@ export async function closeTicketProcess(
     }
 
     await closeDbTicket(channel.id);
-    await channel.delete();
+    await logAudit(guild.id, closedBy.id, 'TICKET_CLOSED', channel.id, { category: categoryName });
+    trackEvent(guild.id, 'ticket_close').catch(() => {});
+
+    setTimeout(() => {
+        channel.delete().catch(() => {});
+    }, 4500);
 }
 
 function getTicketOwnerIdFromTopic(_channel: TextChannel): string | null {

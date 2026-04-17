@@ -5,13 +5,13 @@ import { logger } from './logger.service';
 const AI_LIMITS: Record<PlanTier, number> = {
     free: 5,
     starter: 15,
-    pro: -1, // Unlimited
+    pro: 50, // 50 mensagens diárias
     ultimate: -1 // Unlimited
 };
 
-export async function checkAiLimit(userId: string, guildId: string, ownerId: string): Promise<{ allowed: boolean; limit: number; current: number; plan: PlanTier }> {
+export async function checkAiLimit(userId: string, guildId: string, ownerId: string, ignoreCache: boolean = false): Promise<{ allowed: boolean; limit: number; current: number; plan: PlanTier }> {
     try {
-        const plan = await getUserPlan(ownerId);
+        const plan = await getUserPlan(ownerId, ignoreCache);
         const limit = AI_LIMITS[plan];
 
         // Unlimited plans
@@ -77,13 +77,13 @@ export function getLimitMessage(plan: PlanTier, limit: number): { title: string;
 const SERVER_GEN_LIMITS: Record<PlanTier, number> = {
     free: 1,
     starter: 5,
-    pro: -1, // Unlimited
+    pro: 15, // 15 gerações mensais
     ultimate: -1 // Unlimited
 };
 
-export async function checkServerGenLimit(userId: string): Promise<{ allowed: boolean; limit: number; current: number; plan: PlanTier }> {
+export async function checkServerGenLimit(userId: string, ignoreCache: boolean = false): Promise<{ allowed: boolean; limit: number; current: number; plan: PlanTier }> {
     try {
-        const plan = await getUserPlan(userId);
+        const plan = await getUserPlan(userId, ignoreCache);
         const limit = SERVER_GEN_LIMITS[plan];
 
         if (limit === -1) {

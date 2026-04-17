@@ -38,7 +38,7 @@ export default async function ServerOverviewPage({ params }: Props) {
             title: "AutoMod",
             icon: ShieldAlert,
             href: `/${locale}/dashboard/${guildId}/automod`,
-            isActive: (config?.prohibited_words?.length || 0) > 0,
+            isActive: (config?.prohibited_words?.length || 0) > 0 || !!config?.automod_links_enabled || !!config?.automod_caps_enabled || !!config?.automod_spam_enabled || !!config?.automod_ai_enabled,
             stats: [
                 { label: "Palavras", value: config?.prohibited_words?.length || 0 },
                 { label: "Ação", value: config?.automod_action?.toUpperCase() || "DELETE" }

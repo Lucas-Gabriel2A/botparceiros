@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from "@/lib/auth-options";
 import { database } from '@shared/services/database';
+import { verifyUserGuildAccess } from '@/lib/discord-api';
 
 // Mapa de campos → plano mínimo necessário
 const PREMIUM_FIELDS: Record<string, string> = {
@@ -19,14 +20,20 @@ const PLAN_HIERARCHY: Record<string, number> = {
 
 export async function GET(
     request: Request,
-    { params }: { params: { guildId: string } }
+    { params }: { params: Promise<{ guildId: string }> } // Corrigido a tipagem do Next.js 15
 ) {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { guildId } = params;
+    const { guildId } = await params;
+
+    // 🔒 Security/IDOR Check: Validar MANAGE_GUILD respectivo
+    const hasAccess = await verifyUserGuildAccess(guildId);
+    if (!hasAccess) {
+        return NextResponse.json({ error: 'Acesso Negado: Você não gerencia esta guilda.' }, { status: 403 });
+    }
 
     try {
         const config = await database.getGuildConfig(guildId);
@@ -39,15 +46,21 @@ export async function GET(
 
 export async function PATCH(
     request: Request,
-    { params }: { params: { guildId: string } }
+    { params }: { params: Promise<{ guildId: string }> }
 ) {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { guildId } = params;
+    const { guildId } = await params;
     const userId = (session.user as any).id;
+
+    // 🔒 Security/IDOR Check: Validar MANAGE_GUILD respectivo
+    const hasAccess = await verifyUserGuildAccess(guildId);
+    if (!hasAccess) {
+        return NextResponse.json({ error: 'Acesso Negado: Você não gerencia esta guilda.' }, { status: 403 });
+    }
 
     try {
         const body = await request.json();
@@ -76,6 +89,25 @@ export async function PATCH(
         }
 
         await database.upsertGuildConfig(guildId, body);
+
+        // 🤖 Bônus: Sincronizar o Nickname (Apelido) físico do Bot na lista de Membros do Servidor (se alterado)
+        if ('whitelabel_name' in body) {
+            try {
+                // PATCH https://discord.com/api/v10/guilds/{guildId}/members/@me
+                await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/@me`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        nick: body.whitelabel_name || "" // Vazio remove o apelido (reseta pro padrão)
+                    })
+                });
+            } catch (err) {
+                console.error("Falha ao sincronizar nickname do whitelabel:", err);
+            }
+        }
 
         if (blockedFields.length > 0) {
             return NextResponse.json({

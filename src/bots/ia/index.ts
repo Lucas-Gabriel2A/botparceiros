@@ -135,7 +135,7 @@ client.on('messageCreate', async (message: Message) => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 client.once('ready', async () => {
-    logger.info(`✅ NexstarIA online como ${client.user?.tag}`);
+    logger.info(`✅ CoreIA online como ${client.user?.tag}`);
     logger.info(`📊 Servindo ${client.guilds.cache.size} servidores`);
     
     // Carrega comandos

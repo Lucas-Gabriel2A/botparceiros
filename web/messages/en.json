@@ -17,7 +17,7 @@
   "features": {
     "title": "Unlimited Power",
     "subtitle": "for modern communities.",
-    "desc": "Everything you need to scale your community.",
+    "desc": "Everything you need to scale your community with smart automation and premium design.",
     "items": {
       "ai_builder": {
         "title": "AI Builder",
@@ -44,6 +44,18 @@
     "yearly": "/yr",
     "billed_yearly": "Equivalent to {price}/mo",
     "save_text": "Save 20%",
+    "free": {
+      "name": "Free",
+      "price": "$ 0",
+      "desc": "Start for free and explore CoreBot.",
+      "features": [
+        "5 AI responses/user/day",
+        "1 Server Generation",
+        "1 Ticket Category",
+        "Basic AutoMod",
+        "Default Welcome"
+      ]
+    },
     "starter": {
       "name": "Starter",
       "price": "$ 9.90",
@@ -115,6 +127,10 @@
       "upgrade": "Upgrade Now",
       "secure_payment": "100% Secure Payment via Mercado Pago",
       "features_title": "What's included:",
+      "free": {
+        "name": "Free",
+        "price": "Free"
+      },
       "starter": {
         "name": "Starter",
         "price": "$ 9.90"

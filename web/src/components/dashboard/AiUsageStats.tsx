@@ -23,7 +23,7 @@ export function AiUsageStats({ guildId }: { guildId: string }) {
     const [error, setError] = useState(false);
 
     useEffect(() => {
-        fetch(`/api/guild/${guildId}/ai-usage`)
+        fetch(`/api/guild/${guildId}/ai-usage?_t=${Date.now()}&refresh=true`)
             .then((res) => {
                 if (!res.ok) throw new Error("Falha ao carregar");
                 return res.json();

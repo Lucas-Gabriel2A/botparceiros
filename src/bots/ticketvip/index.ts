@@ -78,7 +78,7 @@ const CORES = {
     INFO: '#3498db'
 } as const;
 
-const NEXSTAR_BANNER = 'https://img.freepik.com/vetores-gratis/paisagem-noturna-do-oceano-lua-cheia-e-estrelas-brilham_107791-7397.jpg?semt=ais_hybrid&w=740&q=80';
+const COREIA_BANNER = 'https://img.freepik.com/vetores-gratis/paisagem-noturna-do-oceano-lua-cheia-e-estrelas-brilham_107791-7397.jpg?semt=ais_hybrid&w=740&q=80';
 
 const EMOJIS = {
     ESTRELA: '⭐',
@@ -147,12 +147,12 @@ const ticketOwners = new Map<string, TicketData>();
 // 🔧 FUNÇÕES HELPER
 // ═══════════════════════════════════════════════════════════════════════════
 
-function criarEmbedNexstar(options: EmbedOptions = {}): EmbedBuilder {
+function criarEmbedCoreIA(options: EmbedOptions = {}): EmbedBuilder {
     const embed = new EmbedBuilder()
         .setColor(parseInt((options.cor || CORES.DOURADO).replace('#', ''), 16))
         .setTimestamp()
         .setFooter({ 
-            text: options.footer || `${EMOJIS.ESTRELA} Nexstar VIP`
+            text: options.footer || `${EMOJIS.ESTRELA} CoreIA VIP`
         });
 
     if (options.titulo) embed.setTitle(options.titulo);
@@ -230,7 +230,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         const member = interaction.member as GuildMember;
         
         if (!member.permissions.has(PermissionFlagsBits.Administrator)) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Acesso Negado`,
                 descricao: 'Você não tem permissão para usar este comando.'
@@ -240,7 +240,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         }
 
         if (ID_CANAL_COMPRAS && interaction.channelId !== ID_CANAL_COMPRAS) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.AVISO,
                 titulo: `${EMOJIS.AVISO} Canal Incorreto`,
                 descricao: `Este comando só pode ser usado no canal <#${ID_CANAL_COMPRAS}>.`
@@ -249,7 +249,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
             return;
         }
 
-        const embed = criarEmbedNexstar({
+        const embed = criarEmbedCoreIA({
             cor: CORES.DOURADO,
             titulo: `${EMOJIS.COROA} Central de Aquisição VIP ${EMOJIS.COROA}`,
             descricao: `Torne-se um membro **VIP** e desbloqueie benefícios exclusivos!\n\n` +
@@ -260,7 +260,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
                 `${EMOJIS.ESTRELA} Acesso a canais VIP\n\n` +
                 `**${EMOJIS.DINHEIRO} Investimento:** \`${VALOR_VIP}\`\n\n` +
                 `Clique no botão abaixo para iniciar sua jornada VIP!`,
-            imagem: NEXSTAR_BANNER,
+            imagem: COREIA_BANNER,
             footer: `${interaction.guild?.name} | Sistema de Tickets VIP`
         });
 
@@ -276,7 +276,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
         const channel = interaction.channel as TextChannel;
         await channel.send({ embeds: [embed], components: [row] });
         
-        const confirmEmbed = criarEmbedNexstar({
+        const confirmEmbed = criarEmbedCoreIA({
             cor: CORES.SUCESSO,
             titulo: `${EMOJIS.SUCESSO} Painel Enviado`,
             descricao: 'O painel de tickets foi enviado com sucesso!'
@@ -304,7 +304,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
         );
         
         if (ticketExistente) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.AVISO,
                 titulo: `${EMOJIS.AVISO} Ticket Existente`,
                 descricao: `Você já possui um ticket aberto!\n\n> Acesse: ${ticketExistente}`
@@ -345,7 +345,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
                 }
             }
 
-            const embedTicket = criarEmbedNexstar({
+            const embedTicket = criarEmbedCoreIA({
                 cor: CORES.DOURADO,
                 autor: {
                     name: `${EMOJIS.TICKET} Ticket de ${user.displayName}`,
@@ -353,14 +353,14 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
                 },
                 descricao: `Olá ${user}! Siga as instruções para concluir sua compra VIP.`,
                 campos: [
-                    { name: `${EMOJIS.PACOTE} Produto`, value: '`Acesso VIP Nexstar`', inline: true },
+                    { name: `${EMOJIS.PACOTE} Produto`, value: '`Acesso VIP CoreIA`', inline: true },
                     { name: `${EMOJIS.DINHEIRO} Valor`, value: `\`${VALOR_VIP}\``, inline: true },
                     { name: `${EMOJIS.RELOGIO} Abertura`, value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true },
                     { name: `${EMOJIS.ESTRELA} Vantagens Inclusas`, value: '> Calls privadas, Cargos exclusivos e Prioridade nos tickets.' },
                     { name: `${EMOJIS.CHAVE} Chave PIX (Copia e Cola)`, value: `\`\`\`${CHAVE_PIX}\`\`\`` },
                     { name: `${EMOJIS.AVISO} Instruções`, value: '> Após realizar o pagamento, envie o **comprovante** neste canal.\n> Use o botão abaixo para copiar o PIX facilmente!' }
                 ],
-                imagem: NEXSTAR_BANNER,
+                imagem: COREIA_BANNER,
                 footer: `ID: ${user.id}`
             });
 
@@ -406,14 +406,14 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
                 components: [rowUsuario, rowStaff]
             });
 
-            const embedConfirm = criarEmbedNexstar({
+            const embedConfirm = criarEmbedCoreIA({
                 cor: CORES.SUCESSO,
                 titulo: `${EMOJIS.SUCESSO} Ticket Criado!`,
                 descricao: `Seu ticket foi criado com sucesso!\n\n> Acesse: ${channel}`
             });
             await interaction.editReply({ embeds: [embedConfirm] });
 
-            const logEmbed = criarEmbedNexstar({
+            const logEmbed = criarEmbedCoreIA({
                 cor: CORES.INFO,
                 titulo: `${EMOJIS.TICKET} Novo Ticket Aberto`,
                 campos: [
@@ -426,7 +426,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
 
         } catch (error) {
             logger.error('Erro ao criar ticket');
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Erro`,
                 descricao: `Não foi possível criar o ticket.`
@@ -437,7 +437,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
 
     // 📋 COPIAR PIX
     else if (customId === 'copiar_pix') {
-        const embed = criarEmbedNexstar({
+        const embed = criarEmbedCoreIA({
             cor: CORES.INFO,
             titulo: `${EMOJIS.PIX} Chave PIX`,
             descricao: `Copie a chave abaixo e cole no seu aplicativo de banco:\n\n\`\`\`${CHAVE_PIX}\`\`\`\n` +
@@ -449,7 +449,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
 
     // ❓ PRECISO DE AJUDA
     else if (customId === 'preciso_ajuda') {
-        const embed = criarEmbedNexstar({
+        const embed = criarEmbedCoreIA({
             cor: CORES.INFO,
             titulo: `${EMOJIS.AJUDA} Central de Ajuda`,
             descricao: `**Como realizar o pagamento:**\n\n` +
@@ -473,7 +473,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
     // ✅ CONFIRMAR PAGAMENTO
     else if (customId === 'confirmar_pagamento') {
         if (!member.roles.cache.has(ID_CARGO_STAFF)) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Sem Permissão`,
                 descricao: 'Apenas a **Staff** pode confirmar pagamentos.'
@@ -486,7 +486,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
         const ticketData = ticketOwners.get(channel.id);
         
         if (!ticketData) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Erro`,
                 descricao: 'Não foi possível encontrar os dados do ticket.'
@@ -501,7 +501,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
 
             const transcript = await gerarTranscript(channel);
 
-            const embedFechamento = criarEmbedNexstar({
+            const embedFechamento = criarEmbedCoreIA({
                 cor: CORES.SUCESSO,
                 titulo: `${EMOJIS.SUCESSO} Compra Aprovada!`,
                 descricao: `O cargo **VIP** foi atribuído a ${targetMember} com sucesso!\n\n` +
@@ -514,7 +514,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
 
             await interaction.reply({ embeds: [embedFechamento] });
 
-            const logEmbed = criarEmbedNexstar({
+            const logEmbed = criarEmbedCoreIA({
                 cor: CORES.SUCESSO,
                 titulo: `${EMOJIS.SUCESSO} Pagamento Confirmado`,
                 campos: [
@@ -541,7 +541,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
 
         } catch (error) {
             logger.error('Erro ao confirmar pagamento');
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Erro`,
                 descricao: `Não foi possível atribuir o cargo.\n\n> Verifique se o cargo do bot está acima do VIP.`
@@ -553,7 +553,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
     // 🗑️ CANCELAR TICKET
     else if (customId === 'cancelar_ticket') {
         if (!member.roles.cache.has(ID_CARGO_STAFF)) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Sem Permissão`,
                 descricao: 'Apenas a **Staff** pode cancelar tickets.'
@@ -566,7 +566,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
         const ticketData = ticketOwners.get(channel.id);
         const transcript = await gerarTranscript(channel);
 
-        const embedCancelamento = criarEmbedNexstar({
+        const embedCancelamento = criarEmbedCoreIA({
             cor: CORES.ERRO,
             titulo: `${EMOJIS.LIXO} Ticket Cancelado`,
             descricao: `Este ticket foi cancelado por ${interaction.user}.\n\n` +
@@ -575,7 +575,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
 
         await interaction.reply({ embeds: [embedCancelamento] });
 
-        const logEmbed = criarEmbedNexstar({
+        const logEmbed = criarEmbedCoreIA({
             cor: CORES.ERRO,
             titulo: `${EMOJIS.LIXO} Ticket Cancelado`,
             campos: [
@@ -594,7 +594,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
     // ➕ ADICIONAR MEMBRO
     else if (customId === 'adicionar_membro') {
         if (!member.roles.cache.has(ID_CARGO_STAFF)) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Sem Permissão`,
                 descricao: 'Apenas a **Staff** pode adicionar membros.'
@@ -612,7 +612,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
                     .setMaxValues(1)
             );
 
-        const embed = criarEmbedNexstar({
+        const embed = criarEmbedCoreIA({
             cor: CORES.INFO,
             titulo: `${EMOJIS.ADICIONAR} Adicionar Membro`,
             descricao: 'Selecione o membro que deseja adicionar ao ticket:'
@@ -624,7 +624,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
     // ➖ REMOVER MEMBRO
     else if (customId === 'remover_membro') {
         if (!member.roles.cache.has(ID_CARGO_STAFF)) {
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.ERRO,
                 titulo: `${EMOJIS.ERRO} Sem Permissão`,
                 descricao: 'Apenas a **Staff** pode remover membros.'
@@ -642,7 +642,7 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
                     .setMaxValues(1)
             );
 
-        const embed = criarEmbedNexstar({
+        const embed = criarEmbedCoreIA({
             cor: CORES.AVISO,
             titulo: `${EMOJIS.REMOVER} Remover Membro`,
             descricao: 'Selecione o membro que deseja remover do ticket:'
@@ -670,7 +670,7 @@ async function handleUserSelect(interaction: UserSelectMenuInteraction): Promise
                 ReadMessageHistory: true
             });
 
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.SUCESSO,
                 titulo: `${EMOJIS.SUCESSO} Membro Adicionado`,
                 descricao: `<@${selectedUserId}> foi adicionado ao ticket!`
@@ -698,7 +698,7 @@ async function handleUserSelect(interaction: UserSelectMenuInteraction): Promise
         try {
             await channel.permissionOverwrites.delete(selectedUserId);
 
-            const embed = criarEmbedNexstar({
+            const embed = criarEmbedCoreIA({
                 cor: CORES.AVISO,
                 titulo: `${EMOJIS.REMOVER} Membro Removido`,
                 descricao: `<@${selectedUserId}> foi removido do ticket.`

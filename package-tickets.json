@@ -1,5 +1,5 @@
 {
-  "name": "nexstar-tickets",
+  "name": "coreia-tickets",
   "version": "1.0.0",
   "description": "Sistema de tickets para Discord",
   "main": "bottickets.js",
@@ -15,6 +15,6 @@
     "nodemon": "^3.0.1"
   },
   "keywords": ["discord", "bot", "tickets", "support"],
-  "author": "Nexstar",
+  "author": "CoreIA",
   "license": "MIT"
 }
