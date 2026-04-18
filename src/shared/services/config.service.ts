@@ -41,6 +41,10 @@ export interface DatabaseConfig {
     database?: string;
 }
 
+export interface RedisConfig {
+    url?: string;
+}
+
 export class ConfigService {
 
     /**
@@ -144,6 +148,15 @@ export class ConfigService {
             user: this.getOptional('DB_USER'),
             password: this.getOptional('DB_PASSWORD'),
             database: this.getOptional('DB_NAME')
+        };
+    }
+
+    /**
+     * Configuração do Redis
+     */
+    getRedisConfig(): RedisConfig {
+        return {
+            url: this.getOptional('REDIS_URL')
         };
     }
 

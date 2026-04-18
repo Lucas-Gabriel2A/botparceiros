@@ -1,6 +1,7 @@
 import { query } from './database';
 import { getUserPlan, PlanTier } from './plan-features';
 import { logger } from './logger.service';
+import { redisService } from './redis.service';
 
 const AI_LIMITS: Record<PlanTier, number> = {
     free: 5,
@@ -19,13 +20,35 @@ export async function checkAiLimit(userId: string, guildId: string, ownerId: str
             return { allowed: true, limit, current: 0, plan };
         }
 
-        // Check usage
+        // Check usage no Redis Primeiro
+        const date = new Date().toISOString().split('T')[0];
+        const redisKey = `ai_usage:${guildId}:${userId}:${date}`;
+        const redisClient = redisService.getClient();
+        let current = 0;
+
+        if (redisClient) {
+            const cachedValue = await redisClient.get(redisKey);
+            if (cachedValue !== null) {
+                current = parseInt(cachedValue, 10);
+                if (current >= limit) {
+                    return { allowed: false, limit, current, plan };
+                }
+                return { allowed: true, limit, current, plan };
+            }
+        }
+
+        // Fallback para Postgres
         const result = await query<{ count: number }>(
             `SELECT count FROM ai_usage WHERE user_id = $1 AND guild_id = $2 AND date = CURRENT_DATE`,
             [userId, guildId]
         );
 
-        const current = result.rows[0]?.count || 0;
+        current = result.rows[0]?.count || 0;
+
+        // Atualiza cache mem
+        if (redisClient) {
+            await redisClient.set(redisKey, current, 'EX', 86400); // Expirar em 1 dia
+        }
 
         if (current >= limit) {
             return { allowed: false, limit, current, plan };
@@ -42,6 +65,19 @@ export async function checkAiLimit(userId: string, guildId: string, ownerId: str
 
 export async function incrementAiUsage(userId: string, guildId: string): Promise<void> {
     try {
+        const date = new Date().toISOString().split('T')[0];
+        const redisKey = `ai_usage:${guildId}:${userId}:${date}`;
+        const redisClient = redisService.getClient();
+
+        if (redisClient) {
+            await redisClient.incr(redisKey);
+            await redisClient.expire(redisKey, 86400); // 1 dia
+            // Marca a chave como dirty para o script de sync jogar pro PG mais tarde
+            await redisClient.sadd(`ai_usage_dirty:${date}`, redisKey);
+            return; // Retorno antecipado, CPU não bloqueia esperando banco
+        }
+
+        // DB Fallback
         await query(
             `INSERT INTO ai_usage (user_id, guild_id, date, count)
              VALUES ($1, $2, CURRENT_DATE, 1)
@@ -51,6 +87,47 @@ export async function incrementAiUsage(userId: string, guildId: string): Promise
         );
     } catch (error) {
         logger.error('Erro ao incrementar uso de IA', { error, userId, guildId });
+    }
+}
+
+export async function syncRedisLimitsToDatabase(): Promise<void> {
+    const redisClient = redisService.getClient();
+    if (!redisClient) return;
+
+    try {
+        const date = new Date().toISOString().split('T')[0];
+        const dirtySetKey = `ai_usage_dirty:${date}`;
+        
+        const dirtyKeys = await redisClient.smembers(dirtySetKey);
+        if (!dirtyKeys || dirtyKeys.length === 0) return;
+
+        logger.info(`🔄 Sincronizando ${dirtyKeys.length} chaves do Redis de uso da IA -> PostgreSQL...`);
+
+        for (const key of dirtyKeys) {
+            const value = await redisClient.get(key);
+            if (!value) continue;
+
+            const parts = key.split(':'); // ai_usage:{guildId}:{userId}:{date}
+            if (parts.length === 4) {
+                const guildId = parts[1];
+                const userId = parts[2];
+                const count = parseInt(value, 10);
+
+                await query(
+                    `INSERT INTO ai_usage (user_id, guild_id, date, count)
+                     VALUES ($1, $2, CURRENT_DATE, $3)
+                     ON CONFLICT (user_id, guild_id, date)
+                     DO UPDATE SET count = GREATEST(ai_usage.count, $3)`,
+                    [userId, guildId, count]
+                );
+            }
+        }
+        
+        // Limpa as chaves atualizadas com sucesso
+        await redisClient.del(dirtySetKey);
+        logger.info('✅ Sincronização AI Usage (Redis -> Edge) concluída.');
+    } catch (error) {
+        logger.error('Erro ao sincronizar Redis -> DB (Sync):', { error });
     }
 }
 

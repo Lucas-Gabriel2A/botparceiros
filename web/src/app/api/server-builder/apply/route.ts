@@ -72,7 +72,7 @@ export async function POST(req: Request) {
                         body: JSON.stringify({
                             name: roleDef.name,
                             color: parseInt((roleDef.color || '#99AAB5').replace('#', ''), 16),
-                            permissions: permissionsBits.toString(),
+                            permissions: permissionsBits,
                             hoist: roleDef.hoist || false,
                             mentionable: roleDef.mentionable || false,
                         }),
@@ -203,15 +203,24 @@ export async function POST(req: Request) {
                                 });
                                 messages.push(`  💬 Canal criado: ${chDef.name}`);
                             } catch (error: any) {
-                                // Fallback: If Announcement (5) fails, try Text (0)
-                                if (channelType === 5 && error.message.includes("Invalid Form Body")) {
+                                // Fallback for non-community servers (Discord API throws 50024 or Invalid Form Body for Stage/Forum/News)
+                                const errMsg = error.message || "";
+                                if (errMsg.includes("50024") || errMsg.includes("Invalid Form Body")) {
                                     try {
-                                        channelData.type = 0; // Fallback to Text
+                                        if (channelType === 5 || channelType === 15) {
+                                            channelData.type = 0; // Fallback to Text
+                                        } else if (channelType === 13) {
+                                            channelData.type = 2; // Fallback to Voice
+                                        } else {
+                                            throw error; // If it's a different error that we can't fallback from
+                                        }
+
                                         await discordFetch(`/guilds/${guildId}/channels`, {
                                             method: 'POST',
                                             body: JSON.stringify(channelData),
                                         });
-                                        messages.push(`  💬 Canal criado (Fallback Texto): ${chDef.name}`);
+                                        const typeName = channelData.type === 2 ? 'Voz' : 'Texto';
+                                        messages.push(`  💬 Canal criado (Fallback ${typeName}): ${chDef.name}`);
                                         await delay(250);
                                         continue; // Skip the error log below
                                     } catch (retryError: any) {
@@ -253,20 +262,54 @@ function getChannelType(type: string): number {
     return map[type] ?? 0;
 }
 
-function resolvePermissions(perms: string[]): number {
-    const map: Record<string, number> = {
-        Administrator: 0x8,
-        KickMembers: 0x2,
-        BanMembers: 0x4,
-        ManageMessages: 0x2000,
-        SendMessages: 0x800,
-        ManageChannels: 0x10,
-        ManageRoles: 0x10000000,
+function resolvePermissions(perms: string[]): string {
+    const map: Record<string, bigint> = {
+        CreateInstantInvite: 1n << 0n,
+        KickMembers: 1n << 1n,
+        BanMembers: 1n << 2n,
+        Administrator: 1n << 3n,
+        ManageChannels: 1n << 4n,
+        ManageGuild: 1n << 5n,
+        AddReactions: 1n << 6n,
+        ViewAuditLog: 1n << 7n,
+        PrioritySpeaker: 1n << 8n,
+        Stream: 1n << 9n,
+        ViewChannel: 1n << 10n,
+        SendMessages: 1n << 11n,
+        SendTTSMessages: 1n << 12n,
+        ManageMessages: 1n << 13n,
+        EmbedLinks: 1n << 14n,
+        AttachFiles: 1n << 15n,
+        ReadMessageHistory: 1n << 16n,
+        MentionEveryone: 1n << 17n,
+        UseExternalEmojis: 1n << 18n,
+        ViewGuildInsights: 1n << 19n,
+        Connect: 1n << 20n,
+        Speak: 1n << 21n,
+        MuteMembers: 1n << 22n,
+        DeafenMembers: 1n << 23n,
+        MoveMembers: 1n << 24n,
+        UseVAD: 1n << 25n,
+        ChangeNickname: 1n << 26n,
+        ManageNicknames: 1n << 27n,
+        ManageRoles: 1n << 28n,
+        ManageWebhooks: 1n << 29n,
+        ManageEmojisAndStickers: 1n << 30n,
+        UseApplicationCommands: 1n << 31n,
+        RequestToSpeak: 1n << 32n,
+        ManageEvents: 1n << 33n,
+        ManageThreads: 1n << 34n,
+        CreatePublicThreads: 1n << 35n,
+        CreatePrivateThreads: 1n << 36n,
+        UseExternalStickers: 1n << 37n,
+        SendMessagesInThreads: 1n << 38n,
+        UseEmbeddedActivities: 1n << 39n,
+        ModerateMembers: 1n << 40n,
     };
 
-    let bits = 0;
+    let bits = 0n;
     for (const p of perms) {
         if (map[p]) bits |= map[p];
     }
-    return bits;
+    return bits.toString();
 }

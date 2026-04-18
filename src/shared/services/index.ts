@@ -55,4 +55,5 @@ export {
 export type { GuildConfig, AuditLog, PrivateCall, Ticket, TicketCategory, CustomCommand } from './database';
 
 export { getUserPlan, getPlanUpgradeMessage, canUseFeature } from './plan-features';
-export { checkAiLimit, incrementAiUsage, getLimitMessage, checkServerGenLimit, incrementServerGenUsage } from './ai-limit.service';
+export { checkAiLimit, incrementAiUsage, getLimitMessage, checkServerGenLimit, incrementServerGenUsage, syncRedisLimitsToDatabase } from './ai-limit.service';
+export { redisService } from './redis.service';

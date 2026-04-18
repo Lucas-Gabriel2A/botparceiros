@@ -44,6 +44,7 @@
     "fs-extra": "^11.3.3",
     "google-translate-api-x": "^10.7.2",
     "google-tts-api": "^2.0.2",
+    "ioredis": "^5.10.1",
     "libsodium-wrappers": "^0.8.2",
     "node-cron": "^4.2.1",
     "node-fetch": "^3.3.2",

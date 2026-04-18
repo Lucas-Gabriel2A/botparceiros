@@ -1129,12 +1129,12 @@ export default function ServerBuilderPage() {
                                                         onChange={(e) => updateRole(role.id, { name: e.target.value })}
                                                         className="flex-1 bg-transparent text-white text-sm outline-none min-w-0"
                                                     />
-                                                    <label className="flex items-center gap-1.5 text-[10px] text-zinc-600 uppercase tracking-wider font-medium shrink-0">
+                                                    <label title="Separar membros com este cargo na lista online do servidor" className="flex items-center gap-1.5 text-[10px] text-zinc-600 uppercase tracking-wider font-medium shrink-0">
                                                         <input
                                                             type="checkbox"
                                                             checked={role.hoist || false}
                                                             onChange={(e) => updateRole(role.id, { hoist: e.target.checked })}
-                                                            className="accent-purple-500 w-3 h-3"
+                                                            className="accent-purple-500 w-3 h-3 cursor-pointer"
                                                         />
                                                         Sep
                                                     </label>
