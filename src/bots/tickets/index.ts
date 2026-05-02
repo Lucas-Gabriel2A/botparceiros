@@ -7,7 +7,6 @@ import {
     Client,
     GatewayIntentBits,
     Partials,
-    EmbedBuilder,
     PermissionFlagsBits,
     REST,
     Routes,
@@ -21,10 +20,7 @@ import {
     logger,
     testConnection,
     initializeSchema,
-    createTicketCategory,
     getTicketCategories,
-    updateTicketCategory,
-    deleteTicketCategory
 } from '../../shared/services';
 
 import {
@@ -74,7 +70,7 @@ function hasAdminPermission(member: GuildMember): boolean {
         member.permissions.has(PermissionFlagsBits.Administrator);
 }
 
-function generateCategoryId(): string {
+function _generateCategoryId(): string {
     return `cat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 

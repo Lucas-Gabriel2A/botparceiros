@@ -60,7 +60,7 @@ const CLIENT_ID = config.get('CLIENT_ID');
 
 import { getUserPlan, hasPlanAccess } from '../../shared/services/plan-features';
 
-function hasAdminPermission(member: any, OWNER_ROLE_ID: string | undefined, SEMI_OWNER_ROLE_ID: string | undefined): boolean {
+function hasAdminPermission(member: any, _ownerRoleId?: string, _semiOwnerRoleId?: string): boolean {
     return member.permissions.has('Administrator');
 }
 const OWNER_ROLE_ID = config.getOptional('OWNER_ROLE_ID');

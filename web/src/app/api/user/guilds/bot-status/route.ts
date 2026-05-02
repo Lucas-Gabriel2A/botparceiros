@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
             [guildIds]
         );
 
-        const botGuilds = new Set(result.rows.map((r: { guild_id: string }) => r.guild_id));
+        const botGuilds = new Set(result.rows.map((r: any) => r.guild_id));
 
         const status: Record<string, boolean> = {};
         for (const id of guildIds) {
