@@ -9,7 +9,7 @@ export const revalidate = 0;
 
 export async function GET(
     request: Request,
-    { params }: { params: { guildId: string } }
+    { params }: { params: Promise<{ guildId: string }> }
 ) {
     const session = await getServerSession(authOptions);
 
