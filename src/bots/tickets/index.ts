@@ -70,10 +70,6 @@ function hasAdminPermission(member: GuildMember): boolean {
         member.permissions.has(PermissionFlagsBits.Administrator);
 }
 
-function _generateCategoryId(): string {
-    return `cat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
-
 // ═══════════════════════════════════════════════════════════════════════════
 // 📝 SLASH COMMANDS
 // ═══════════════════════════════════════════════════════════════════════════
