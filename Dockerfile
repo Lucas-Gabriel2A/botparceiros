@@ -14,12 +14,12 @@ RUN apt-get update && apt-get install -y \
 # Define o diretório de trabalho dentro do container
 WORKDIR /app
 
-# Copia os arquivos de manifesto do npm primeiro (para aproveitar o cache do Docker)
-COPY package.json package-lock.json ./
+# Copia os arquivos de manifesto do npm primeiro (o * permite que o package-lock.json seja opcional)
+COPY package.json package-lock.json* ./
 COPY web/package.json ./web/
 
-# Instala as dependências de todo o projeto (workspaces inclusos)
-RUN npm ci
+# Instala as dependências de todo o projeto usando npm install (mais flexível se não houver lockfile no repo)
+RUN npm install
 
 # Copia todo o resto do código da sua máquina para o container
 COPY . .
