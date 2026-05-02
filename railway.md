@@ -1,121 +1,82 @@
-# Railway Configuration for CoreIA Discord Bots
+# Guia Definitivo de Deploy na Railway 🚀
 
-## 🎯 Quick Deploy Links
+Este guia passo a passo vai te mostrar como colocar o projeto (Bot + Painel Web Next.js) no ar utilizando a Railway.
 
-### Opção 1: Todos os Bots em Um Serviço (Recomendado)
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/github.com/Lucas-Gabriel2A/botparceiros)
+## 1️⃣ Preparando o Repositório
+Certifique-se de que todas as suas alterações estejam com *commit* e enviadas para o seu repositório no **GitHub**.
 
-### Opção 2: Serviços Separados (Avançado)
-Crie serviços separados no Railway para cada bot:
+## 2️⃣ Criando o Banco de Dados (PostgreSQL)
+1. Acesse o painel da [Railway](https://railway.app/).
+2. Clique em **New Project** -> **Provision PostgreSQL**.
+3. Aguarde o banco de dados ser criado.
 
-#### Serviço 1: Bot de Tickets
-- **Start Command**: `npm run start:tickets`
-- **Environment Variables**: `DISCORD_TOKEN`, `STAFF_ROLE_ID`, etc.
+## 3️⃣ Criando a Aplicação
+1. No mesmo projeto, clique em **Create** (ou no botão `+` no canto superior direito).
+2. Selecione **GitHub Repo** e escolha o repositório `Lucas-Gabriel2A/botparceiros` (ou o repositório correspondente).
+3. A Railway vai ler o arquivo `railway.toml` na raiz do seu projeto e iniciar o *build* automaticamente.
 
-#### Serviço 2: Bot de Welcome
-- **Start Command**: `npm run start:welcome`
-- **Environment Variables**: `DISCORD_TOKEN`, `CLIENT_ID`, etc.
+## 4️⃣ Configurando as Variáveis de Ambiente
+Sua aplicação vai falhar na primeira vez porque faltam as variáveis de ambiente. Siga estes passos:
 
-## 🔧 Environment Variables Required
+1. Clique no card do **Repositório** (a sua aplicação) no projeto.
+2. Vá até a aba **Variables**.
+3. Adicione todas as variáveis necessárias (baseadas no seu `.env.local` e `.env`):
 
-### Para Todos os Bots:
-```
-DISCORD_TOKEN=your_tickets_bot_token
-DISCORD_TOKENS=your_welcome_bot_token
-CLIENT_ID=your_welcome_bot_client_id
-```
+### Banco de Dados
+A Railway facilita muito essa parte. Para adicionar a `DATABASE_URL`:
+- Clique em **New Variable** -> **Add Reference** e selecione o banco de dados criado (geralmente será algo como `${{Postgres.DATABASE_URL}}`).
 
-### Bot de Tickets (bottickets.js):
-```
-STAFF_ROLE_ID=your_staff_role_id
-TICKETS_CATEGORY_ID=your_tickets_category_id
-TICKETS_CHANNEL_ID=your_tickets_channel_id
-ANNOUNCEMENTS_CHANNEL_ID=your_announcements_channel_id
-MEMBERS_ROLE_ID=your_members_role_id
-```
-
-### Bot de Calls (botcallprivada.js):
-```
-VIP_ROLE_ID=your_vip_role_id
-CALLS_CATEGORY_ID=your_calls_category_id
+### Autenticação Discord (NextAuth)
+```env
+DISCORD_CLIENT_ID=seu_client_id_aqui
+DISCORD_CLIENT_SECRET=seu_client_secret_aqui
+NEXTAUTH_URL=https://sua-url-da-railway.up.railway.app # (Atualize isso após o passo 5)
+NEXTAUTH_SECRET=um_segredo_gerado_aqui
 ```
 
-### Bot de Welcome (botwelcom.js):
-```
-CLIENT_ID=your_bot_client_id
-OWNER_ROLE_ID=your_owner_role_id
-SEMI_OWNER_ROLE_ID=your_semi_owner_role_id
-CATEGORY_ID=your_category_id
-WELCOME_CHANNEL_ID=your_welcome_channel_id
-LEAVE_CHANNEL_ID=your_leave_channel_id
-```
-
-## 🚀 Deployment Configuration
-
-### Configuração Atual (Todos os Bots):
-- **Start Command**: `npm start` (executa todos os bots)
-- **Root Directory**: `/`
-- **Port**: Automática (para healthcheck)
-
-### Recursos Recomendados:
-- **RAM**: 1GB (para todos os bots)
-- **CPU**: 1 vCPU
-- **Storage**: 2GB
-
-## 📊 Status dos Bots
-
-Após o deploy, você verá logs de ambos os bots:
-- 🤖 **Bot Tickets**: Sistema de tickets e parcerias
-- 🎉 **Bot Welcome**: Sistema de boas-vindas com canvas
-
-## 🔍 Troubleshooting
-
-### Healthcheck Falhando:
-- Verifique se todos os tokens estão corretos
-- Confirme que os bots têm permissões adequadas no Discord
-
-### Bot Não Conectando:
-- Verifique o `DISCORD_TOKEN` no Railway
-- Confirme que o bot está convidado para o servidor
-
-### Erro de Dependências:
-- Railway usa Node.js 18.17.0
-- Todas as dependências estão no package.json
-
-### Expected Usage:
-- **Memory**: ~30-50MB per bot
-- **CPU**: <5% most of the time
-- **Network**: Minimal (Discord API only)
-
-## 🔍 Health Checks
-
-The bots will log when ready:
-```
-Sistema de Tickets BotName#1234 está online!
-Bot de Calls Privadas BotName#5678 está online!
+### Serviços do Bot & IA
+```env
+DISCORD_TOKEN=seu_token_do_bot
+DISCORD_TOKEN_AGENTE_IA=seu_token_do_agente_ia
+OPENAI_API_KEY=sua_chave_groq_ou_openai
+LLM_BASE_URL=https://api.groq.com/openai/v1
+MODELO_IA=llama-3.3-70b-versatile
 ```
 
-## 🛠️ Troubleshooting
+### Outros Serviços (Mercado Pago, Cloudinary, etc.)
+```env
+MERCADOPAGO_PUBLIC_KEY=sua_chave_publica
+MERCADOPAGO_ACCESS_TOKEN=seu_access_token
+CLOUDINARY_CLOUD_NAME=seu_cloud_name
+CLOUDINARY_API_KEY=sua_api_key
+CLOUDINARY_API_SECRET=seu_api_secret
+```
 
-### Common Issues:
-1. **Bot not starting**: Check environment variables
-2. **Permission errors**: Verify bot permissions in Discord
-3. **Connection issues**: Check token validity
+## 5️⃣ Gerando o Domínio Público
+1. Ainda nas configurações da sua aplicação, vá na aba **Settings**.
+2. Desça até a seção **Networking** -> **Public Networking**.
+3. Clique em **Generate Domain**.
+4. Copie o domínio gerado (ex: `botparceiros-production.up.railway.app`).
+5. **ATENÇÃO:** Volte na aba **Variables** e atualize a variável `NEXTAUTH_URL` para colocar `https://` + esse domínio que você copiou!
+6. **ATENÇÃO 2:** Vá até o portal do *Discord Developer* da sua aplicação e atualize o **Redirect URI** do OAuth2 para ser `https://seu-dominio.up.railway.app/api/auth/callback/discord`.
 
-### Logs to Monitor:
-- Bot login success/failure
-- Command registration
-- Error messages
-- Memory usage warnings
+## 6️⃣ Inicializando o Banco de Dados (Tabelas)
+Como é a primeira vez que você roda no banco de produção, você precisará criar as tabelas do banco de dados (schema).
 
-## 💰 Cost Estimation
+O projeto já possui um script para isso: `npm run db:setup`.
+Para rodar na Railway:
+1. Clique no card do seu aplicativo.
+2. Acesse a aba **Deployments** ou diretamente o atalho na Command Palette (Cmd/Ctrl + K).
+3. Busque por **Execute Command** ou algo similar para abrir um terminal no container ativo.
+4. Digite:
+```bash
+npm run db:setup
+```
+*Isso vai rodar o arquivo `scripts/init-db.ts` e criar todas as tabelas e índices necessários no PostgreSQL da Railway.*
 
-### Monthly Cost (Hobby Plan):
-- **Base**: $5/month per project
-- **Both bots**: Same project = $5/month total
-- **Additional**: No overages expected
+## 7️⃣ Acompanhando os Logs
+- A aplicação será reiniciada automaticamente após as variáveis serem colocadas.
+- Vá na aba **Deployments** e clique no *build* mais recente.
+- Em **View Logs**, você deverá ver os logs do Next.js subindo (`Ready in x ms`) e os logs da IA conectando no Discord!
 
-### Free Trial:
-- **$5 credit** included
-- **~30 days** of testing
-- No credit card for trial
+✅ **Tudo Pronto!** A sua aplicação Web e o seu Bot estarão rodando juntos (graças ao script de *start* configurado) em um único serviço de hospedagem.
