@@ -1,8 +1,5 @@
 "use server";
 
-import { customCommandService } from "../../bots/custom-commands/service"; // Adjust path if needed.
-// Relative path from `web/src/actions` to `src/bots`
-// web/src/actions -> ../../../src/bots
 import { customCommandService as service } from "../../../src/bots/custom-commands/service";
 import { revalidatePath } from "next/cache";
 import { llmService } from "../../../src/shared/services/llm.service";
