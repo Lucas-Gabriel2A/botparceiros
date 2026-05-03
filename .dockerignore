@@ -1,0 +1,14 @@
+node_modules
+web/node_modules
+.git
+*.md
+pg_log.txt
+pgdata
+postgres_data
+logs
+
+# IMPORTANTE: não copiar .env locais para produção
+.env
+.env.local
+web/.env.local
+web/.env
