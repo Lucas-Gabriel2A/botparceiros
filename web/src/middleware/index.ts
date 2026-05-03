@@ -22,6 +22,12 @@ const authMiddleware = withAuth(
 );
 
 export default function middleware(req: NextRequest) {
+    // Railway proxy fix: remove internal port (like :8080) from request URL
+    // so next-intl and next-auth do not use it for constructing redirects.
+    if (req.nextUrl.port) {
+        req.nextUrl.port = '';
+    }
+
     const publicPathnameRegex = /^\/(?:en|pt)?(?:\/)?$/;
     const isPublicPage = publicPathnameRegex.test(req.nextUrl.pathname);
 
