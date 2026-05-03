@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start -p ${PORT:-3000}",
+    "start": "NEXTAUTH_URL=${NEXTAUTH_URL:-https://botparceiros-production.up.railway.app} next start -p ${PORT:-3000}",
     "lint": "eslint"
   },
   "dependencies": {
