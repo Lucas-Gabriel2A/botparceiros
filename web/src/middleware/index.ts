@@ -1,6 +1,6 @@
 import { withAuth } from "next-auth/middleware";
 import createMiddleware from 'next-intl/middleware';
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const intlMiddleware = createMiddleware({
     locales: ['en', 'pt'],
@@ -21,21 +21,30 @@ const authMiddleware = withAuth(
     }
 );
 
-export default function middleware(req: NextRequest) {
-    // Railway proxy fix: remove internal port (like :8080) from request URL
-    // so next-intl and next-auth do not use it for constructing redirects.
-    if (req.nextUrl.port) {
-        req.nextUrl.port = '';
-    }
-
+export default async function middleware(req: NextRequest) {
     const publicPathnameRegex = /^\/(?:en|pt)?(?:\/)?$/;
     const isPublicPage = publicPathnameRegex.test(req.nextUrl.pathname);
 
+    let response: NextResponse;
+
     if (isPublicPage) {
-        return intlMiddleware(req);
+        response = intlMiddleware(req);
     } else {
-        return (authMiddleware as any)(req);
+        response = (authMiddleware as any)(req);
     }
+
+    // A Railway injeta o host com a porta 8080 internamente.
+    // Isso faz com que redirects (301/302) gerados pelo next-intl ou next-auth
+    // venham com a porta 8080 na URL, o que quebra o acesso externo.
+    // Essa correção intercepta o redirect e remove a porta.
+    if (response && response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location');
+        if (location && location.includes(':8080')) {
+            response.headers.set('location', location.replace(':8080', ''));
+        }
+    }
+
+    return response;
 }
 
 export const config = {
