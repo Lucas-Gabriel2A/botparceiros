@@ -578,7 +578,7 @@ export default function Home() {
                         </p>
                         <div className="flex justify-center gap-4">
                             <Link
-                                href="https://discord.gg/QJGEmqqz"
+                                href="https://discord.gg/gUFMmpPc"
                                 target="_blank"
                                 className="px-8 py-4 bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold uppercase tracking-wider flex items-center gap-2 transition-colors rounded-sm"
                             >
