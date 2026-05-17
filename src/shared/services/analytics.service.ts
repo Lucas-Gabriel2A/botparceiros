@@ -101,9 +101,7 @@ export async function getAnalytics(guildId: string, period: number = 7): Promise
     }
 }
 
-/**
- * Retorna totais agregados de um guild para um período.
- */
+
 export async function getAnalyticsSummary(guildId: string, period: number = 7): Promise<Partial<GuildAnalytics> | null> {
     try {
         const result = await query<GuildAnalytics>(
