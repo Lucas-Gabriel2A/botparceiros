@@ -5,7 +5,7 @@ import { apiBridgeService } from '../../shared/services/api-bridge.service';
 import { trackEvent } from '../../shared/services/analytics.service';
 
 interface Action {
-    type: 'REPLY' | 'ADD_ROLE' | 'REMOVE_ROLE' | 'SEND_DM' | 'SEND_CHANNEL' | 'KICK' | 'BAN' | 'RANDOM_IMAGE' | 'SET_NICKNAME' | 'EXTERNAL_API';
+    type: 'REPLY' | 'ADD_ROLE' | 'REMOVE_ROLE' | 'SEND_DM' | 'SEND_CHANNEL' | 'KICK' | 'BAN' | 'RANDOM_IMAGE' | 'SET_NICKNAME' | 'EXTERNAL_API' | 'AI_REPLY';
     [key: string]: any;
 }
 
@@ -143,6 +143,34 @@ export class CommandEngine {
                         await interaction.editReply({ content });
                     } else {
                         await interaction.followUp({ content, ephemeral });
+                    }
+                    return true;
+                }
+
+                case 'AI_REPLY': {
+                    const promptTemplate = action.prompt || action.content || '';
+                    const systemPrompt = action.system_prompt || 'Você é um assistente útil do servidor.';
+                    const ephemeral = action.ephemeral as boolean || false;
+                    
+                    const finalPrompt = interpolate(promptTemplate);
+                    
+                    if (!firstResponseSent && interaction.deferred) {
+                        // Send a thinking state if we are going to wait for AI
+                        await interaction.editReply({ content: '🤔 Pensando...' });
+                    }
+
+                    // To avoid circular dependency, dynamically import llmService or we can import it at the top
+                    const { llmService } = require('../../shared/services/llm.service');
+                    
+                    const responseText = await llmService.generateResponse(
+                        [{ role: 'user', content: finalPrompt }],
+                        systemPrompt
+                    );
+
+                    if (!firstResponseSent && interaction.deferred) {
+                        await interaction.editReply({ content: responseText });
+                    } else {
+                        await interaction.followUp({ content: responseText, ephemeral });
                     }
                     return true;
                 }

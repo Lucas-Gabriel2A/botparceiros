@@ -227,7 +227,7 @@ export function CommandGenerator({ guildId, userId, existingCommands }: CommandG
                                                         {action.type}
                                                     </Badge>
                                                     <span className="truncate flex-1 font-mono text-xs opacity-80">
-                                                        {action.content || (action.role_name ? `Role: ${action.role_name}` : JSON.stringify(action))}
+                                                        {action.content || action.prompt || (action.role_name ? `Role: ${action.role_name}` : JSON.stringify(action))}
                                                     </span>
                                                 </div>
                                             ))}

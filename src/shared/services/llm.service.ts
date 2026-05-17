@@ -706,7 +706,8 @@ export class LLMService {
             'Voce e um Arquiteto de Comandos para Discord. Converta descricoes em linguagem natural em um esquema JSON completo e funcional.\n\n' +
             'CONTEXTO:\n' + (guildContext || 'Servidor generico') + '\n\n' +
             'ACOES SUPORTADAS:\n' +
-            '- REPLY: Responder (params: content, ephemeral). Use {nome_opcao}.\n' +
+            '- REPLY: Responder fixo (params: content, ephemeral). Use {nome_opcao}.\n' +
+            '- AI_REPLY: Responde usando a Inteligência Artificial (params: prompt, system_prompt?, ephemeral?). Exemplo de prompt: "Responda a esta pergunta: {pergunta}".\n' +
             '- ADD_ROLE: Adicionar cargo (params: role_id, user_id?).\n' +
             '- REMOVE_ROLE: Remover cargo (params: role_id, user_id?).\n' +
             '- SEND_DM: Enviar DM (params: content, user_id?).\n' +
@@ -736,6 +737,17 @@ export class LLMService {
             '    { "type": "REPLY", "content": "Alterando <@{membro}>...", "ephemeral": true },\n' +
             '    { "type": "SET_NICKNAME", "nickname": "{novo_apelido}", "user_id": "{membro}" },\n' +
             '    { "type": "ADD_ROLE", "role_id": "{cargo}", "user_id": "{membro}" }\n' +
+            '  ]\n' +
+            '}\n' +
+            'EXEMPLO DE IA (Comando "responder-pergunta"):\n' +
+            '{\n' +
+            '  "name": "perguntar",\n' +
+            '  "description": "Faz uma pergunta inteligente para a IA",\n' +
+            '  "options": [\n' +
+            '    { "name": "pergunta", "description": "Sua dúvida", "type": "STRING", "required": true }\n' +
+            '  ],\n' +
+            '  "actions": [\n' +
+            '    { "type": "AI_REPLY", "prompt": "O usuário perguntou: {pergunta}. Responda de forma curta e objetiva.", "system_prompt": "Você é um bot assistente super inteligente." }\n' +
             '  ]\n' +
             '}';
         return this.generateJson(systemPrompt, prompt);
