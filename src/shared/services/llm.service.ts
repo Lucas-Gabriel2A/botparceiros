@@ -747,7 +747,7 @@ export class LLMService {
             '    { "name": "pergunta", "description": "Sua dúvida", "type": "STRING", "required": true }\n' +
             '  ],\n' +
             '  "actions": [\n' +
-            '    { "type": "AI_REPLY", "prompt": "O usuário perguntou: {pergunta}. Responda de forma curta e objetiva.", "system_prompt": "Você é um bot assistente super inteligente." }\n' +
+            '    { "type": "AI_REPLY", "prompt": "{pergunta}", "system_prompt": "Você é um assistente inteligente. Responda à pergunta de forma clara, objetiva e útil." }\n' +
             '  ]\n' +
             '}';
         return this.generateJson(systemPrompt, prompt);
