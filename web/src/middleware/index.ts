@@ -35,12 +35,33 @@ export default async function middleware(req: NextRequest) {
 
     // A Railway injeta o host com a porta 8080 internamente.
     // Isso faz com que redirects (301/302) gerados pelo next-intl ou next-auth
-    // venham com a porta 8080 na URL, o que quebra o acesso externo.
-    // Essa correção intercepta o redirect e remove a porta.
+    // venham com a porta 8080 ou como localhost.
+    // Essa correção intercepta o redirect e ajusta a URL.
     if (response && response.status >= 300 && response.status < 400) {
-        const location = response.headers.get('location');
-        if (location && location.includes(':8080')) {
-            response.headers.set('location', location.replace(':8080', ''));
+        let location = response.headers.get('location');
+        if (location) {
+            const prodUrl = process.env.NEXTAUTH_URL;
+            const isLocalhost = location.includes('localhost') || location.includes('127.0.0.1');
+            const hasPort = location.includes(':8080');
+
+            if (prodUrl && (isLocalhost || hasPort)) {
+                try {
+                    const parsedLocation = new URL(location);
+                    const parsedProdUrl = new URL(prodUrl);
+                    
+                    parsedLocation.protocol = parsedProdUrl.protocol;
+                    parsedLocation.host = parsedProdUrl.host;
+                    parsedLocation.port = parsedProdUrl.port;
+                    
+                    response.headers.set('location', parsedLocation.toString());
+                } catch (e) {
+                    if (hasPort) {
+                        response.headers.set('location', location.replace(':8080', ''));
+                    }
+                }
+            } else if (hasPort) {
+                response.headers.set('location', location.replace(':8080', ''));
+            }
         }
     }
 
